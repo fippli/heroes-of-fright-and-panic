@@ -1,0 +1,43 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #000;
+  width: 100%;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+.menu {
+  width: 100%;
+  height: 32px;
+  box-shadow: 0 5px 10px 0 #00000011;
+  background-color: #ffffff;
+  box-sizing: border-box;
+}
+
+.tile {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  background-color: #ffffff;
+  border: 1px solid #ffffff22;
+  cursor: pointer;
+}
+
+.tile:hover {
+  border: 1px solid red;
+}
+
+.board {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
