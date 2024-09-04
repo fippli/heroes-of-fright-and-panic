@@ -45,14 +45,16 @@ const expandMap = (state) => {
 
 export const App = () => {
   const [state, setState] = useState(initialState);
+  const [hoveredTile, setHoveredTile] = useState(null);
 
   useEffect(() => {
+    console.log({ hoveredTile });
     if (unfold(state.rows).every((tile) => tile.type !== "unexplored")) {
       console.log("all discovered");
 
       setState(compose(increaseMapSize, expandMap));
     }
-  }, [state.rows]);
+  }, [hoveredTile, state.rows]);
 
   const clickTile = (tile) => {
     const passTime = (state) => ({ ...state, time: state.time + 1 });
@@ -79,18 +81,7 @@ export const App = () => {
   };
 
   return (
-    <>
-      <div className="menu">
-        <FontAwesomeIcon icon={faUser} />
-        &nbsp;{state.villagers}
-        <FontAwesomeIcon icon={faClock} />
-        &nbsp;{state.time}
-        <FontAwesomeIcon icon={faCarrot} />
-        &nbsp;{state.food}
-        <FontAwesomeIcon icon={faTree} />
-        &nbsp;{state.wood}
-      </div>
-
+    <div className="layout">
       <div className="board">
         <div
           style={{
@@ -109,19 +100,43 @@ export const App = () => {
                 {...tile}
                 index={tileIndex}
                 onClick={clickTile}
+                onMouseEnter={() => setHoveredTile(tile)}
+                onMouseMove={() => setHoveredTile(tile)}
               />
             );
           })}
         </div>
       </div>
-    </>
+
+      <div className="menu">
+        <div>
+          <FontAwesomeIcon icon={faUser} />
+          &nbsp;{state.villagers}
+        </div>
+        <div>
+          <FontAwesomeIcon icon={faClock} />
+          &nbsp;{state.time}
+        </div>
+        <div>
+          <FontAwesomeIcon icon={faCarrot} />
+          &nbsp;{state.food}
+        </div>
+        <div>
+          <FontAwesomeIcon icon={faTree} />
+          &nbsp;{state.wood}
+        </div>
+        <div>{hoveredTile?.type}</div>
+      </div>
+    </div>
   );
 };
 
-const Tile = (tile) => {
+const Tile = ({ onMouseEnter, onMouseMove, ...tile }) => {
   return (
     <div
       className="tile"
+      onMouseEnter={onMouseEnter}
+      onMouseMove={onMouseMove}
       style={{
         backgroundColor: tile.backgroundColor,
         color: tile.color,
