@@ -8,9 +8,13 @@ import treeSrc from "../assets/tree.png";
 import unesploredSrc from "../assets/unexplored.png";
 import vegetationSrc from "../assets/vegetation.png";
 import waterSrc from "../assets/water.png";
-import { State } from "../state";
+
 import { mapExplorer } from "./mapExplorer";
 import { TileType } from "./TileType";
+import { Landscape } from "./Landscape";
+import { Building } from "./Building";
+import { Piece } from "./Piece";
+import { EmptyRender } from "./EmptyRender";
 
 const radius = 2 * 3 * 5;
 
@@ -36,59 +40,61 @@ export class Tile {
   col: number;
   radius: number = radius;
   explored: boolean = false;
-  type: TileType;
-  image: TileImage;
-  building: TileImage | null;
 
   constructor({
     row,
     col,
     explored,
-    type,
   }: {
     row: number;
     col: number;
     explored?: boolean;
-    type?: TileType;
   }) {
     this.x = Hexagon.x(row, col);
     this.y = Hexagon.y(row);
-    this.image = unexploredImage;
     this.row = row;
     this.col = col;
-    this.type = type ?? TileType.UNEXPLORED;
-    this.building = null;
     this.explored = explored ?? false;
   }
 
   render(
     ctx: CanvasRenderingContext2D,
-    state: State,
-    mouseX: number,
-    mouseY: number
+    {
+      landscape,
+      building,
+      piece,
+    }: {
+      landscape: Landscape | EmptyRender;
+      building: Building | EmptyRender;
+      piece: Piece | EmptyRender;
+    },
   ) {
     ctx.save();
 
-    // Draw hexagon
-    const centerX = this.x;
-    const centerY = this.y;
+    landscape.render(ctx);
+    building.render(ctx);
+    piece.render(ctx);
 
-    Hexagon.render(ctx, centerX, centerY, this.isMouseOver(mouseX, mouseY));
+    // Draw hexagon
+    // const centerX = this.x;
+    // const centerY = this.y;
+
+    // Hexagon.render(ctx, centerX, centerY, this.isMouseOver(mouseX, mouseY));
     // ctx.clip();
 
-    this.tileImage().render(ctx, this.x, this.y);
+    // this.tileImage().render(ctx, this.x, this.y);
 
-    Hexagon.debug(ctx, centerX, centerY);
+    // Hexagon.debug(ctx, centerX, centerY);
 
-    if (this.isMouseOver(mouseX, mouseY)) {
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 5;
-      // draw a line from the center to the mouse
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.lineTo(mouseX, mouseY);
-      ctx.stroke();
-    }
+    //   if (this.isMouseOver(mouseX, mouseY)) {
+    //     ctx.strokeStyle = "#ffffff";
+    //     ctx.lineWidth = 5;
+    //     // draw a line from the center to the mouse
+    //     ctx.beginPath();
+    //     ctx.moveTo(centerX, centerY);
+    //     ctx.lineTo(mouseX, mouseY);
+    //     ctx.stroke();
+    //   }
     ctx.restore();
   }
 
@@ -112,46 +118,46 @@ export class Tile {
     return new Tile({ ...this, explored: true, type });
   }
 
-  tileImage() {
-    if (this.explored) {
-      switch (this.type) {
-        case TileType.TREE: {
-          return treeImage;
-        }
+  // tileImage() {
+  //   if (this.explored) {
+  //     switch (this.type) {
+  //       case TileType.TREE: {
+  //         return treeImage;
+  //       }
 
-        case TileType.VEGETATION: {
-          return vegetationImage;
-        }
+  //       case TileType.VEGETATION: {
+  //         return vegetationImage;
+  //       }
 
-        case TileType.SAND: {
-          return sandImage;
-        }
+  //       case TileType.SAND: {
+  //         return sandImage;
+  //       }
 
-        case TileType.WATER: {
-          return waterImage;
-        }
+  //       case TileType.WATER: {
+  //         return waterImage;
+  //       }
 
-        default: {
-          return grassImage;
-        }
-      }
-    }
+  //       default: {
+  //         return grassImage;
+  //       }
+  //     }
+  //   }
 
-    return unexploredImage;
-  }
+  //   return unexploredImage;
+  // }
 
-  placeBuilding(building: TileBuilding) {
-    switch (building) {
-      case TileBuilding.HOUSE: {
-        this.building = houseImage;
-        return this;
-      }
-      default: {
-        this.building = null;
-        return this;
-      }
-    }
-  }
+  // placeBuilding(building: TileBuilding) {
+  //   switch (building) {
+  //     case TileBuilding.HOUSE: {
+  //       this.building = houseImage;
+  //       return this;
+  //     }
+  //     default: {
+  //       this.building = null;
+  //       return this;
+  //     }
+  //   }
+  // }
 
   isSameRow(position: { row: number; col: number }) {
     return this.row === position.row;
@@ -216,45 +222,45 @@ export class Tile {
     );
   }
 
-  isNeighborToType(type: TileType, tiles: Tile[]) {
-    return tiles.some((tile) => tile.isNeighborTo(this) && tile.type === type);
-  }
+  // isNeighborToType(type: TileType, tiles: Tile[]) {
+  //   return tiles.some((tile) => tile.isNeighborTo(this) && tile.type === type);
+  // }
 
-  isNeighborToGrass(tiles: Tile[]) {
-    return tiles.some(
-      (tile: Tile) => tile.isNeighborTo(this) && tile.type === TileType.GRASS
-    );
-  }
+  // isNeighborToGrass(tiles: Tile[]) {
+  //   return tiles.some(
+  //     (tile: Tile) => tile.isNeighborTo(this) && tile.type === TileType.GRASS,
+  //   );
+  // }
 
-  isNeighborToTree(tiles: Tile[]) {
-    return tiles.some(
-      (tile) => tile.isNeighborTo(this) && tile.type === TileType.TREE
-    );
-  }
+  // isNeighborToTree(tiles: Tile[]) {
+  //   return tiles.some(
+  //     (tile) => tile.isNeighborTo(this) && tile.type === TileType.TREE,
+  //   );
+  // }
 
-  isNeighborToWater(tiles: Tile[]) {
-    return tiles.some(
-      (tile) => tile.isNeighborTo(this) && tile.type === TileType.WATER
-    );
-  }
+  // isNeighborToWater(tiles: Tile[]) {
+  //   return tiles.some(
+  //     (tile) => tile.isNeighborTo(this) && tile.type === TileType.WATER,
+  //   );
+  // }
 
-  isNeighborToSand(tiles: Tile[]) {
-    return tiles.some(
-      (tile) => tile.isNeighborTo(this) && tile.type === TileType.SAND
-    );
-  }
+  // isNeighborToSand(tiles: Tile[]) {
+  //   return tiles.some(
+  //     (tile) => tile.isNeighborTo(this) && tile.type === TileType.SAND,
+  //   );
+  // }
 
   getNeighbors(tiles: Tile[]) {
     return tiles.filter((tile) => tile.isNeighborTo(this));
   }
 
-  getNeighborTypes(tiles: Tile[]) {
-    return this.getNeighbors(tiles).map((tile) => tile.type);
-  }
+  // getNeighborTypes(tiles: Tile[]) {
+  //   return this.getNeighbors(tiles).map((tile) => tile.type);
+  // }
 
-  hasNoNeighborOfType(type: TileType, tiles: Tile[]) {
-    return this.getNeighborTypes(tiles).every((t) => t !== type);
-  }
+  // hasNoNeighborOfType(type: TileType, tiles: Tile[]) {
+  //   return this.getNeighborTypes(tiles).every((t) => t !== type);
+  // }
 
   hasExploredNeighbor(tiles: Tile[]) {
     return this.getNeighbors(tiles).some((t) => t.explored);
@@ -262,5 +268,9 @@ export class Tile {
 
   hasUnexploredNeighbor(tiles: Tile[]) {
     return this.getNeighbors(tiles).some((t) => !t.explored);
+  }
+
+  has({ row, col }: { row: number; col: number }) {
+    return this.row === row && this.col === col;
   }
 }

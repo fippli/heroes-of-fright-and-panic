@@ -1,6 +1,4 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Cursor } from "../core/Cursor";
-import { Tile } from "../core/Tile";
 import { Action, State } from "../state";
 
 const render = ({
@@ -21,31 +19,23 @@ const render = ({
   const ctx = canvas?.getContext("2d");
 
   if (ctx != null) {
-    ctx.clearRect(
-      -translationX,
-      -translationY,
-      ctx.canvas.width,
-      ctx.canvas.height
-    );
+    ctx.clearRect(0, 0,      ctx.canvas.width,      ctx.canvas.height );
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.translate(translationX, translationY);
 
-    state.tiles.forEach((tile: Tile) => {
-      tile.render(ctx, state, mouseX - translationX, mouseY - translationY);
-    });
+    state.board.render(ctx);
 
     // state.buildings.forEach((building: House) => {
     //   building.render(ctx, mouseX - translationX, mouseY - translationY);
     // });
 
-    state.player.render(ctx);
+    // state.player.render(ctx);
 
-    new Cursor().render(
-      ctx,
-      mouseX - translationX,
-      mouseY - translationY,
-      state
-    );
+    // new Cursor().render(
+    //   ctx,
+    //   mouseX - translationX,
+    //   mouseY - translationY,
+    //   state
+    // );
   }
 };
 
