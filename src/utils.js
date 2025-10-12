@@ -37,7 +37,5 @@ export const moveTowardsCenter = (state, tileIndex) => {
     tileIndex
   ).filter(({ type }) => type === "grass");
 
-  console.log("surroundingGrassTiles", surroundingGrassTiles);
-
   const centerIndex = Math.floor(state.size / 2) + 1;
 };
