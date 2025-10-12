@@ -1,3 +1,4 @@
+import { Board } from "../core/Board";
 import { House } from "../core/House";
 import { Player } from "../core/Player";
 import { Tile } from "../core/Tile";
@@ -17,19 +18,21 @@ const createBoard = (columns: number) => {
 
 export const initialState = {
   mapPosition: {
-    // x: -(SIZE * Hexagon.width) / 2,
-    // y: -(SIZE * Hexagon.height) / 2,
+
     x: 0,
     y: 0,
   },
-  tiles: createBoard(SIZE),
-  player: new Player({ row: Math.floor(SIZE / 2), col: Math.floor(SIZE / 2) }),
+  
+
   time: 8,
+  
   contextMenu: null,
-  buildings: [],
+  
   resources: {
     wood: 0,
   },
+
+  board: new Board({ tiles: createBoard(SIZE), landscapes: [], buildings: [], pieces: [], player: new Player({ row: Math.floor(SIZE / 2), col: Math.floor(SIZE / 2) }) }),
 };
 
 export type State = typeof initialState;
