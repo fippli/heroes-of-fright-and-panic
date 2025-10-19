@@ -33,7 +33,7 @@ export class TileImage {
       x - this.width / 2,
       y - this.height / 2,
       this.width,
-      this.height
+      this.height,
     );
   }
 }

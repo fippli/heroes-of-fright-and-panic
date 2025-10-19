@@ -34,7 +34,7 @@ export const moveTowardsCenter = (state, tileIndex) => {
   // Find the surrounding tile that is closest to the center and grass
   const surroundingGrassTiles = findSurroundingTiles(
     state.rows,
-    tileIndex
+    tileIndex,
   ).filter(({ type }) => type === "grass");
 
   const centerIndex = Math.floor(state.size / 2) + 1;

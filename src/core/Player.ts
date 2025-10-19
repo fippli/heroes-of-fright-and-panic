@@ -1,5 +1,6 @@
 import playerSrc from "../assets/player.png";
 import { Hexagon } from "./Hexagon";
+import { Landscape, LandscapeType } from "./Landscape";
 import { Tile } from "./Tile";
 import { TileImage } from "./TileImage";
 
@@ -8,23 +9,26 @@ const playerImage = new TileImage(playerSrc, Hexagon.height, Hexagon.height);
 export class Player {
   row: number;
   col: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  image: TileImage;
+  inventory: string[] = ["axe"];
+  wood: number = 0;
+  stone: number = 0;
+  gold: number = 0;
+  currentFood: number = 0;
+  maxFood: number = 0;
+  currentHealth: number = 1;
+  maxHealth: number = 1;
 
   constructor({ row, col }: { row: number; col: number }) {
     this.row = row;
     this.col = col;
-    this.x = Hexagon.x(row, col);
-    this.y = Hexagon.y(row);
   }
 
   render(ctx: CanvasRenderingContext2D) {
     ctx.save();
-    playerImage.render(ctx, this.x, this.y);
-    Hexagon.debug(ctx, this.x, this.y);
+    const x = Hexagon.x(this.row, this.col);
+    const y = Hexagon.y(this.row);
+    playerImage.render(ctx, x, y);
+
     ctx.restore();
   }
 
@@ -35,7 +39,7 @@ export class Player {
       | "north-east"
       | "north-west"
       | "south-east"
-      | "south-west"
+      | "south-west",
   ) {
     switch (direction) {
       case "east": {
@@ -72,14 +76,55 @@ export class Player {
   }
 
   place(tile: Tile) {
+    if (tile.landscape?.type === LandscapeType.mountain) {
+      return;
+    }
+
+    if (tile.landscape?.type === LandscapeType.water) {
+      if (this.inventory.includes("boat")) {
+        this.row = tile.row;
+        this.col = tile.col;
+        return;
+      } else {
+        return;
+      }
+    }
+
+    if (tile.landscape?.type === LandscapeType.tree) {
+      if (this.inventory.includes("axe")) {
+        tile.landscape = Landscape.grass();
+        this.wood = this.wood + 1;
+        // this.row = tile.row;
+        // this.col = tile.col;
+        return;
+      } else {
+        return;
+      }
+    }
     // const walkableTiles = [TileType.GRASS, TileType.SAND];
 
-    return new Player({ ...this, row: tile.row, col: tile.col });
+    // return new Player({ ...this, row: tile.row, col: tile.col });
+    if (
+      [LandscapeType.grass, LandscapeType.sand].includes(tile.landscape?.type)
+    ) {
+      this.row = tile.row;
+      this.col = tile.col;
+    }
   }
 
-  tile(tiles: Tile[]) {
-    return tiles.find((tile: Tile) => {
-      return tile.isThis(this);
-    });
+  interact(tile: Tile) {}
+
+  canAfford(cost: { wood: number; stone: number; gold: number }) {
+    return (
+      this.wood >= cost.wood &&
+      this.stone >= cost.stone &&
+      this.gold >= cost.gold
+    );
+  }
+
+  pay(cost: { wood: number; stone: number; gold: number }) {
+    this.wood = this.wood - cost.wood;
+    this.stone = this.stone - cost.stone;
+    this.gold = this.gold - cost.gold;
   }
 }

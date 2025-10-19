@@ -1,21 +1,101 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Amarante&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Irish+Grover&display=swap"
       rel="stylesheet"
     />
 
-    <title>Forest Game</title>
+    <title>forest-game</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="app">
+      <div class="grid">
+        <div class="canvas-wrapper">
+          <canvas id="canvas" width="600" height="600"></canvas>
+        </div>
+
+        <div class="menu">
+          <div class="resource-wrapper">
+            <img src="/src/assets/clock.png" alt="time" class="resource-icon" />
+            <div id="time"></div>
+          </div>
+
+          <div id="health">
+            <div class="resource-wrapper">
+              <img
+                src="/src/assets/heart.png"
+                alt="health"
+                class="resource-icon"
+              />
+              <div class="meter">
+                <div id="health-bar-fill"></div>
+              </div>
+            </div>
+          </div>
+        
+
+        <div id="resources">
+          <div class="resource-wrapper">
+            <img src="/src/assets/food.png" alt="food" class="resource-icon" />
+            <div id="food"></div>
+          </div>
+
+          <div class="resource-wrapper">
+            <img src="/src/assets/wood.png" alt="wood" class="resource-icon" />
+            <div id="wood"></div>
+          </div>
+
+          <div class="resource-wrapper">
+            <img
+              src="/src/assets/stone.png"
+              alt="stone"
+              class="resource-icon"
+            />
+            <div id="stone"></div>
+          </div>
+
+          <div class="resource-wrapper">
+            <img src="/src/assets/gold.png" alt="gold" class="resource-icon" />
+
+            <div id="gold"></div>
+          </div>
+        </div>
+
+        <div id="buildings">
+          <div class="resource-wrapper">
+            <img
+              src="/src/assets/house.png"
+              alt="buildings"
+              class="resource-icon"
+            />
+            <div id="houses"></div>
+          </div>
+
+          <div class="resource-wrapper">
+            <img
+              src="/src/assets/tower.png"
+              alt="buildings"
+              class="resource-icon"
+            />
+            <div id="towers"></div>
+          </div>
+          <div class="resource-wrapper">
+            <img
+              src="/src/assets/castle.png"
+              alt="buildings"
+              class="resource-icon"
+            />
+            <div id="castles"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

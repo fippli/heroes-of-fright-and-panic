@@ -31,13 +31,11 @@ export class Cursor {
     ctx: CanvasRenderingContext2D,
     mouseX: number,
     mouseY: number,
-    state: State
+    state: State,
   ) {
     ctx.save();
 
     const tile = state.tiles.find((tile) => tile.isMouseOver(mouseX, mouseY));
-
-    
 
     if (tile) {
       switch (tile.type) {
