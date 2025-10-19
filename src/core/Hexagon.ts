@@ -14,23 +14,25 @@ export const layerCount = (n: number) => {
 
 export class Hexagon {
   static radius: number = 2 * 3 * 5;
-  static borderWidth: number = 4;
-  static width =
-    2 * (this.radius - remainingDistanceToRadius(this.radius)) +
-    this.borderWidth;
-  static height = 2 * this.radius + this.borderWidth;
+
+  static borderWidth: number = 2;
+
+  static width = 2 * (this.radius - remainingDistanceToRadius(this.radius));
+
+  static height = 2 * this.radius;
+
   static innerRadius: number = this.width / 2 - this.borderWidth;
 
   static render(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
-    hover: boolean = false
+    color: string = "#ffffff11",
   ) {
     ctx.save();
     ctx.beginPath();
 
-    ctx.strokeStyle = hover ? "orange" : "green";
+    ctx.strokeStyle = color;
     ctx.lineWidth = this.borderWidth;
 
     // ctx.moveTo(x, y);
@@ -43,10 +45,11 @@ export class Hexagon {
     }
 
     ctx.closePath();
+
     ctx.stroke();
     ctx.restore();
 
-    Hexagon.debug(ctx, x, y);
+    // Hexagon.debug(ctx, x, y);
   }
 
   static debug(ctx: CanvasRenderingContext2D, x: number, y: number) {
@@ -97,7 +100,7 @@ export class Hexagon {
       x - Hexagon.width / 2,
       y - Hexagon.height / 2,
       Hexagon.width,
-      Hexagon.height
+      Hexagon.height,
     );
     ctx.stroke();
 
@@ -148,7 +151,7 @@ export class Hexagon {
     mx: number,
     my: number,
     cx: number,
-    cy: number
+    cy: number,
   ): boolean {
     const dx = Math.abs(mx - cx);
     const dy = Math.abs(my - cy);
@@ -157,29 +160,26 @@ export class Hexagon {
     if (Math.sqrt(dx * dx + dy * dy) > this.innerRadius) {
       return false;
     } else {
-      console.log(`(${mx}, ${my})`);
       return true;
     }
+  }
 
-    // Fast AABB reject
+  static path(cx: number, cy: number) {
+    const path = new Path2D();
 
-    // if (dx > this.width / 2 || dy > this.radius) {
-    //   return false;
-    // }
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 6;
+      const xOffset = cx + this.radius * Math.cos(angle);
+      const yOffset = cy + this.radius * Math.sin(angle);
+      if (i === 0) {
+        path.moveTo(xOffset, yOffset);
+      } else {
+        path.lineTo(xOffset, yOffset);
+      }
+    }
 
-    // // Corner cut test
-    // return Math.sqrt(3) * dx + dy <= Math.sqrt(3) * this.radius;
+    path.closePath();
+
+    return path;
   }
 }
-
-// function isPointInHexPointy(mx: number, my: number, cx: number, cy: number, size: number): boolean {
-//   const dx = Math.abs(mx - cx);
-//   const dy = Math.abs(my - cy);
-
-//   // Fast AABB reject
-//   const w = Math.sqrt(3) * 0.5 * size; // half width
-//   if (dx > w || dy > size) return false;
-
-//   // Corner cut test
-//   return (Math.sqrt(3) * dx + dy) <= (Math.sqrt(3) * size);
-// }
