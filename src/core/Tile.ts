@@ -1,8 +1,8 @@
+import type { Building } from "./Building";
 import { Hexagon } from "./Hexagon";
 
 import { Landscape } from "./Landscape";
-
-const TileLayerCache = new Map<string, HTMLCanvasElement>();
+import type { Piece } from "./Piece";
 
 export type TilePosition = {
   row: number;
@@ -10,24 +10,32 @@ export type TilePosition = {
 };
 
 export class Tile {
-  x: number;
-  y: number;
+  readonly x: number;
+  readonly y: number;
   readonly row: number;
   readonly col: number;
   explored: boolean = false;
   landscape: Landscape | null;
+  building?: Building;
+  piece?: Piece;
 
   constructor({
     row,
     col,
     explored,
     landscape,
+    piece,
+    building,
   }: {
     row: number;
     col: number;
     explored?: boolean;
     landscape: Landscape | null;
+    piece?: Piece;
+    building?: Building;
   }) {
+    this.piece = piece;
+    this.building = building;
     this.x = Hexagon.x(row, col);
     this.y = Hexagon.y(row);
     this.row = row;
@@ -38,9 +46,8 @@ export class Tile {
 
   render(ctx: CanvasRenderingContext2D) {
     ctx.save();
-    const centerX = this.x;
-    const centerY = this.y;
-    ctx.clip(Hexagon.path(centerX, centerY));
+
+    ctx.clip(Hexagon.path(this.x, this.y));
 
     if (this.explored) {
       if (this.landscape) {
@@ -67,13 +74,27 @@ export class Tile {
   }
 
   explore(tiles: Tile[]) {
-    if (!this.explored) {
-      this.explored = true;
-      const neighbors = this.getNeighbors(tiles);
-
-      return this.exploreAs(Landscape.generate(neighbors));
+    if (this.building) {
+      tiles.forEach((tile) => {
+        if (tile.isNeighborTo(this) && !tile.explored) {
+          tile.explored = true;
+          tile.landscape = Landscape.generate(tile.getNeighbors(tiles));
+        }
+      });
     }
-    return this;
+
+    if (this.piece) {
+      tiles.forEach((tile) => {
+        if (tile.isNeighborTo(this) && !tile.explored) {
+          tile.explored = true;
+          tile.landscape = Landscape.generate(tile.getNeighbors(tiles));
+        }
+      });
+    }
+
+    // const neighbors = this.getNeighbors(tiles);
+
+    // return this.exploreAs(Landscape.generate(neighbors));
   }
 
   exploreAs(landscape: Landscape) {
@@ -132,7 +153,9 @@ export class Tile {
     }
   }
 
-  isNeighborTo(position: TilePosition) {
+  isNeighborTo(position: TilePosition | null | undefined) {
+    if (!position) return false;
+
     return (
       this.isEastOf(position) ||
       this.isWestOf(position) ||
@@ -157,5 +180,35 @@ export class Tile {
 
   has(tilePosition: TilePosition) {
     return this.row === tilePosition.row && this.col === tilePosition.col;
+  }
+
+  hasAny(tilePositions: TilePosition[]) {
+    return tilePositions.some((tilePosition) => this.has(tilePosition));
+  }
+
+  renderOutline(ctx: CanvasRenderingContext2D, tiles: Tile[]) {
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    this.getNeighbors(tiles).forEach((tile) => {
+      Hexagon.render(ctx, tile.x, tile.y, "#00ffff");
+    });
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  build(building: Building) {
+    this.building = building;
+  }
+
+  place(piece: Piece) {
+    this.piece = piece;
+  }
+
+  unplace() {
+    this.piece = undefined;
+  }
+
+  unbuild() {
+    this.building = undefined;
   }
 }

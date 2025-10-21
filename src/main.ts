@@ -1,6 +1,6 @@
 import { Canvas } from "./canvas";
 import { Board } from "./core/Board";
-import { BuildingType, type Building } from "./core/Building";
+import { BuildingType, type Building, type ResourceMap } from "./core/Building";
 import { Landscape } from "./core/Landscape";
 import { Piece } from "./core/Piece";
 import { Player } from "./core/Player";
@@ -13,10 +13,6 @@ const stoneElement = document.getElementById("stone") as HTMLDivElement;
 const goldElement = document.getElementById("gold") as HTMLDivElement;
 const foodElement = document.getElementById("food") as HTMLDivElement;
 
-const healthBarFillElement = document.getElementById(
-  "health-bar-fill",
-) as HTMLDivElement;
-
 const housesElement = document.getElementById("houses") as HTMLDivElement;
 const towersElement = document.getElementById("towers") as HTMLDivElement;
 const castlesElement = document.getElementById("castles") as HTMLDivElement;
@@ -25,18 +21,11 @@ const setTime = (time: number) => {
   timeElement.textContent = `${time % 24}:00`;
 };
 
-const setHealth = (currentHealth: number, maxHealth: number) => {
-  healthBarFillElement.style.width = `${(currentHealth / maxHealth) * 100}%`;
-};
-
-const setFood = (currentFood: number) => {
-  foodElement.textContent = `${currentFood}`;
-};
-
-const setResources = (wood: number, stone: number, gold: number) => {
-  woodElement.textContent = wood.toString();
-  stoneElement.textContent = stone.toString();
-  goldElement.textContent = gold.toString();
+const setResources = (resources: ResourceMap = {}) => {
+  woodElement.textContent = resources.wood?.toString() ?? "0";
+  stoneElement.textContent = resources.stone?.toString() ?? "0";
+  goldElement.textContent = resources.gold?.toString() ?? "0";
+  foodElement.textContent = resources.food?.toString() ?? "0";
 };
 
 const setBuildings = (buildings: Building[]) => {
@@ -74,6 +63,7 @@ const createBoard = (columns: number) => {
         row,
         landscape: Landscape.grass(),
         explored: true,
+        piece: Piece.peasant({ row: startRow, col: startCol }),
       });
     } else {
       return new Tile({
@@ -95,8 +85,8 @@ const tiles = createBoard(SIZE);
 
 const board = new Board({
   tiles,
-  buildings: [],
-  pieces: [Piece.peasant({ row: startRow, col: startCol })],
+  // buildings: [],
+  // pieces: [Piece.peasant({ row: startRow, col: startCol })],
   player: new Player({ row: startRow, col: startCol }),
 });
 
@@ -120,10 +110,12 @@ const loop = () => {
   canvas.reset();
 
   setTime(board.time);
-  setHealth(board.player.currentHealth, board.player.maxHealth);
-  setFood(board.player.currentFood, board.player.maxFood);
-  setResources(board.player.wood, board.player.stone, board.player.gold);
-  setBuildings(board.buildings);
+  setResources(board.player.resources);
+  setBuildings(
+    board.tiles
+      .filter((tile) => tile.building)
+      .flatMap((tile) => tile?.building ?? []),
+  );
 
   requestAnimationFrame(loop);
 };
@@ -153,6 +145,11 @@ canvas.keydown({
     }),
   b: () =>
     board.build(BuildingType.boat, {
+      x: canvas.mousePosition.x,
+      y: canvas.mousePosition.y,
+    }),
+  f: () =>
+    board.build(BuildingType.farm, {
       x: canvas.mousePosition.x,
       y: canvas.mousePosition.y,
     }),

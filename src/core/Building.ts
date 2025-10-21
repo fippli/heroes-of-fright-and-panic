@@ -1,7 +1,8 @@
+import boatSrc from "../assets/boat.png";
 import castleSrc from "../assets/castle.png";
+import farmSrc from "../assets/farm.png";
 import houseSrc from "../assets/house.png";
 import towerSrc from "../assets/tower.png";
-import boatSrc from "../assets/boat.png";
 import { GameImage } from "./GameImage";
 import { Hexagon } from "./Hexagon";
 import { Piece } from "./Piece";
@@ -33,47 +34,56 @@ const boatImage = new GameImage({
   height: tileWidth,
 });
 
+const farmImage = new GameImage({
+  src: farmSrc,
+  width: tileWidth,
+  height: tileWidth,
+});
+
 export enum BuildingType {
   house = "house",
   castle = "castle",
   tower = "tower",
   boat = "boat",
+  farm = "farm",
 }
+
+export type ResourceMap =
+  | {
+      wood?: number | undefined;
+      stone?: number | undefined;
+      gold?: number | undefined;
+      food?: number | undefined;
+      time?: number | undefined;
+    }
+  | undefined;
 
 export class Building {
   readonly image: GameImage;
   readonly type: BuildingType;
-  readonly cost: {
-    wood: number;
-    stone: number;
-    gold: number;
-  };
-  readonly row: number;
-  readonly col: number;
-  readonly foodProduction: number;
+  readonly cost: ResourceMap;
+  readonly production: ResourceMap;
+  populated: boolean = false;
+  walkable: boolean = false;
 
   constructor({
     type,
-    row,
-    col,
-    foodProduction,
+
+    production,
     cost,
+    walkable,
   }: {
     type: BuildingType;
-    row: number;
-    col: number;
-    foodProduction: number;
-    cost: {
-      wood: number;
-      stone: number;
-      gold: number;
-    };
+
+    walkable: boolean;
+    production: ResourceMap;
+    cost: ResourceMap;
   }) {
-    this.row = row;
-    this.col = col;
+    this.walkable = walkable;
+
     this.type = type;
     this.cost = cost;
-    this.foodProduction = foodProduction;
+    this.production = production;
     this.image = (() => {
       switch (type) {
         case BuildingType.house: {
@@ -88,6 +98,9 @@ export class Building {
         case BuildingType.boat: {
           return boatImage;
         }
+        case BuildingType.farm: {
+          return farmImage;
+        }
         default: {
           return houseImage;
         }
@@ -95,73 +108,81 @@ export class Building {
     })();
   }
 
-  render(ctx: CanvasRenderingContext2D) {
+  render(ctx: CanvasRenderingContext2D, position: TilePosition) {
     ctx.save();
 
-    const x = Hexagon.x(this.row, this.col) - Hexagon.width / 2;
-    const y = Hexagon.y(this.row) - Hexagon.height / 2;
-    this.image.render(ctx, x, y);
+    const x = Hexagon.x(position.row, position.col);
+    const y = Hexagon.y(position.row);
+
+    ctx.clip(Hexagon.path(x, y));
+
+    this.image.render(ctx, x - Hexagon.width / 2, y - Hexagon.height / 2);
 
     ctx.restore();
   }
 
-  static house({ row, col }: { row: number; col: number }) {
+  static house() {
     return new Building({
       type: BuildingType.house,
-      row,
-      col,
-      foodProduction: 1,
-      cost: { wood: 1, stone: 0, gold: 0 },
+      production: { food: 1 },
+      cost: { wood: 0, stone: 0, gold: 0 },
+      walkable: true,
     });
   }
 
-  static castle({ row, col }: { row: number; col: number }) {
+  static castle() {
     return new Building({
       type: BuildingType.castle,
-      row,
-      col,
-      foodProduction: 10,
-      cost: { wood: 10, stone: 10, gold: 10 },
+      production: { food: 0 },
+      cost: { wood: 0, stone: 0, gold: 0 },
+      walkable: true,
     });
   }
 
-  static tower({ row, col }: { row: number; col: number }) {
+  static farm() {
+    return new Building({
+      type: BuildingType.farm,
+      production: { food: 1 },
+      cost: { wood: 0, stone: 0, gold: 0 },
+      walkable: true,
+    });
+  }
+
+  static tower() {
     return new Building({
       type: BuildingType.tower,
-      row,
-      col,
-      foodProduction: 0,
-      cost: { wood: 1, stone: 5, gold: 0 },
+      production: { food: 0 },
+      cost: { wood: 0, stone: 0, gold: 0 },
+      walkable: true,
     });
   }
 
-  static boat({ row, col }: { row: number; col: number }) {
+  static boat() {
     return new Building({
       type: BuildingType.boat,
-      row,
-      col,
-      foodProduction: 1,
-      cost: { wood: 10, stone: 0, gold: 0 },
+      production: { food: 1 },
+      cost: { wood: 0, stone: 0, gold: 0 },
+      walkable: true,
     });
   }
 
-  static build(
-    buildingType: BuildingType,
-    { row, col }: { row: number; col: number },
-  ) {
+  static build(buildingType: BuildingType) {
     switch (buildingType) {
       case BuildingType.house: {
-        return Building.house({ row, col });
+        return Building.house();
       }
       case BuildingType.tower: {
-        return Building.tower({ row, col });
+        return Building.tower();
       }
 
       case BuildingType.castle: {
-        return Building.castle({ row, col });
+        return Building.castle();
       }
       case BuildingType.boat: {
-        return Building.boat({ row, col });
+        return Building.boat();
+      }
+      case BuildingType.farm: {
+        return Building.farm();
       }
       default: {
         throw new Error(`Invalid building type: ${buildingType}`);

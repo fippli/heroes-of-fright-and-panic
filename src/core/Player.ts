@@ -1,4 +1,5 @@
 import playerSrc from "../assets/player.png";
+import type { ResourceMap } from "./Building";
 import { Hexagon } from "./Hexagon";
 import { Landscape, LandscapeType } from "./Landscape";
 import { Tile } from "./Tile";
@@ -10,13 +11,12 @@ export class Player {
   row: number;
   col: number;
   inventory: string[] = ["axe"];
-  wood: number = 0;
-  stone: number = 0;
-  gold: number = 0;
-  currentFood: number = 0;
-  maxFood: number = 0;
-  currentHealth: number = 1;
-  maxHealth: number = 1;
+  resources: ResourceMap = {
+    wood: 0,
+    stone: 0,
+    gold: 0,
+    food: 0,
+  };
 
   constructor({ row, col }: { row: number; col: number }) {
     this.row = row;
@@ -114,17 +114,19 @@ export class Player {
 
   interact(tile: Tile) {}
 
-  canAfford(cost: { wood: number; stone: number; gold: number }) {
-    return (
-      this.wood >= cost.wood &&
-      this.stone >= cost.stone &&
-      this.gold >= cost.gold
+  canAfford(cost: ResourceMap = {}) {
+    return Object.keys(cost).every(
+      (key) =>
+        this.resources[key as keyof ResourceMap] >=
+        cost[key as keyof ResourceMap],
     );
   }
 
-  pay(cost: { wood: number; stone: number; gold: number }) {
-    this.wood = this.wood - cost.wood;
-    this.stone = this.stone - cost.stone;
-    this.gold = this.gold - cost.gold;
+  pay(cost: ResourceMap = {}) {
+    Object.keys(cost).forEach((key) => {
+      this.resources[key as keyof ResourceMap] =
+        this.resources[key as keyof ResourceMap] -
+        cost[key as keyof ResourceMap];
+    });
   }
 }

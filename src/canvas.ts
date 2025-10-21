@@ -28,7 +28,6 @@ export class Canvas {
     this.canvas.focus();
 
     this.canvas.addEventListener("keydown", (event) => {
-      console.log("hello", event.key);
       const speed = 25;
       switch (event.key) {
         case "ArrowLeft": {
@@ -55,7 +54,6 @@ export class Canvas {
   }
 
   translate(x: number, y: number) {
-    console.log("translate", x, y);
     this.translation = { x, y };
   }
 
