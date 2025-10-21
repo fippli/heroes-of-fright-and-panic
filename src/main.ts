@@ -1,6 +1,6 @@
+import { Canvas } from "./canvas";
 import { Board } from "./core/Board";
 import { BuildingType, type Building } from "./core/Building";
-import { Hexagon } from "./core/Hexagon";
 import { Landscape } from "./core/Landscape";
 import { Piece } from "./core/Piece";
 import { Player } from "./core/Player";
@@ -54,27 +54,13 @@ const setBuildings = (buildings: Building[]) => {
   castlesElement.textContent = castles.toString();
 };
 
-const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-const ctx = canvas.getContext("2d");
-
-const canvasWrapper = document.querySelector(
-  ".canvas-wrapper",
-) as HTMLDivElement;
-
-canvas.width = canvasWrapper.clientWidth;
-canvas.height = canvasWrapper.clientHeight;
-
-let mousePosition = { x: Infinity, y: Infinity };
+const canvas = new Canvas();
 
 const SIZE = 33;
 const startRow = Math.floor(SIZE / 2);
 const startCol = Math.floor(SIZE / 2);
 
 // translate the center of the canvas to the center of the board
-let translation = {
-  x: -Hexagon.x(startRow, startCol) + canvasWrapper.clientWidth / 2,
-  y: -Hexagon.y(startRow) + canvasWrapper.clientHeight / 2,
-};
 
 const createBoard = (columns: number) => {
   const numberOfTiles = columns * columns;
@@ -117,26 +103,21 @@ const board = new Board({
 const loop = () => {
   board.calculateNextState();
 
-  if (!ctx) return;
+  if (!canvas.ctx) return;
 
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  canvas.init();
 
-  ctx.translate(translation.x, translation.y);
-
-  board.render(ctx);
+  board.render(canvas.ctx);
 
   const hoveredTile = board.tiles.find((tile) => {
-    return tile.isMouseOver(
-      mousePosition.x - translation.x,
-      mousePosition.y - translation.y,
-    );
+    return tile.isMouseOver(canvas.mousePosition.x, canvas.mousePosition.y);
   });
 
   if (hoveredTile) {
-    hoveredTile.renderHovered(ctx);
+    hoveredTile.renderHovered(canvas.ctx);
   }
 
-  ctx.resetTransform();
+  canvas.reset();
 
   setTime(board.time);
   setHealth(board.player.currentHealth, board.player.maxHealth);
@@ -147,73 +128,34 @@ const loop = () => {
   requestAnimationFrame(loop);
 };
 
-canvas.addEventListener("mousemove", (event) => {
-  mousePosition = {
-    x: event.clientX,
-    y: event.clientY,
-  };
-});
-
-window.addEventListener("keydown", (event) => {
-  event.preventDefault();
-
-  const speed = 25;
-  switch (event.key) {
-    case "ArrowLeft": {
-      return (translation = { ...translation, x: translation.x + speed });
-    }
-    case "ArrowRight": {
-      return (translation = { ...translation, x: translation.x - speed });
-    }
-    case "ArrowUp": {
-      return (translation = { ...translation, y: translation.y + speed });
-    }
-    case "ArrowDown": {
-      return (translation = { ...translation, y: translation.y - speed });
-    }
-
-    case "h": {
-      return board.build(BuildingType.house, {
-        x: mousePosition.x - translation.x,
-        y: mousePosition.y - translation.y,
-      });
-    }
-    case "t": {
-      return board.build(BuildingType.tower, {
-        x: mousePosition.x - translation.x,
-        y: mousePosition.y - translation.y,
-      });
-    }
-    case "c": {
-      return board.build(BuildingType.castle, {
-        x: mousePosition.x - translation.x,
-        y: mousePosition.y - translation.y,
-      });
-    }
-
-    case "b": {
-      return board.build(BuildingType.boat, {
-        x: mousePosition.x - translation.x,
-        y: mousePosition.y - translation.y,
-      });
-    }
-
-    default: {
-      return;
-    }
-  }
-});
-
-window.addEventListener("onKeyUp", (event) => {
-  event.preventDefault();
-});
-
-window.addEventListener("click", (event) => {
-  event.preventDefault();
+canvas.click(({ x, y }: { x: number; y: number }) => {
   board.click({
-    x: event.clientX - translation.x,
-    y: event.clientY - translation.y,
+    x,
+    y,
   });
+});
+
+canvas.keydown({
+  h: () =>
+    board.build(BuildingType.house, {
+      x: canvas.mousePosition.x,
+      y: canvas.mousePosition.y,
+    }),
+  t: () =>
+    board.build(BuildingType.tower, {
+      x: canvas.mousePosition.x,
+      y: canvas.mousePosition.y,
+    }),
+  c: () =>
+    board.build(BuildingType.castle, {
+      x: canvas.mousePosition.x,
+      y: canvas.mousePosition.y,
+    }),
+  b: () =>
+    board.build(BuildingType.boat, {
+      x: canvas.mousePosition.x,
+      y: canvas.mousePosition.y,
+    }),
 });
 
 loop();
