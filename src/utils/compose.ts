@@ -1,4 +1,4 @@
 export const compose =
-  (...fns: Function[]) =>
-  (x: any) =>
-    fns.reduce((acc, fn) => fn(acc), x);
+  <T>(...fns: ((x: T) => T)[]) =>
+  (x: T) =>
+    fns.reduce((acc, fn) => fn(acc), x as T);

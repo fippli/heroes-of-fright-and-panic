@@ -156,6 +156,7 @@ export class Landscape {
     return new Landscape({
       type: LandscapeType.mountain,
       walkable: false,
+      lootDrop: new ResourceMap({ stone: 1 }),
     });
   }
 
@@ -169,6 +170,9 @@ export class Landscape {
 
   transform(): Landscape {
     if (this.type === LandscapeType.tree) {
+      return Landscape.grass();
+    }
+    if (this.type === LandscapeType.mountain) {
       return Landscape.grass();
     }
     return this;

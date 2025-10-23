@@ -134,7 +134,7 @@ export class Building {
       production: new ResourceMap({ food: 0 }),
       cost: new ResourceMap({ wood: 10, stone: 10 }),
       walkable: true,
-      viewRange: 2,
+      viewRange: 3,
       owner,
     });
   }
@@ -155,7 +155,7 @@ export class Building {
       production: new ResourceMap({ food: 0 }),
       cost: new ResourceMap({ wood: 1, stone: 3 }),
       walkable: true,
-      viewRange: 3,
+      viewRange: 4,
       owner,
     });
   }
@@ -170,7 +170,33 @@ export class Building {
     });
   }
 
+  static price(buildingType: BuildingType): ResourceMap {
+    switch (buildingType) {
+      case BuildingType.house: {
+        return new ResourceMap({});
+      }
+      case BuildingType.tower: {
+        return new ResourceMap({});
+      }
+      case BuildingType.castle: {
+        return new ResourceMap({});
+      }
+      case BuildingType.boat: {
+        return new ResourceMap({});
+      }
+      default: {
+        return new ResourceMap({});
+      }
+    }
+  }
+
   static build(buildingType: BuildingType, owner: Player) {
+    if (!owner.canAfford(Building.price(buildingType))) {
+      return undefined;
+    }
+
+    owner.pay(Building.price(buildingType));
+
     switch (buildingType) {
       case BuildingType.house: {
         return Building.house(owner);

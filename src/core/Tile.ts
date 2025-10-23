@@ -1,9 +1,10 @@
 import type { Building } from "./Building";
 import { Hexagon } from "./Hexagon";
 
-import { Landscape } from "./Landscape";
+import { Landscape, LandscapeType } from "./Landscape";
 import type { Piece } from "./Piece";
 import type { Player } from "./Player";
+import { ResourceMap } from "./ResourceMap";
 
 export type TilePosition = {
   row: number;
@@ -31,7 +32,7 @@ export class Tile {
     row: number;
     col: number;
     explored?: boolean;
-    landscape: Landscape | null;
+    landscape?: Landscape;
     piece?: Piece;
     building?: Building;
   }) {
@@ -42,7 +43,7 @@ export class Tile {
     this.row = row;
     this.col = col;
     this.explored = explored ?? false;
-    this.landscape = landscape;
+    this.landscape = landscape ?? null;
   }
 
   render(ctx: CanvasRenderingContext2D) {
@@ -73,8 +74,8 @@ export class Tile {
       this.piece?.viewRange ?? 0,
     );
     this.getTilesInRange(tiles, viewRange).forEach((tile) => {
-      Hexagon.renderArea(ctx, tile.x, tile.y, "#00ffff22");
-      Hexagon.render(ctx, tile.x, tile.y, "#00ffff");
+      // Hexagon.renderArea(ctx, tile.x, tile.y, "#00ffff11");
+      // Hexagon.render(ctx, tile.x, tile.y, "#00ffff44");
     });
     ctx.restore();
   }
@@ -235,7 +236,9 @@ export class Tile {
   }
 
   build(building: Building) {
-    this.building = building;
+    if (this.landscape?.type === LandscapeType.grass) {
+      this.building = building;
+    }
   }
 
   place(piece: Piece) {
@@ -256,5 +259,38 @@ export class Tile {
 
   distance(compareTile: Tile) {
     return Math.abs(this.row - compareTile.row + (this.col - compareTile.col));
+  }
+
+  distanceTo(compareTile: Tile) {
+    return Math.abs(this.row - compareTile.row + (this.col - compareTile.col));
+  }
+
+  inRangeOf(compareTile: Tile) {
+    return this.distanceTo(compareTile) <= this.getMaxViewRange();
+  }
+
+  getMaxViewRange() {
+    return Math.max(this.building?.viewRange ?? 0, this.piece?.viewRange ?? 0);
+  }
+
+  canWalkOn(tile: Tile) {
+    if (!tile.landscape) return false;
+    return (
+      this.piece?.walkableLandscape.includes(tile.landscape?.type) ?? false
+    );
+  }
+
+  canLoot(tile: Tile) {
+    if (!tile.landscape) return false;
+    if (!tile.landscape.lootDrop) return false;
+    return (
+      this.piece?.lootableLandscape.includes(tile.landscape?.type) ?? false
+    );
+  }
+
+  loot() {
+    if (!this.landscape)
+      return { lootDrop: new ResourceMap({}), nextLandscape: this.landscape };
+    return this.landscape.loot();
   }
 }

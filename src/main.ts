@@ -1,14 +1,15 @@
 import { Canvas } from "./canvas";
 import { Board } from "./core/Board";
 import { BuildingType } from "./core/Building";
+
 import "./style.css";
 import type { Coordinate } from "./types/coordinate";
 
 const canvas = new Canvas();
-const board = new Board(21);
+const board = new Board(55);
 
 const loop = () => {
-  board.calculateNextState();
+  board.calculateNextState(canvas);
 
   if (!canvas.ctx) return;
 
@@ -29,9 +30,10 @@ canvas.keydown({
   t: (position) => board.build(BuildingType.tower, position),
   c: (position) => board.build(BuildingType.castle, position),
   b: (position) => board.build(BuildingType.boat, position),
-  f: (position) => board.build(BuildingType.farm, position),
-  p: (position) => board.placePeasant(position),
+  f: (position) => board.buildFarm(position),
+  p: (position) => board.createPeasant(position),
   u: (position) => board.upgrade(position),
+  x: (position) => board.attack(position),
 });
 
 loop();

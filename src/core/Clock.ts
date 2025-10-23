@@ -2,6 +2,8 @@ const timeElement = document.getElementById("time") as HTMLDivElement;
 
 export class Clock {
   private time: number;
+  hasDawned: boolean = false;
+  hasDusked: boolean = false;
 
   constructor() {
     this.time = 6;
@@ -9,6 +11,24 @@ export class Clock {
 
   tick() {
     this.time = this.time + 1;
+  }
+
+  dusk(fn: () => void) {
+    if (!this.hasDusked && this.isNight()) {
+      console.log("Dusk");
+      fn();
+      this.hasDusked = true;
+      this.hasDawned = false;
+    }
+  }
+
+  dawn(fn: () => void) {
+    if (!this.hasDawned && this.isDay()) {
+      console.log("Dawn");
+      fn();
+      this.hasDawned = true;
+      this.hasDusked = false;
+    }
   }
 
   isNight() {

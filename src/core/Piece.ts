@@ -1,8 +1,9 @@
 import { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
+import { LandscapeType } from "./Landscape";
 import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
-import type { TilePosition } from "./Tile";
+import type { Tile, TilePosition } from "./Tile";
 
 export enum PieceType {
   peasant = "peasant",
@@ -18,22 +19,30 @@ export class Piece {
   boat: boolean = false;
   viewRange: number = 1;
   upgradeCost: ResourceMap;
+  readonly walkableLandscape: LandscapeType[];
+  readonly lootableLandscape: LandscapeType[];
 
   constructor({
     type,
     viewRange,
     owner,
     upgradeCost,
+    walkableLandscape,
+    lootableLandscape,
   }: {
     type: PieceType;
     viewRange?: number;
     owner: Player;
     upgradeCost: ResourceMap;
+    walkableLandscape: LandscapeType[];
+    lootableLandscape?: LandscapeType[];
   }) {
     this.type = type;
     this.viewRange = viewRange ?? 1;
     this.owner = owner;
     this.upgradeCost = upgradeCost;
+    this.walkableLandscape = walkableLandscape;
+    this.lootableLandscape = lootableLandscape ?? [];
   }
 
   render(ctx: CanvasRenderingContext2D, position: TilePosition) {
@@ -50,6 +59,8 @@ export class Piece {
       viewRange: 1,
       owner,
       upgradeCost: new ResourceMap({ wood: 1 }),
+      walkableLandscape: [LandscapeType.grass, LandscapeType.sand],
+      lootableLandscape: [LandscapeType.tree, LandscapeType.mountain],
     });
   }
 
@@ -58,7 +69,8 @@ export class Piece {
       type: PieceType.soldier,
       owner,
       viewRange: 1,
-      upgradeCost: new ResourceMap({ wood: 2 }),
+      upgradeCost: new ResourceMap({ wood: 0 }),
+      walkableLandscape: [LandscapeType.grass, LandscapeType.sand],
     });
   }
 
@@ -66,17 +78,23 @@ export class Piece {
     return new Piece({
       type: PieceType.knight,
       owner,
-      viewRange: 1,
-      upgradeCost: new ResourceMap({ wood: 3 }),
+      viewRange: 2,
+      upgradeCost: new ResourceMap({ wood: 0 }),
+      walkableLandscape: [LandscapeType.grass, LandscapeType.sand],
     });
   }
 
   static archer(owner: Player) {
     return new Piece({
       type: PieceType.archer,
-      viewRange: 3,
+      viewRange: 2,
       owner,
       upgradeCost: new ResourceMap({ wood: 3 }),
+      walkableLandscape: [
+        LandscapeType.grass,
+        LandscapeType.tree,
+        LandscapeType.sand,
+      ],
     });
   }
 

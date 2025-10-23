@@ -3,12 +3,16 @@ import type { Coordinate } from "../types/coordinate";
 import { compose } from "../utils/compose";
 import { Building, BuildingType } from "./Building";
 import { Clock } from "./Clock";
+import { Dialog } from "./Dialog";
+import { Hexagon } from "./Hexagon";
 import { Landscape } from "./Landscape";
 import { Log } from "./Log";
 import { Piece, PieceType } from "./Piece";
 
 import { Player } from "./Player";
 import { Tile } from "./Tile";
+
+const dialog = new Dialog();
 
 const log = new Log();
 
@@ -34,9 +38,14 @@ export class Board {
       row: Math.floor(size / 6),
       col: Math.floor(size / 6),
     });
+    // const nightPlayerStartTile = this.findTile({
+    //   row: size - Math.floor(size / 6),
+    //   col: size - Math.floor(size / 6),
+    // });
+
     const nightPlayerStartTile = this.findTile({
-      row: size - Math.floor(size / 6),
-      col: size - Math.floor(size / 6),
+      row: Math.floor(size / 6),
+      col: Math.floor(size / 6) + 1,
     });
 
     if (dayPlayerStartTile) {
@@ -56,6 +65,12 @@ export class Board {
 
     if (this.selectedTile) {
       this.selectedTile.renderArea(canvas.ctx, this.tiles);
+      Hexagon.render(
+        canvas.ctx,
+        this.selectedTile.x,
+        this.selectedTile.y,
+        "#00ffff",
+      );
     }
 
     const hoveredTile = this.findTile(canvas.mousePosition);
@@ -75,11 +90,7 @@ export class Board {
       const col = tileNumber % size;
       const row = Math.floor(tileNumber / size);
 
-      return new Tile({
-        col,
-        row,
-        landscape: null,
-      });
+      return new Tile({ col, row });
     }) as Tile[];
 
     const mapTiles = startTiles.reduce((acc, tile) => {
@@ -116,17 +127,30 @@ export class Board {
     this.tiles.filter((tile) => tile.unexplore());
   }
 
-  calculateNextState() {
+  calculateNextState(_canvas: Canvas) {
     this.unExploredTiles();
     this.exploreTiles();
+
+    this.clock.dusk(() => {
+      this.selectedTile = undefined;
+      dialog.open({ title: "Dusk", content: "The sun is setting" });
+      const production = this.nightPlayer.produce(this.tiles);
+      this.nightPlayer.collect(production);
+    });
+
+    this.clock.dawn(() => {
+      this.selectedTile = undefined;
+      dialog.open({ title: "Dawn", content: "The sun is rising" });
+      const production = this.dayPlayer.produce(this.tiles);
+      this.dayPlayer.collect(production);
+    });
+
     if (this.clock.isNight()) {
       this.player = this.nightPlayer;
     } else {
       this.player = this.dayPlayer;
     }
   }
-
-  action() {}
 
   findTile(pos: { x: number; y: number } | { row: number; col: number }) {
     if ("x" in pos && "y" in pos) {
@@ -161,18 +185,15 @@ export class Board {
 
     if (this.selectedTile?.piece) {
       if (clickedTile.isNeighborTo(this.selectedTile)) {
-        if (
-          clickedTile.landscape?.lootDrop &&
-          this.selectedTile.piece.type === PieceType.peasant
-        ) {
-          const { lootDrop, nextLandscape } = clickedTile.landscape.loot();
+        if (this.selectedTile.canLoot(clickedTile)) {
+          const { lootDrop, nextLandscape } = clickedTile.loot();
           this.player.collect(lootDrop);
           clickedTile.landscape = nextLandscape;
           this.clock.tick();
           return;
         }
 
-        if (clickedTile.walkable()) {
+        if (this.selectedTile.canWalkOn(clickedTile)) {
           clickedTile.place(this.selectedTile.piece);
           this.selectedTile.unplace();
           this.selectedTile = clickedTile;
@@ -199,22 +220,44 @@ export class Board {
 
     if (neighborWithPiece) {
       const building = Building.build(buildingType, this.player);
-      if (this.player.canAfford(building.cost)) {
-        this.player.pay(building.cost);
+      if (building) {
         tile.build(building);
-      } else {
-        console.log("Cannot afford building");
+        this.clock.tick();
       }
     }
   }
 
-  placePeasant({ x, y }: Coordinate) {
+  buildFarm({ x, y }: Coordinate) {
+    const tile = this.findTile({ x, y });
+    if (!tile) return;
+
+    const isNeighborToHouse = tile.getNeighbors(this.tiles).some((tile) => {
+      return tile.building?.type === BuildingType.house;
+    });
+
+    if (
+      isNeighborToHouse &&
+      this.selectedTile?.building?.type === BuildingType.house &&
+      this.selectedTile.building.owner === this.player &&
+      this.selectedTile.piece?.type === PieceType.peasant
+    ) {
+      tile.build(Building.farm(this.player));
+      this.clock.tick();
+      return;
+    }
+  }
+
+  createPeasant({ x, y }: Coordinate) {
     const tile = this.findTile({ x, y });
     if (!tile) return;
 
     if (tile.building?.type === BuildingType.house) {
-      tile.place(Piece.peasant(this.player));
-      return;
+      if (this.player.canAfford(Piece.costOfUpgrade(PieceType.peasant))) {
+        this.player.pay(Piece.costOfUpgrade(PieceType.peasant));
+        tile.place(Piece.peasant(this.player));
+      } else {
+        return;
+      }
     }
   }
 
@@ -235,6 +278,17 @@ export class Board {
 
     if (tile.piece) {
       tile.piece = Piece.archer(this.player);
+      return;
+    }
+  }
+
+  attack({ x, y }: { x: number; y: number }) {
+    const tile = this.findTile({ x, y });
+    if (!tile) return;
+
+    // if the piece is in range, attack the tile
+    if (this.selectedTile?.inRangeOf(tile)) {
+      tile.piece = undefined;
       return;
     }
   }
