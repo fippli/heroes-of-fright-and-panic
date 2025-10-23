@@ -52,6 +52,28 @@ export class Hexagon {
     // Hexagon.debug(ctx, x, y);
   }
 
+  static renderArea(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+
+    color: string = "#00ffff",
+  ) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.clip(Hexagon.path(x, y));
+
+    ctx.fillStyle = color;
+
+    ctx.fillRect(
+      x - Hexagon.width / 2,
+      y - Hexagon.height / 2,
+      Hexagon.width,
+      Hexagon.height,
+    );
+    ctx.restore();
+  }
+
   static debug(ctx: CanvasRenderingContext2D, x: number, y: number) {
     ctx.save();
 

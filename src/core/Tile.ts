@@ -46,17 +46,35 @@ export class Tile {
 
   render(ctx: CanvasRenderingContext2D) {
     ctx.save();
-
     ctx.clip(Hexagon.path(this.x, this.y));
 
     if (this.explored) {
       if (this.landscape) {
-        this.landscape.render(ctx, this.x, this.y);
+        this.landscape.render(ctx, this);
+        this.building?.render(ctx, this);
+        this.piece?.render(ctx, this);
       }
     } else {
       Landscape.unexplored(ctx, this.x, this.y);
     }
 
+    ctx.restore();
+  }
+
+  giveLandscape(landscape: Landscape) {
+    return new Tile({ ...this, landscape: landscape });
+  }
+
+  renderArea(ctx: CanvasRenderingContext2D, tiles: Tile[]) {
+    ctx.save();
+    const viewRange = Math.max(
+      this.building?.viewRange ?? 0,
+      this.piece?.viewRange ?? 0,
+    );
+    this.getTilesInRange(tiles, viewRange).forEach((tile) => {
+      Hexagon.renderArea(ctx, tile.x, tile.y, "#00ffff22");
+      Hexagon.render(ctx, tile.x, tile.y, "#00ffff");
+    });
     ctx.restore();
   }
 
@@ -74,27 +92,27 @@ export class Tile {
   }
 
   explore(tiles: Tile[]) {
+    // this.explored = true;
+
     if (this.building) {
-      tiles.forEach((tile) => {
-        if (tile.isNeighborTo(this) && !tile.explored) {
-          tile.explored = true;
-          tile.landscape = Landscape.generate(tile.getNeighbors(tiles));
-        }
-      });
+      this.explored = true;
     }
 
     if (this.piece) {
-      tiles.forEach((tile) => {
-        if (tile.isNeighborTo(this) && !tile.explored) {
-          tile.explored = true;
-          tile.landscape = Landscape.generate(tile.getNeighbors(tiles));
-        }
+      this.explored = true;
+
+      const viewRange = Math.max(
+        this.building?.viewRange ?? 0,
+        this.piece?.viewRange ?? 0,
+      );
+      this.getTilesInRange(tiles, viewRange).forEach((tile) => {
+        tile.explored = true;
       });
     }
+  }
 
-    // const neighbors = this.getNeighbors(tiles);
-
-    // return this.exploreAs(Landscape.generate(neighbors));
+  unexplore() {
+    this.explored = false;
   }
 
   exploreAs(landscape: Landscape) {
@@ -170,6 +188,25 @@ export class Tile {
     return tiles.filter((tile) => tile.isNeighborTo(this));
   }
 
+  getTilesInRange(
+    tiles: Tile[],
+    viewRange: number,
+    layer: number = 1,
+    neighbors: Tile[] = [this],
+  ): Tile[] {
+    if (layer > viewRange) {
+      return neighbors;
+    }
+
+    const nextNeighbors = neighbors.flatMap((neighbor) => {
+      return neighbor.getNeighbors(tiles);
+    });
+
+    return this.getTilesInRange(tiles, viewRange, layer + 1, [
+      ...new Set<Tile>(nextNeighbors),
+    ]);
+  }
+
   hasExploredNeighbor(tiles: Tile[]) {
     return this.getNeighbors(tiles).some((t) => t.explored);
   }
@@ -210,5 +247,13 @@ export class Tile {
 
   unbuild() {
     this.building = undefined;
+  }
+
+  walkable() {
+    return this.building?.walkable || this.landscape?.walkable;
+  }
+
+  distance(compareTile: Tile) {
+    return Math.abs(this.row - compareTile.row + (this.col - compareTile.col));
   }
 }

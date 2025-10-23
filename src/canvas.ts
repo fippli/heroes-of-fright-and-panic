@@ -18,9 +18,11 @@ export class Canvas {
     this.canvas.height = canvasWrapper.clientHeight;
 
     this.canvas.addEventListener("mousemove", (event) => {
+      const distanceFromTop =
+        event.clientY - canvasWrapper.getBoundingClientRect().top;
       this.mousePosition = {
         x: event.clientX - this.translation.x,
-        y: event.clientY - this.translation.y,
+        y: distanceFromTop - this.translation.y,
       };
     });
 
@@ -29,6 +31,7 @@ export class Canvas {
 
     this.canvas.addEventListener("keydown", (event) => {
       const speed = 25;
+
       switch (event.key) {
         case "ArrowLeft": {
           return this.translate(this.translation.x + speed, this.translation.y);

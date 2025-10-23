@@ -6,11 +6,12 @@ import mountainSrc from "../assets/rock.png";
 import sandSrc from "../assets/sand.png";
 import treeSrc from "../assets/tree.png";
 import unesploredSrc from "../assets/unexplored2.png";
-import vegetationSrc from "../assets/vegetation.png";
+
 import waterSrc from "../assets/water.png";
-import woodSrc from "../assets/wood.png";
+
 import { weightedRandom } from "../utils/weightedRandom";
-import type { Tile } from "./Tile";
+import { ResourceMap } from "./ResourceMap";
+import type { Tile, TilePosition } from "./Tile";
 
 const tileWidth = Hexagon.width;
 const tileHeight = Hexagon.height;
@@ -30,11 +31,7 @@ const treeImage = new GameImage({
   width: tileWidth,
   height: tileHeight,
 });
-const vegetationImage = new GameImage({
-  src: vegetationSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
+
 const sandImage = new GameImage({
   src: sandSrc,
   width: tileWidth,
@@ -42,11 +39,6 @@ const sandImage = new GameImage({
 });
 const waterImage = new GameImage({
   src: waterSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
-const woodImage = new GameImage({
-  src: woodSrc,
   width: tileWidth,
   height: tileHeight,
 });
@@ -60,7 +52,6 @@ const mountainImage = new GameImage({
 export enum LandscapeType {
   grass = "grass",
   tree = "tree",
-  vegetation = "vegetation",
   sand = "sand",
   water = "water",
   unexplored = "unexplored",
@@ -68,14 +59,28 @@ export enum LandscapeType {
 }
 
 export class Landscape {
-  readonly type;
+  type: LandscapeType;
+  readonly walkable: boolean;
+  readonly lootDrop?: ResourceMap = undefined;
 
-  constructor({ type }: { type: LandscapeType }) {
+  constructor({
+    type,
+    walkable,
+    lootDrop,
+  }: {
+    type: LandscapeType;
+    walkable: boolean;
+    lootDrop?: ResourceMap;
+  }) {
     this.type = type;
+    this.walkable = walkable;
+    this.lootDrop = lootDrop;
   }
 
-  render(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  render(ctx: CanvasRenderingContext2D, tilePosition: TilePosition) {
     ctx.save();
+    const x = Hexagon.x(tilePosition.row, tilePosition.col);
+    const y = Hexagon.y(tilePosition.row);
     const centerX = x - Hexagon.width / 2;
     const centerY = y - Hexagon.height / 2;
     ctx.translate(centerX, centerY);
@@ -100,9 +105,6 @@ export class Landscape {
       }
       case LandscapeType.tree: {
         return treeImage;
-      }
-      case LandscapeType.vegetation: {
-        return vegetationImage;
       }
       case LandscapeType.sand: {
         return sandImage;
@@ -132,147 +134,191 @@ export class Landscape {
   static grass() {
     return new Landscape({
       type: LandscapeType.grass,
+      walkable: true,
     });
   }
 
   static water() {
     return new Landscape({
       type: LandscapeType.water,
+      walkable: false,
     });
   }
 
   static sand() {
     return new Landscape({
       type: LandscapeType.sand,
+      walkable: true,
     });
   }
 
   static mountain() {
     return new Landscape({
       type: LandscapeType.mountain,
+      walkable: false,
     });
   }
 
   static tree() {
     return new Landscape({
       type: LandscapeType.tree,
+      walkable: false,
+      lootDrop: new ResourceMap({ wood: 1 }),
     });
   }
 
+  transform(): Landscape {
+    if (this.type === LandscapeType.tree) {
+      return Landscape.grass();
+    }
+    return this;
+  }
+
+  loot(): { lootDrop: ResourceMap; nextLandscape: Landscape } {
+    const lootDrop = this.lootDrop ?? new ResourceMap({});
+
+    const nextLandscape = this.transform();
+
+    return { lootDrop, nextLandscape };
+  }
+
   static generate(neighbors: Tile[]): Landscape {
+    const waterSeed = 0.2;
+    const grassSeed = 0.8;
+
     if (neighbors.length === 0) {
       return Landscape.grass();
     }
 
-    const exploredNeighbors = neighbors.filter((neighbor) => neighbor.explored);
+    if (neighbors.every((neighbor) => !neighbor.landscape)) {
+      return Landscape.grass();
+    }
+
+    const landscapedNeighbors = neighbors.filter(
+      (neighbor) => neighbor.landscape,
+    );
 
     const isGrass = (neighbor: Tile) =>
       neighbor.landscape?.type === LandscapeType.grass;
-    const hasGrass = exploredNeighbors.some(isGrass);
-
-    const isSand = (neighbor: Tile) =>
-      neighbor.landscape?.type === LandscapeType.sand;
-    const hasSand = exploredNeighbors.some(isSand);
 
     const isWater = (neighbor: Tile) =>
       neighbor.landscape?.type === LandscapeType.water;
-    const hasWater = exploredNeighbors.some(isWater);
+    const hasWater = landscapedNeighbors.some(isWater);
 
-    const isMountain = (neighbor: Tile) =>
-      neighbor.landscape?.type === LandscapeType.mountain;
-    const hasMountain = exploredNeighbors.some(isMountain);
-
-    const isTree = (neighbor: Tile) =>
-      neighbor.landscape?.type === LandscapeType.tree;
-    const hasTree = exploredNeighbors.some(isTree);
-
-    if ((hasWater && hasGrass) || (hasWater && hasTree)) {
-      return Landscape.sand();
-    }
-
-    if (hasSand && hasWater) {
-      // only generate water or sand
-      return weightedRandom([Landscape.water(), Landscape.sand()], [0.5, 0.5]);
-    }
-
-    if (hasSand && hasGrass) {
-      return weightedRandom([Landscape.sand(), Landscape.grass()], [0.5, 0.5]);
-    }
-
-    if (hasSand && hasTree) {
-      return weightedRandom([Landscape.sand(), Landscape.tree()], [0.5, 0.5]);
-    }
-
-    if (hasSand && hasMountain) {
+    if (landscapedNeighbors.every(isGrass)) {
       return weightedRandom(
-        [Landscape.sand(), Landscape.mountain()],
-        [0.5, 0.5],
+        [Landscape.grass(), Landscape.water()],
+        [0.95, 0.01],
       );
     }
 
-    if (hasMountain && hasGrass) {
-      return weightedRandom(
-        [Landscape.mountain(), Landscape.grass()],
-        [0.5, 0.5],
-      );
-    }
-
-    if (hasTree && hasGrass) {
-      return weightedRandom(
-        [Landscape.tree(), Landscape.grass(), Landscape.sand()],
-        [0.9, 0.08, 0.02],
-      );
-    }
-
-    if (hasTree && hasMountain) {
-      return weightedRandom(
-        [Landscape.tree(), Landscape.mountain()],
-        [0.9, 0.1],
-      );
-    }
-
-    if (exploredNeighbors.every(isSand)) {
+    if (hasWater) {
       return weightedRandom(
         [Landscape.water(), Landscape.grass()],
-        [0.99, 0.01],
+        [grassSeed, waterSeed],
       );
-    }
-
-    if (exploredNeighbors.every(isGrass)) {
+    } else {
       return weightedRandom(
-        [
-          Landscape.tree(),
-          Landscape.grass(),
-          Landscape.sand(),
-          Landscape.mountain(),
-        ],
-        [0.8, 0.05, 0.01, 0.05],
+        [Landscape.water(), Landscape.grass()],
+        [waterSeed, grassSeed],
       );
     }
+  }
 
-    if (exploredNeighbors.every(isWater)) {
-      return weightedRandom(
-        [Landscape.water(), Landscape.sand()],
-        [0.85, 0.15],
-      );
-    }
+  static createBeaches(tiles: Tile[]) {
+    return tiles.map((tile) => {
+      const neighbors = tile.getNeighbors(tiles);
+      switch (tile.landscape?.type) {
+        case LandscapeType.water: {
+          if (
+            neighbors.some(
+              (neighbor) => neighbor.landscape?.type === LandscapeType.grass,
+            )
+          ) {
+            return tile.giveLandscape(Landscape.sand());
+          } else {
+            return tile;
+          }
+        }
+        default: {
+          return tile;
+        }
+      }
+    });
+  }
 
-    if (exploredNeighbors.every(isMountain)) {
-      return weightedRandom(
-        [Landscape.mountain(), Landscape.grass()],
-        [0.5, 0.5],
-      );
-    }
+  static cleanupSingles(tiles: Tile[]) {
+    return tiles.map((tile) => {
+      const neighbors = tile.getNeighbors(tiles);
+      if (
+        neighbors.every(
+          (neighbor) => neighbor.landscape?.type === LandscapeType.water,
+        )
+      ) {
+        return tile.giveLandscape(Landscape.water());
+      } else if (
+        neighbors.every(
+          (neighbor) => neighbor.landscape?.type === LandscapeType.grass,
+        )
+      ) {
+        return tile.giveLandscape(Landscape.grass());
+      } else {
+        return tile;
+      }
+    });
+  }
 
-    if (exploredNeighbors.every(isTree)) {
-      return weightedRandom(
-        [Landscape.tree(), Landscape.mountain()],
-        [0.5, 0.5],
-      );
-    }
+  static cleanupSand(tiles: Tile[]) {
+    return tiles.map((tile) => {
+      const neighbors = tile.getNeighbors(tiles);
+      switch (tile.landscape?.type) {
+        case LandscapeType.sand: {
+          if (
+            neighbors.some(
+              (neighbor) => neighbor.landscape?.type === LandscapeType.water,
+            )
+          ) {
+            return tile;
+          } else {
+            return tile.giveLandscape(Landscape.grass());
+          }
+        }
+        default: {
+          return tile;
+        }
+      }
+    });
+  }
 
-    console.log({ exploredNeighbors });
+  static placeTrees(tiles: Tile[]) {
+    return tiles.map((tile) => {
+      if (tile.landscape?.type === LandscapeType.grass) {
+        return weightedRandom(
+          [
+            tile.giveLandscape(Landscape.tree()),
+            tile.giveLandscape(Landscape.grass()),
+          ],
+          [0.7, 0.3],
+        );
+      } else {
+        return tile;
+      }
+    });
+  }
 
-    throw new Error("No landscape option");
+  static placeMountains(tiles: Tile[]) {
+    return tiles.map((tile) => {
+      if (tile.landscape?.type === LandscapeType.grass) {
+        return weightedRandom(
+          [
+            tile.giveLandscape(Landscape.mountain()),
+            tile.giveLandscape(Landscape.grass()),
+          ],
+          [0.2, 0.8],
+        );
+      } else {
+        return tile;
+      }
+    });
   }
 }

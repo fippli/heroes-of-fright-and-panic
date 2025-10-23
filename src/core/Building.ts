@@ -6,6 +6,7 @@ import towerSrc from "../assets/tower.png";
 import { GameImage } from "./GameImage";
 import { Hexagon } from "./Hexagon";
 import { Piece } from "./Piece";
+import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
 
 const tileWidth = Hexagon.width;
@@ -48,16 +49,6 @@ export enum BuildingType {
   farm = "farm",
 }
 
-export type ResourceMap =
-  | {
-      wood?: number | undefined;
-      stone?: number | undefined;
-      gold?: number | undefined;
-      food?: number | undefined;
-      time?: number | undefined;
-    }
-  | undefined;
-
 export class Building {
   readonly image: GameImage;
   readonly type: BuildingType;
@@ -65,22 +56,23 @@ export class Building {
   readonly production: ResourceMap;
   populated: boolean = false;
   walkable: boolean = false;
+  viewRange: number;
 
   constructor({
     type,
-
     production,
     cost,
     walkable,
+    viewRange,
   }: {
     type: BuildingType;
-
     walkable: boolean;
     production: ResourceMap;
     cost: ResourceMap;
+    viewRange?: number;
   }) {
     this.walkable = walkable;
-
+    this.viewRange = viewRange ?? 1;
     this.type = type;
     this.cost = cost;
     this.production = production;
@@ -124,8 +116,8 @@ export class Building {
   static house() {
     return new Building({
       type: BuildingType.house,
-      production: { food: 1 },
-      cost: { wood: 0, stone: 0, gold: 0 },
+      production: new ResourceMap({ food: 1 }),
+      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
       walkable: true,
     });
   }
@@ -133,17 +125,18 @@ export class Building {
   static castle() {
     return new Building({
       type: BuildingType.castle,
-      production: { food: 0 },
-      cost: { wood: 0, stone: 0, gold: 0 },
+      production: new ResourceMap({ food: 0 }),
+      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
       walkable: true,
+      viewRange: 2,
     });
   }
 
   static farm() {
     return new Building({
       type: BuildingType.farm,
-      production: { food: 1 },
-      cost: { wood: 0, stone: 0, gold: 0 },
+      production: new ResourceMap({ food: 1 }),
+      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
       walkable: true,
     });
   }
@@ -151,17 +144,18 @@ export class Building {
   static tower() {
     return new Building({
       type: BuildingType.tower,
-      production: { food: 0 },
-      cost: { wood: 0, stone: 0, gold: 0 },
+      production: new ResourceMap({ food: 0 }),
+      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
       walkable: true,
+      viewRange: 3,
     });
   }
 
   static boat() {
     return new Building({
       type: BuildingType.boat,
-      production: { food: 1 },
-      cost: { wood: 0, stone: 0, gold: 0 },
+      production: new ResourceMap({ food: 1 }),
+      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
       walkable: true,
     });
   }

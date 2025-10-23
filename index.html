@@ -16,78 +16,84 @@
   <body>
     <div id="app">
       <div class="grid">
+        <div class="menu">
+          
+
+          <div id="resources" class="resources-wrapper">
+            <div class="resource-wrapper">
+              <img src="/src/assets/food.png" alt="food" class="resource-icon" />
+              <div id="food"></div>
+            </div>
+  
+            <div class="resource-wrapper">
+              <img src="/src/assets/wood.png" alt="wood" class="resource-icon" />
+              <div id="wood"></div>
+            </div>
+  
+            <div class="resource-wrapper">
+              <img
+                src="/src/assets/stone.png"
+                alt="stone"
+                class="resource-icon"
+              />
+              <div id="stone"></div>
+            </div>
+  
+            <div class="resource-wrapper">
+              <img src="/src/assets/gold.png" alt="gold" class="resource-icon" />
+  
+              <div id="gold"></div>
+            </div>
+          </div>
+  
+          <div id="buildings" class="buildings-wrapper">
+            <div class="resource-wrapper">
+              <img
+                src="/src/assets/house.png"
+                alt="buildings"
+                class="resource-icon"
+              />
+              <div id="houses"></div>
+            </div>
+  
+            <div class="resource-wrapper">
+              <img
+                src="/src/assets/tower.png"
+                alt="buildings"
+                class="resource-icon"
+              />
+              <div id="towers"></div>
+            </div>
+
+            <div class="resource-wrapper">
+              <img
+                src="/src/assets/castle.png"
+                alt="buildings"
+                class="resource-icon"
+              />
+              <div id="castles"></div>
+            </div>
+  
+           
+          </div>    
+
+          <div class="resource-wrapper right-aligned">
+            <img src="/src/assets/clock.png" alt="time" class="resource-icon" />
+            <div id="time"></div>
+          </div>
+        
+
+        
+      </div>
+
+
+
+
+
         <div class="canvas-wrapper">
           <canvas id="canvas" width="600" height="600"></canvas>
         </div>
 
-        <div class="menu">
-          <div class="resource-wrapper">
-            <img src="/src/assets/clock.png" alt="time" class="resource-icon" />
-            <div id="time"></div>
-          </div>
-
-          
-        
-
-        <div id="resources">
-          <div class="resource-wrapper">
-            <img src="/src/assets/food.png" alt="food" class="resource-icon" />
-            <div id="food"></div>
-          </div>
-
-          <div class="resource-wrapper">
-            <img src="/src/assets/wood.png" alt="wood" class="resource-icon" />
-            <div id="wood"></div>
-          </div>
-
-          <div class="resource-wrapper">
-            <img
-              src="/src/assets/stone.png"
-              alt="stone"
-              class="resource-icon"
-            />
-            <div id="stone"></div>
-          </div>
-
-          <div class="resource-wrapper">
-            <img src="/src/assets/gold.png" alt="gold" class="resource-icon" />
-
-            <div id="gold"></div>
-          </div>
-        </div>
-
-        <div id="buildings">
-          <div class="resource-wrapper">
-            <img
-              src="/src/assets/house.png"
-              alt="buildings"
-              class="resource-icon"
-            />
-            <div id="houses"></div>
-          </div>
-
-          <div class="resource-wrapper">
-            <img
-              src="/src/assets/tower.png"
-              alt="buildings"
-              class="resource-icon"
-            />
-            <div id="towers"></div>
-          </div>
-          <div class="resource-wrapper">
-            <img
-              src="/src/assets/castle.png"
-              alt="buildings"
-              class="resource-icon"
-            />
-            <div id="castles"></div>
-          </div>
-
-          <div class="log-wrapper">
-            <ul id="log"></ul>
-          </div>
-        </div>
-      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -1,4 +1,4 @@
-import { Tile, type TilePosition } from "./Tile";
+import type { TilePosition } from "./Tile";
 
 import archerSrc from "../assets/archer.png";
 import boatPieceSrc from "../assets/boat-piece.png";
@@ -6,11 +6,8 @@ import knightSrc from "../assets/knight.png";
 import peasantSrc from "../assets/peasant.png";
 import soldierSrc from "../assets/soldier.png";
 
-import { BuildingType, type Building } from "./Building";
 import { GameImage } from "./GameImage";
 import { Hexagon } from "./Hexagon";
-import { Landscape, LandscapeType } from "./Landscape";
-import type { Player } from "./Player";
 
 const peasantImage = new GameImage({
   src: peasantSrc,
@@ -52,9 +49,11 @@ export enum PieceType {
 export class Piece {
   type: PieceType;
   boat: boolean = false;
+  viewRange: number = 1;
 
-  constructor({ type }: { type: PieceType }) {
+  constructor({ type, viewRange }: { type: PieceType; viewRange?: number }) {
     this.type = type;
+    this.viewRange = viewRange ?? 1;
   }
 
   render(ctx: CanvasRenderingContext2D, position: TilePosition) {
@@ -90,7 +89,7 @@ export class Piece {
   }
 
   static peasant() {
-    return new Piece({ type: PieceType.peasant });
+    return new Piece({ type: PieceType.peasant, viewRange: 1 });
   }
 
   static knight() {
@@ -102,7 +101,18 @@ export class Piece {
   }
 
   static archer() {
-    return new Piece({ type: PieceType.archer });
+    return new Piece({ type: PieceType.archer, viewRange: 3 });
+  }
+
+  upgrade(): Piece {
+    if (this.type === PieceType.peasant) {
+      return Piece.soldier();
+    }
+    if (this.type === PieceType.soldier) {
+      return Piece.knight();
+    }
+
+    return this;
   }
 
   // explore(tiles: Tile[]) {
