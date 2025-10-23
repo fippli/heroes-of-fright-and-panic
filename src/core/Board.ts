@@ -1,3 +1,5 @@
+import type { Canvas } from "../canvas";
+import type { Coordinate } from "../types/coordinate";
 import { compose } from "../utils/compose";
 import { Building, BuildingType } from "./Building";
 import { Clock } from "./Clock";
@@ -15,42 +17,72 @@ export class Board {
   clock: Clock = new Clock();
   player: Player;
 
-  dayPlayer: Player | undefined | null = undefined;
-  nightPlayer: Player | undefined | null = undefined;
+  dayPlayer: Player;
+  nightPlayer: Player;
 
   selectedTile: Tile | undefined | null = undefined;
 
-  constructor({ tiles, player }: { tiles: Tile[]; player: Player }) {
-    this.tiles = tiles;
-    this.player = player;
+  constructor(size: number) {
+    this.tiles = this.generateMap(size);
 
-    this.dayPlayer = new Player({ row: player.row, col: player.col });
-    this.nightPlayer = new Player({ row: player.row, col: player.col });
+    this.dayPlayer = new Player({ type: "day" });
+    this.nightPlayer = new Player({ type: "night" });
 
-    this.generateMap();
+    this.player = this.dayPlayer;
+
+    const dayPlayerStartTile = this.findTile({
+      row: Math.floor(size / 6),
+      col: Math.floor(size / 6),
+    });
+    const nightPlayerStartTile = this.findTile({
+      row: size - Math.floor(size / 6),
+      col: size - Math.floor(size / 6),
+    });
+
+    if (dayPlayerStartTile) {
+      dayPlayerStartTile.place(Piece.peasant(this.dayPlayer));
+    }
+    if (nightPlayerStartTile) {
+      nightPlayerStartTile.place(Piece.peasant(this.nightPlayer));
+    }
   }
 
-  render(ctx: CanvasRenderingContext2D) {
-    ctx.save();
-
-    // console.time("renderTiles");
+  render(canvas: Canvas) {
+    canvas.ctx.save();
 
     this.tiles.forEach((tile: Tile) => {
-      tile.render(ctx);
+      tile.render(canvas.ctx);
     });
 
     if (this.selectedTile) {
-      this.selectedTile.renderArea(ctx, this.tiles);
+      this.selectedTile.renderArea(canvas.ctx, this.tiles);
     }
 
-    ctx.restore();
+    const hoveredTile = this.findTile(canvas.mousePosition);
+
+    if (hoveredTile) {
+      hoveredTile.renderHovered(canvas.ctx);
+    }
+
+    canvas.ctx.restore();
 
     this.player.resources.render();
+    this.clock.render();
   }
 
-  generateMap() {
-    const startTiles = this.tiles;
-    this.tiles = startTiles.reduce((acc, tile) => {
+  generateMap(size: number) {
+    const startTiles = Array.from({ length: size * size }, (_, tileNumber) => {
+      const col = tileNumber % size;
+      const row = Math.floor(tileNumber / size);
+
+      return new Tile({
+        col,
+        row,
+        landscape: null,
+      });
+    }) as Tile[];
+
+    const mapTiles = startTiles.reduce((acc, tile) => {
       const newTile = tile.giveLandscape(
         Landscape.generate(tile.getNeighbors(acc)),
       );
@@ -61,13 +93,13 @@ export class Board {
 
     // cleanup map
 
-    this.tiles = compose(
+    return compose(
       Landscape.cleanupSingles,
       Landscape.createBeaches,
       Landscape.cleanupSand,
       Landscape.placeTrees,
       Landscape.placeMountains,
-    )(this.tiles);
+    )(mapTiles);
   }
 
   replaceTile(tile: Tile) {
@@ -77,7 +109,7 @@ export class Board {
   }
 
   exploreTiles() {
-    this.tiles.forEach((tile) => tile.explore(this.tiles));
+    this.tiles.forEach((tile) => tile.explore(this.tiles, this.player));
   }
 
   unExploredTiles() {
@@ -166,7 +198,7 @@ export class Board {
     });
 
     if (neighborWithPiece) {
-      const building = Building.build(buildingType);
+      const building = Building.build(buildingType, this.player);
       if (this.player.canAfford(building.cost)) {
         this.player.pay(building.cost);
         tile.build(building);
@@ -176,12 +208,12 @@ export class Board {
     }
   }
 
-  placePiece(piece: Piece, { x, y }: { x: number; y: number }) {
+  placePeasant({ x, y }: Coordinate) {
     const tile = this.findTile({ x, y });
     if (!tile) return;
 
     if (tile.building?.type === BuildingType.house) {
-      tile.place(piece);
+      tile.place(Piece.peasant(this.player));
       return;
     }
   }
@@ -202,7 +234,7 @@ export class Board {
     if (!tile) return;
 
     if (tile.piece) {
-      tile.piece = Piece.archer();
+      tile.piece = Piece.archer(this.player);
       return;
     }
   }

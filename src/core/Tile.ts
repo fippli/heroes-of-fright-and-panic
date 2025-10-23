@@ -3,6 +3,7 @@ import { Hexagon } from "./Hexagon";
 
 import { Landscape } from "./Landscape";
 import type { Piece } from "./Piece";
+import type { Player } from "./Player";
 
 export type TilePosition = {
   row: number;
@@ -91,14 +92,14 @@ export class Tile {
     return Hexagon.collidesWithCoordinates(mouseX, mouseY, centerX, centerY);
   }
 
-  explore(tiles: Tile[]) {
+  explore(tiles: Tile[], player: Player) {
     // this.explored = true;
 
-    if (this.building) {
+    if (this.building && this.building.isOwnedBy(player)) {
       this.explored = true;
     }
 
-    if (this.piece) {
+    if (this.piece && this.piece.isOwnedBy(player)) {
       this.explored = true;
 
       const viewRange = Math.max(

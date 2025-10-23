@@ -6,6 +6,7 @@ import towerSrc from "../assets/tower.png";
 import { GameImage } from "./GameImage";
 import { Hexagon } from "./Hexagon";
 import { Piece } from "./Piece";
+import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
 
@@ -54,6 +55,7 @@ export class Building {
   readonly type: BuildingType;
   readonly cost: ResourceMap;
   readonly production: ResourceMap;
+  readonly owner: Player;
   populated: boolean = false;
   walkable: boolean = false;
   viewRange: number;
@@ -64,18 +66,21 @@ export class Building {
     cost,
     walkable,
     viewRange,
+    owner,
   }: {
     type: BuildingType;
     walkable: boolean;
     production: ResourceMap;
     cost: ResourceMap;
     viewRange?: number;
+    owner: Player;
   }) {
     this.walkable = walkable;
     this.viewRange = viewRange ?? 1;
     this.type = type;
     this.cost = cost;
     this.production = production;
+    this.owner = owner;
     this.image = (() => {
       switch (type) {
         case BuildingType.house: {
@@ -113,70 +118,75 @@ export class Building {
     ctx.restore();
   }
 
-  static house() {
+  static house(owner: Player) {
     return new Building({
       type: BuildingType.house,
       production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
+      cost: new ResourceMap({ wood: 2 }),
       walkable: true,
+      owner,
     });
   }
 
-  static castle() {
+  static castle(owner: Player) {
     return new Building({
       type: BuildingType.castle,
       production: new ResourceMap({ food: 0 }),
-      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
+      cost: new ResourceMap({ wood: 10, stone: 10 }),
       walkable: true,
       viewRange: 2,
+      owner,
     });
   }
 
-  static farm() {
+  static farm(owner: Player) {
     return new Building({
       type: BuildingType.farm,
       production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
+      cost: new ResourceMap({ wood: 1 }),
       walkable: true,
+      owner,
     });
   }
 
-  static tower() {
+  static tower(owner: Player) {
     return new Building({
       type: BuildingType.tower,
       production: new ResourceMap({ food: 0 }),
-      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
+      cost: new ResourceMap({ wood: 1, stone: 3 }),
       walkable: true,
       viewRange: 3,
+      owner,
     });
   }
 
-  static boat() {
+  static boat(owner: Player) {
     return new Building({
       type: BuildingType.boat,
       production: new ResourceMap({ food: 1 }),
       cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
       walkable: true,
+      owner,
     });
   }
 
-  static build(buildingType: BuildingType) {
+  static build(buildingType: BuildingType, owner: Player) {
     switch (buildingType) {
       case BuildingType.house: {
-        return Building.house();
+        return Building.house(owner);
       }
       case BuildingType.tower: {
-        return Building.tower();
+        return Building.tower(owner);
       }
 
       case BuildingType.castle: {
-        return Building.castle();
+        return Building.castle(owner);
       }
       case BuildingType.boat: {
-        return Building.boat();
+        return Building.boat(owner);
       }
       case BuildingType.farm: {
-        return Building.farm();
+        return Building.farm(owner);
       }
       default: {
         throw new Error(`Invalid building type: ${buildingType}`);
@@ -184,15 +194,19 @@ export class Building {
     }
   }
 
-  spawn(tilePosition: TilePosition) {
+  spawn(tilePosition: TilePosition, owner: Player) {
     switch (this.type) {
       case BuildingType.house: {
-        return Piece.peasant(tilePosition);
+        return Piece.peasant(owner);
       }
 
       default: {
         throw new Error(`Invalid building type: ${this.type}`);
       }
     }
+  }
+
+  isOwnedBy(player: Player) {
+    return this.owner === player;
   }
 }

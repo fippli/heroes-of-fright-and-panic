@@ -1,8 +1,10 @@
+import type { Coordinate } from "./types/coordinate";
+
 export class Canvas {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
-  mousePosition: { x: number; y: number };
-  translation: { x: number; y: number };
+  mousePosition: Coordinate;
+  translation: Coordinate;
 
   constructor() {
     this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -77,10 +79,10 @@ export class Canvas {
     this.canvas.addEventListener("click", handler);
   }
 
-  keydown(keymap: { [key: string]: () => void }) {
+  keydown(keymap: { [key: string]: (position: Coordinate) => void }) {
     const handler = (event: KeyboardEvent) => {
       const fn = keymap[event.key.toLowerCase()];
-      fn?.();
+      fn?.(this.mousePosition);
     };
 
     this.canvas.addEventListener("keydown", handler);
