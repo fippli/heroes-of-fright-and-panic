@@ -3,12 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.21.0",
+    "pnpm": ">=10.10.0"
+  },
+  "packageManager": "pnpm@10.10.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "oxlint ./src",
-    "fmt": "prettier --write ./src"
+    "fmt": "prettier --write ./src",
+    "knip": "knip"
   },
   "devDependencies": {
     "knip": "^5.66.2",

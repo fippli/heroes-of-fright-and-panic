@@ -6,15 +6,12 @@ import { Clock } from "./Clock";
 import { Dialog } from "./Dialog";
 import { Hexagon } from "./Hexagon";
 import { Landscape } from "./Landscape";
-import { Log } from "./Log";
 import { Piece, PieceType } from "./Piece";
 
 import { Player } from "./Player";
 import { Tile } from "./Tile";
 
 const dialog = new Dialog();
-
-const log = new Log();
 
 export class Board {
   tiles: Tile[];

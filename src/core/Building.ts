@@ -11,7 +11,6 @@ import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
 
 const tileWidth = Hexagon.width;
-const tileHeight = Hexagon.height;
 
 const houseImage = new GameImage({
   src: houseSrc,
@@ -220,7 +219,7 @@ export class Building {
     }
   }
 
-  spawn(tilePosition: TilePosition, owner: Player) {
+  spawn(owner: Player) {
     switch (this.type) {
       case BuildingType.house: {
         return Piece.peasant(owner);

@@ -73,7 +73,7 @@ export class Tile {
       this.building?.viewRange ?? 0,
       this.piece?.viewRange ?? 0,
     );
-    this.getTilesInRange(tiles, viewRange).forEach((tile) => {
+    this.getTilesInRange(tiles, viewRange).forEach((_tile: Tile) => {
       // Hexagon.renderArea(ctx, tile.x, tile.y, "#00ffff11");
       // Hexagon.render(ctx, tile.x, tile.y, "#00ffff44");
     });

@@ -3,7 +3,7 @@ import { Hexagon } from "./Hexagon";
 import { LandscapeType } from "./Landscape";
 import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
-import type { Tile, TilePosition } from "./Tile";
+import type { TilePosition } from "./Tile";
 
 export enum PieceType {
   peasant = "peasant",

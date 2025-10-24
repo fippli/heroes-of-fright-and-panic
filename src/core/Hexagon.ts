@@ -1,26 +1,10 @@
-export const remainingDistanceToRadius = (r: number) =>
-  r * (1 - Math.sqrt(3) / 2);
-
-export const topTriangleHeight = (r: number) => r / 2;
-
-export const width = (r: number) => 2 * (r - remainingDistanceToRadius(r));
-
-export const layerCount = (n: number) => {
-  if (n === 0) {
-    return 1;
-  }
-  return n * 6;
-};
+const remainingDistanceToRadius = (r: number) => r * (1 - Math.sqrt(3) / 2);
 
 export class Hexagon {
   static radius: number = 2 * 3 * 5;
-
   static borderWidth: number = 2;
-
   static width = 2 * (this.radius - remainingDistanceToRadius(this.radius));
-
   static height = 2 * this.radius;
-
   static innerRadius: number = this.width / 2 - this.borderWidth;
 
   static render(
