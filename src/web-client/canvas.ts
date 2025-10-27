@@ -1,3 +1,4 @@
+import { Hexagon } from "./core/Hexagon";
 import type { Coordinate } from "./types/coordinate";
 
 export class Canvas {
@@ -5,6 +6,7 @@ export class Canvas {
   ctx: CanvasRenderingContext2D;
   mousePosition: Coordinate;
   translation: Coordinate;
+  DOMElement: HTMLDivElement;
 
   constructor() {
     this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -12,16 +14,16 @@ export class Canvas {
     this.mousePosition = { x: Infinity, y: Infinity };
     this.translation = { x: 0, y: 0 };
 
-    const canvasWrapper = document.querySelector(
+    this.DOMElement = document.querySelector(
       ".canvas-wrapper",
     ) as HTMLDivElement;
 
-    this.canvas.width = canvasWrapper.clientWidth;
-    this.canvas.height = canvasWrapper.clientHeight;
+    this.canvas.width = this.DOMElement.clientWidth;
+    this.canvas.height = this.DOMElement.clientHeight;
 
     this.canvas.addEventListener("mousemove", (event) => {
       const distanceFromTop =
-        event.clientY - canvasWrapper.getBoundingClientRect().top;
+        event.clientY - this.DOMElement.getBoundingClientRect().top;
       this.mousePosition = {
         x: event.clientX - this.translation.x,
         y: distanceFromTop - this.translation.y,
@@ -32,7 +34,7 @@ export class Canvas {
     this.canvas.focus();
 
     this.canvas.addEventListener("keydown", (event) => {
-      const speed = 25;
+      const speed = Hexagon.width * 2;
 
       switch (event.key) {
         case "ArrowLeft": {

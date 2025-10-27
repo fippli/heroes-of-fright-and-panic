@@ -6,17 +6,17 @@ import "./style.css";
 import type { Coordinate } from "./types/coordinate";
 
 const canvas = new Canvas();
-const board = new Board(55);
+const board = new Board(canvas);
 
 const loop = () => {
   board.calculateNextState(canvas);
 
-  if (!canvas.ctx) return;
+  if (!canvas.ctx) {
+    return;
+  }
 
   canvas.init();
-
-  board.render(canvas);
-
+  board.render();
   canvas.reset();
 
   requestAnimationFrame(loop);

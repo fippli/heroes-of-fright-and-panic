@@ -14,6 +14,7 @@ import { Tile } from "./Tile";
 const dialog = new Dialog();
 
 export class Board {
+  canvas: Canvas;
   tiles: Tile[];
   clock: Clock = new Clock();
   player: Player;
@@ -23,7 +24,9 @@ export class Board {
 
   selectedTile: Tile | undefined | null = undefined;
 
-  constructor(size: number) {
+  constructor(canvas: Canvas) {
+    this.canvas = canvas;
+    const size = 55;
     this.tiles = this.generateMap(size);
 
     this.dayPlayer = new Player({ type: "day" });
@@ -31,18 +34,16 @@ export class Board {
 
     this.player = this.dayPlayer;
 
+    const center = Math.floor(size / 2);
+
     const dayPlayerStartTile = this.findTile({
-      row: Math.floor(size / 6),
-      col: Math.floor(size / 6),
+      row: Math.floor(Math.random() * center),
+      col: Math.floor(Math.random() * center),
     });
-    // const nightPlayerStartTile = this.findTile({
-    //   row: size - Math.floor(size / 6),
-    //   col: size - Math.floor(size / 6),
-    // });
 
     const nightPlayerStartTile = this.findTile({
-      row: Math.floor(size / 6),
-      col: Math.floor(size / 6) + 1,
+      row: center + Math.floor(Math.random() * (size - center)),
+      col: center + Math.floor(Math.random() * (size - center)),
     });
 
     if (dayPlayerStartTile) {
@@ -53,7 +54,8 @@ export class Board {
     }
   }
 
-  render(canvas: Canvas) {
+  render() {
+    const canvas = this.canvas;
     canvas.ctx.save();
 
     this.tiles.forEach((tile: Tile) => {
@@ -138,6 +140,7 @@ export class Board {
     this.clock.dawn(() => {
       this.selectedTile = undefined;
       dialog.open({ title: "Dawn", content: "The sun is rising" });
+
       const production = this.dayPlayer.produce(this.tiles);
       this.dayPlayer.collect(production);
     });
