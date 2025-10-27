@@ -1,53 +1,9 @@
-import { GameImage } from "./GameImage";
 import { Hexagon } from "./Hexagon";
-
-import grassSrc from "../assets/grass.png";
-import mountainSrc from "../assets/rock.png";
-import sandSrc from "../assets/sand.png";
-import treeSrc from "../assets/tree.png";
-import unesploredSrc from "../assets/unexplored2.png";
-
-import waterSrc from "../assets/water.png";
 
 import { weightedRandom } from "../utils/weightedRandom";
 import { ResourceMap } from "./ResourceMap";
 import type { Tile, TilePosition } from "./Tile";
-
-const tileWidth = Hexagon.width;
-const tileHeight = Hexagon.height;
-
-const unexploredImage = new GameImage({
-  src: unesploredSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
-const grassImage = new GameImage({
-  src: grassSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
-const treeImage = new GameImage({
-  src: treeSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
-
-const sandImage = new GameImage({
-  src: sandSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
-const waterImage = new GameImage({
-  src: waterSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
-
-const mountainImage = new GameImage({
-  src: mountainSrc,
-  width: tileWidth,
-  height: tileHeight,
-});
+import { ImageAssets } from "../images";
 
 export enum LandscapeType {
   grass = "grass",
@@ -86,39 +42,16 @@ export class Landscape {
     ctx.translate(centerX, centerY);
 
     if (this.type === LandscapeType.tree) {
-      grassImage.render(ctx, 0, 0);
-      treeImage.render(ctx, 0, 0);
+      ImageAssets.landscapeImage(LandscapeType.grass).render(ctx, 0, 0);
+      ImageAssets.landscapeImage(LandscapeType.tree).render(ctx, 0, 0);
     } else if (this.type === LandscapeType.mountain) {
-      grassImage.render(ctx, 0, 0);
-      mountainImage.render(ctx, 0, 0);
+      ImageAssets.landscapeImage(LandscapeType.grass).render(ctx, 0, 0);
+      ImageAssets.landscapeImage(LandscapeType.mountain).render(ctx, 0, 0);
     } else {
-      this.image().render(ctx, 0, 0);
+      ImageAssets.landscapeImage(this.type).render(ctx, 0, 0);
     }
     ctx.resetTransform();
     ctx.restore();
-  }
-
-  image() {
-    switch (this.type) {
-      case LandscapeType.grass: {
-        return grassImage;
-      }
-      case LandscapeType.tree: {
-        return treeImage;
-      }
-      case LandscapeType.sand: {
-        return sandImage;
-      }
-      case LandscapeType.water: {
-        return waterImage;
-      }
-      case LandscapeType.mountain: {
-        return mountainImage;
-      }
-      case LandscapeType.unexplored: {
-        return unexploredImage;
-      }
-    }
   }
 
   static unexplored(ctx: CanvasRenderingContext2D, x: number, y: number) {
@@ -126,7 +59,7 @@ export class Landscape {
     const centerX = x - Hexagon.width / 2;
     const centerY = y - Hexagon.height / 2;
     ctx.translate(centerX, centerY);
-    unexploredImage.render(ctx, 0, 0);
+    ImageAssets.landscapeImage(LandscapeType.unexplored).render(ctx, 0, 0);
     ctx.resetTransform();
     ctx.restore();
   }

@@ -1,45 +1,9 @@
-import boatSrc from "../assets/boat.png";
-import castleSrc from "../assets/castle.png";
-import farmSrc from "../assets/farm.png";
-import houseSrc from "../assets/house.png";
-import towerSrc from "../assets/tower.png";
-import { GameImage } from "./GameImage";
+import { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import { Piece } from "./Piece";
 import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
-
-const tileWidth = Hexagon.width;
-
-const houseImage = new GameImage({
-  src: houseSrc,
-  width: tileWidth,
-  height: tileWidth,
-});
-const castleImage = new GameImage({
-  src: castleSrc,
-  width: tileWidth,
-  height: tileWidth,
-});
-
-const towerImage = new GameImage({
-  src: towerSrc,
-  width: tileWidth,
-  height: tileWidth,
-});
-
-const boatImage = new GameImage({
-  src: boatSrc,
-  width: tileWidth,
-  height: tileWidth,
-});
-
-const farmImage = new GameImage({
-  src: farmSrc,
-  width: tileWidth,
-  height: tileWidth,
-});
 
 export enum BuildingType {
   house = "house",
@@ -50,7 +14,6 @@ export enum BuildingType {
 }
 
 export class Building {
-  readonly image: GameImage;
   readonly type: BuildingType;
   readonly cost: ResourceMap;
   readonly production: ResourceMap;
@@ -80,28 +43,6 @@ export class Building {
     this.cost = cost;
     this.production = production;
     this.owner = owner;
-    this.image = (() => {
-      switch (type) {
-        case BuildingType.house: {
-          return houseImage;
-        }
-        case BuildingType.castle: {
-          return castleImage;
-        }
-        case BuildingType.tower: {
-          return towerImage;
-        }
-        case BuildingType.boat: {
-          return boatImage;
-        }
-        case BuildingType.farm: {
-          return farmImage;
-        }
-        default: {
-          return houseImage;
-        }
-      }
-    })();
   }
 
   render(ctx: CanvasRenderingContext2D, position: TilePosition) {
@@ -112,7 +53,11 @@ export class Building {
 
     ctx.clip(Hexagon.path(x, y));
 
-    this.image.render(ctx, x - Hexagon.width / 2, y - Hexagon.height / 2);
+    ImageAssets.buildingImage(this.type).render(
+      ctx,
+      x - Hexagon.width / 2,
+      y - Hexagon.height / 2,
+    );
 
     ctx.restore();
   }
