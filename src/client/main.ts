@@ -8,6 +8,18 @@ import type { Coordinate } from "./types/coordinate";
 const canvas = new Canvas();
 const board = new Board(canvas);
 
+// get game Id from path parameter
+const gameId = window.location.pathname.split("/").pop();
+console.log(gameId);
+
+fetch(`/api/game/${gameId}`)
+  .then((response) => response.json())
+  .then((game) => {
+    console.log(game);
+    board.parseTiles(game.board.tiles);
+    loop();
+  });
+
 const loop = () => {
   board.calculateNextState(canvas);
 

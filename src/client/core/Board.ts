@@ -5,10 +5,11 @@ import { Building, BuildingType } from "./Building";
 import { Clock } from "./Clock";
 import { Dialog } from "./Dialog";
 import { Hexagon } from "./Hexagon";
-import { Landscape } from "./Landscape";
+import { Landscape, LandscapeType } from "./Landscape";
 import { Piece, PieceType } from "./Piece";
 
 import { Player } from "./Player";
+import { ResourceMap } from "./ResourceMap";
 import { Tile } from "./Tile";
 
 const dialog = new Dialog();
@@ -26,13 +27,36 @@ export class Board {
 
   constructor(canvas: Canvas) {
     this.canvas = canvas;
-    const size = 55;
-    this.tiles = this.generateMap(size);
+    this.tiles = [];
 
     this.dayPlayer = new Player({ type: "day" });
     this.nightPlayer = new Player({ type: "night" });
 
     this.player = this.dayPlayer;
+  }
+
+  parseTiles(
+    tiles: {
+      row: number;
+      column: number;
+      landscape: { type: LandscapeType; lootDrop?: ResourceMap };
+      building: Building;
+      piece: Piece;
+    }[],
+  ) {
+    console.log("parsing board");
+    this.tiles = tiles.map(
+      (tile) =>
+        new Tile({
+          row: tile.row,
+          col: tile.column,
+          landscape: new Landscape(tile.landscape),
+          building: tile.building,
+          piece: tile.piece,
+        }),
+    );
+
+    const size = 55;
 
     const center = Math.floor(size / 2);
 
@@ -52,6 +76,7 @@ export class Board {
     if (nightPlayerStartTile) {
       nightPlayerStartTile.place(Piece.peasant(this.nightPlayer));
     }
+    console.log("board parsed", this.tiles);
   }
 
   render() {

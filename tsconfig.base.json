@@ -6,7 +6,11 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "sourceMap": true,
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": "src",
+    "paths": {
+      "@shared/*": ["shared/*"]
+    }
   },
   "include": ["src"]
 }

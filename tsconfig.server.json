@@ -2,7 +2,7 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src/server",
+    "rootDir": "./src",
     "outDir": "dist/server",
     "noEmit": false,
     "module": "ESNext",

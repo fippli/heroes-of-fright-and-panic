@@ -1,5 +1,8 @@
 import express from "express";
-import { Database } from "../../database";
+import { Database, Game } from "../../database";
+import type { Filter } from "mongodb";
+import { ObjectId } from "mongodb";
+import { GameMap } from "../../../shared/map/map";
 
 const gameRouter = express.Router();
 
@@ -16,14 +19,19 @@ database
   });
 
 // POST / → create a new game and redirect
-gameRouter.post("/", async (_req, res) => {
+gameRouter.post("/", async (req, res) => {
   try {
     const games = database.games();
+    const boardSize = req.body.size;
 
     const now = new Date();
     const result = await games.create({
       createdAt: now,
       updatedAt: now,
+      board: {
+        size: boardSize,
+        tiles: GameMap.generate(boardSize),
+      },
     });
 
     // redirect to the new game path
@@ -32,6 +40,14 @@ gameRouter.post("/", async (_req, res) => {
     console.error("Error creating game:", err);
     res.status(500).json({ error: "Failed to create game" });
   }
+});
+
+gameRouter.get("/:gameId", async (_req, res) => {
+  const games = database.games();
+  const game = await games.findOne({
+    _id: new ObjectId(_req.params.gameId),
+  } as Filter<Game>);
+  res.json(game);
 });
 
 export default gameRouter;

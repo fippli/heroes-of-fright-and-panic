@@ -24,10 +24,11 @@ services:
       CHOKIDAR_USEPOLLING: "1"
       WATCHPACK_POLLING: "true"
     volumes:
-      - .:/app                # live-mount your source
+      - ./src:/app/src             # mount your source code
+      - ./static:/app/static       # mount static assets folder
       - /app/node_modules     # keep container node_modules (avoid being shadowed)
       - /app/.pnpm-store      # optional: keep pnpm store in container
-    command: ["pnpm", "dev:container"]
+    command: ["pnpm", "dev"]
 
 volumes:
   mongo_data:
