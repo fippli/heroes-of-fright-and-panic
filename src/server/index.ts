@@ -10,9 +10,15 @@ const thisDir = path.dirname(thisFile);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware: parse URL-encoded bodies
+app.use(express.urlencoded({ extended: true }));
+
+// Optional: parse JSON bodies if you accept JSON also
+app.use(express.json());
+
 app.use("/api", apiRouter);
 
-const imgDir = path.resolve(thisDir, "../static/img");
+const imgDir = path.resolve(thisDir, "../../static/img");
 app.use("/img", express.static(imgDir));
 
 app.use("/", clientRouter);

@@ -9,11 +9,11 @@
   },
   "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "dev:client": "vite",
+    "dev:client:watch": "vite build --watch --mode development",
     "dev:client:docker": "vite --host 0.0.0.0 --port 5173",
     "dev:server": "tsx watch src/server/index.ts",
     "dev:container": "concurrently -k -n client,server -c cyan,magenta \"pnpm:dev:client:docker\" \"pnpm:dev:server\"",
-    "dev": "concurrently -k -n client,server -c cyan,magenta \"pnpm:dev:client\" \"pnpm:dev:server\"",
+    "dev": "concurrently -k -n client,server -c cyan,magenta \"pnpm:dev:client:watch\" \"pnpm:dev:server\"",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json && tsc-esm-fix dist/server --tsconfig tsconfig.server.json",
     "build": "pnpm build:client && pnpm build:server && pnpm copy:static",

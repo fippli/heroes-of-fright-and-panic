@@ -1,9 +1,8 @@
-import { Hexagon } from "./Hexagon";
-
-import { weightedRandom } from "../utils/weightedRandom";
-import { ResourceMap } from "./ResourceMap";
-import type { Tile, TilePosition } from "./Tile";
-import { ImageAssets } from "../images";
+// import { ResourceMap } from "./ResourceMap";
+import type { Tile } from "./tile";
+import { GameMap } from "./map";
+import { weightedRandom } from "@shared/utils/weightedRandom";
+import { ResourceMap } from "@shared/player/resource-map";
 
 export enum LandscapeType {
   grass = "grass",
@@ -15,8 +14,8 @@ export enum LandscapeType {
 }
 
 export class Landscape {
-  type: LandscapeType;
-  readonly lootDrop?: ResourceMap = undefined;
+  readonly type: LandscapeType;
+  readonly lootDrop?: ResourceMap;
 
   constructor({
     type,
@@ -29,85 +28,36 @@ export class Landscape {
     this.lootDrop = lootDrop;
   }
 
-  render(ctx: CanvasRenderingContext2D, tilePosition: TilePosition) {
-    ctx.save();
-    const x = Hexagon.x(tilePosition.row, tilePosition.col);
-    const y = Hexagon.y(tilePosition.row);
-    const centerX = x - Hexagon.width / 2;
-    const centerY = y - Hexagon.height / 2;
-    ctx.translate(centerX, centerY);
-
-    if (this.type === LandscapeType.tree) {
-      ImageAssets.landscapeImage(LandscapeType.grass).render(ctx, 0, 0);
-      ImageAssets.landscapeImage(LandscapeType.tree).render(ctx, 0, 0);
-    } else if (this.type === LandscapeType.mountain) {
-      ImageAssets.landscapeImage(LandscapeType.grass).render(ctx, 0, 0);
-      ImageAssets.landscapeImage(LandscapeType.mountain).render(ctx, 0, 0);
-    } else {
-      ImageAssets.landscapeImage(this.type).render(ctx, 0, 0);
-    }
-    ctx.resetTransform();
-    ctx.restore();
-  }
-
-  static unexplored(ctx: CanvasRenderingContext2D, x: number, y: number) {
-    ctx.save();
-    const centerX = x - Hexagon.width / 2;
-    const centerY = y - Hexagon.height / 2;
-    ctx.translate(centerX, centerY);
-    ImageAssets.landscapeImage(LandscapeType.unexplored).render(ctx, 0, 0);
-    ctx.resetTransform();
-    ctx.restore();
-  }
-
   static grass() {
-    return new Landscape({
+    return {
       type: LandscapeType.grass,
-    });
+    };
   }
 
   static water() {
-    return new Landscape({
+    return {
       type: LandscapeType.water,
-    });
+    };
   }
 
   static sand() {
-    return new Landscape({
+    return {
       type: LandscapeType.sand,
-    });
+    };
   }
 
   static mountain() {
-    return new Landscape({
+    return {
       type: LandscapeType.mountain,
       lootDrop: new ResourceMap({ stone: 1 }),
-    });
+    };
   }
 
   static tree() {
-    return new Landscape({
+    return {
       type: LandscapeType.tree,
       lootDrop: new ResourceMap({ wood: 1 }),
-    });
-  }
-
-  transform(): Landscape {
-    if (this.type === LandscapeType.tree) {
-      return Landscape.grass();
-    }
-    if (this.type === LandscapeType.mountain) {
-      return Landscape.grass();
-    }
-    return this;
-  }
-
-  loot(): { lootDrop: ResourceMap; nextLandscape: Landscape } {
-    const lootDrop = this.lootDrop ?? new ResourceMap({});
-
-    const nextLandscape = this.transform();
-
-    return { lootDrop, nextLandscape };
+    };
   }
 
   static generate(neighbors: Tile[]): Landscape {
@@ -154,16 +104,17 @@ export class Landscape {
   }
 
   static createBeaches(tiles: Tile[]) {
-    return tiles.map((tile) => {
-      const neighbors = tile.getNeighbors(tiles);
+    return tiles.map((tile: Tile) => {
+      const neighbors = GameMap.findNeighbors(tile, tiles);
       switch (tile.landscape?.type) {
         case LandscapeType.water: {
           if (
             neighbors.some(
-              (neighbor) => neighbor.landscape?.type === LandscapeType.grass,
+              (neighbor: Tile) =>
+                neighbor.landscape?.type === LandscapeType.grass,
             )
           ) {
-            return tile.giveLandscape(Landscape.sand());
+            return { ...tile, landscape: Landscape.sand() };
           } else {
             return tile;
           }
@@ -177,19 +128,19 @@ export class Landscape {
 
   static cleanupSingles(tiles: Tile[]) {
     return tiles.map((tile) => {
-      const neighbors = tile.getNeighbors(tiles);
+      const neighbors = GameMap.findNeighbors(tile, tiles);
       if (
         neighbors.every(
-          (neighbor) => neighbor.landscape?.type === LandscapeType.water,
+          (neighbor: Tile) => neighbor.landscape?.type === LandscapeType.water,
         )
       ) {
-        return tile.giveLandscape(Landscape.water());
+        return { ...tile, landscape: Landscape.water() };
       } else if (
         neighbors.every(
-          (neighbor) => neighbor.landscape?.type === LandscapeType.grass,
+          (neighbor: Tile) => neighbor.landscape?.type === LandscapeType.grass,
         )
       ) {
-        return tile.giveLandscape(Landscape.grass());
+        return { ...tile, landscape: Landscape.grass() };
       } else {
         return tile;
       }
@@ -198,17 +149,18 @@ export class Landscape {
 
   static cleanupSand(tiles: Tile[]) {
     return tiles.map((tile) => {
-      const neighbors = tile.getNeighbors(tiles);
+      const neighbors = GameMap.findNeighbors(tile, tiles);
       switch (tile.landscape?.type) {
         case LandscapeType.sand: {
           if (
             neighbors.some(
-              (neighbor) => neighbor.landscape?.type === LandscapeType.water,
+              (neighbor: Tile) =>
+                neighbor.landscape?.type === LandscapeType.water,
             )
           ) {
             return tile;
           } else {
-            return tile.giveLandscape(Landscape.grass());
+            return { ...tile, landscape: Landscape.grass() };
           }
         }
         default: {
@@ -223,8 +175,8 @@ export class Landscape {
       if (tile.landscape?.type === LandscapeType.grass) {
         return weightedRandom(
           [
-            tile.giveLandscape(Landscape.tree()),
-            tile.giveLandscape(Landscape.grass()),
+            { ...tile, landscape: Landscape.tree() },
+            { ...tile, landscape: Landscape.grass() },
           ],
           [0.7, 0.3],
         );
@@ -239,8 +191,8 @@ export class Landscape {
       if (tile.landscape?.type === LandscapeType.grass) {
         return weightedRandom(
           [
-            tile.giveLandscape(Landscape.mountain()),
-            tile.giveLandscape(Landscape.grass()),
+            { ...tile, landscape: Landscape.mountain() },
+            { ...tile, landscape: Landscape.grass() },
           ],
           [0.2, 0.8],
         );
