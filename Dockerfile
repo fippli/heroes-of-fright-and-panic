@@ -1,56 +1,55 @@
-# Production Dockerfile for Forest Game
-# Multi-stage build for optimal image size
+# ---------- Base image ----------
+  FROM node:22-alpine AS base
+  WORKDIR /app
+  # Enable pnpm via Corepack
+  RUN corepack enable
+  
+  # Optional: needed for HEALTHCHECK (curl)
+  RUN apk add --no-cache curl
+  
+  # ---------- Dependencies (install once, cacheable) ----------
+  FROM base AS deps
+  # Copy only files needed to resolve deps
+  COPY package.json pnpm-lock.yaml ./
+  # Pre-fetch all deps into the store, then install offline (fast, cached)
+  RUN pnpm fetch
+  RUN pnpm install --frozen-lockfile --offline
+  
+  # ---------- Build (client + server) ----------
+  FROM deps AS build
+  # App sources and configs
+  COPY tsconfig*.json ./
+  COPY vite.config.ts ./
+  COPY src ./src
+  COPY static ./static 
+  
+  # Build separately so each outputs to its own dir:
+  # - Vite -> dist/client
+  # - tsc   -> dist/server + then add ".js" extensions to emitted imports
+  RUN pnpm build:client
+  RUN pnpm build:server
 
-# Stage 1: Build
-FROM node:22-alpine AS builder
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# Copy source files and configs
-COPY tsconfig.json tsconfig.build.json vite.config.js ./
-COPY src/ ./src/
-
-# Copy static assets
-COPY static/img/ ./static/img/
-
-# Build the project (TypeScript compilation + Vite build)
-RUN pnpm run build
-
-# Stage 2: Production
-FROM node:22-alpine AS runner
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
-
-# Create app directory
-WORKDIR /app
-
-# Copy package files for production dependencies only
-COPY package.json pnpm-lock.yaml ./
-
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
-
-# Copy built files from builder stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/static ./static
-
-# Expose port
-EXPOSE 3000
-
-# Set environment to production
-ENV NODE_ENV=production
-
-# Start the server
-CMD ["node", "dist/api/index.js"]
-
+  RUN cp -r ./static ./dist/static
+  
+  # ---------- Production runtime ----------
+  FROM base AS runtime
+  ENV NODE_ENV=production
+  WORKDIR /app
+  
+  # Install ONLY production deps offline, leveraging the lockfile
+  COPY package.json pnpm-lock.yaml ./
+  RUN pnpm fetch --prod && pnpm install --prod --frozen-lockfile --offline
+  
+  # Bring in build artifacts
+  COPY --from=build /app/dist ./dist
+  
+  # Expose your server port
+  EXPOSE 3000
+  
+  # Optional healthcheck hitting /api/health (adjust if needed)
+  HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+    CMD curl -fsS http://localhost:3000/api/health || exit 1
+  
+  # Start the server
+  CMD ["node", "dist/server/index.js"]
+  

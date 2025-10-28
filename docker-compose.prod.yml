@@ -1,0 +1,25 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: forest-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: forest-game
+
+  app:
+    build: .
+    container_name: forest-app
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+    environment:
+      # Match your Database class default (db name) or override
+      MONGODB_URI: "mongodb://mongo:27017/forest-game"
+      NODE_ENV: "production"
+
+volumes:
+  mongo_data:

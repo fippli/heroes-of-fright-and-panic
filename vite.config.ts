@@ -3,12 +3,12 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  root: "src/web-client",
+  root: "src/client",
   build: {
-    outDir: "../../static/web-client",
+    outDir: path.resolve(__dirname, "dist/client"),
     emptyOutDir: true,
     rollupOptions: {
-      input: path.resolve(__dirname, "src/web-client/index.html"),
+      input: path.resolve(__dirname, "src/client/index.html"),
     },
   },
   server: {
