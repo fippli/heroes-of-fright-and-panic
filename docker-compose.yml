@@ -1,14 +1,33 @@
-version: '3.8'
-
 services:
-  forest-game:
+  mongo:
+    image: mongo:7
+    container_name: forest-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: forest-game
+
+  app:
+    container_name: forest-game-app
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: dev.Dockerfile
     ports:
-      - "3000:3000"
+      - "3000:3000"   # server
+      - "5173:5173"   # vite
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-    restart: unless-stopped
+      NODE_ENV: development
+      MONGODB_URI: "mongodb://mongo:27017/forest-game"
+      # Polling already set in Dockerfile; override here if needed
+      CHOKIDAR_USEPOLLING: "1"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - .:/app                # live-mount your source
+      - /app/node_modules     # keep container node_modules (avoid being shadowed)
+      - /app/.pnpm-store      # optional: keep pnpm store in container
+    command: ["pnpm", "dev:container"]
 
+volumes:
+  mongo_data:

@@ -28,3 +28,16 @@ idea
 # Other
 .cache
 .DS_Store
+
+
+node_modules
+.pnpm-store
+dist
+.git
+.gitignore
+Dockerfile*
+README.md
+.vscode
+.idea
+*.log
+.env
