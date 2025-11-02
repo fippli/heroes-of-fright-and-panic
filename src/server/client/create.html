@@ -4,13 +4,45 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Create Game</title>
+    <link rel="stylesheet" href="/css/style.css" />
   </head>
-  <body>
+  <body id="create-body" class="hero-image">
     <h1>Create Game</h1>
     <form action="/api/game" method="post">
-      <label for="size">Size:</label>
+      <label for="size">Map size:</label>
       <input type="number" name="size" id="size" required value="55" />
+
+      <label for="team">Choose your team:</label>
+      <select name="team" id="team" required>
+        <option value="day">Day</option>
+        <option value="night">Night</option>
+      </select>
+
       <input type="submit" value="Create Game" />
     </form>
+
+    <script>
+      const teamSelect = document.getElementById("team");
+      const body = document.getElementById("create-body");
+
+      // Function to update hero image based on team selection
+      function updateHeroImage() {
+        const selectedTeam = teamSelect.value;
+        if (selectedTeam === "day") {
+          body.style.backgroundImage = "url('/img/hero-image.png')";
+        } else if (selectedTeam === "night") {
+          body.style.backgroundImage = "url('/img/hero-image-night.png')";
+        }
+        body.style.backgroundSize = "cover";
+        body.style.backgroundPosition = "center";
+        body.style.backgroundRepeat = "no-repeat";
+      }
+
+      // Set initial image if day is selected by default
+      updateHeroImage();
+
+      // Update image when selection changes
+      teamSelect.addEventListener("change", updateHeroImage);
+    </script>
   </body>
 </html>
