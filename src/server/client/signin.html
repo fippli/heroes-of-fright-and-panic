@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body class="hero-image-signin">
+    <main class="signin-main">
+      <div class="form-section">
+        <h2>Login</h2>
+        <form id="loginForm">
+          <label for="loginUsername">Username:</label>
+          <input type="text" name="username" id="loginUsername" required />
+
+          <label for="loginPassword">Password:</label>
+          <input type="password" name="password" id="loginPassword" required />
+
+          <button type="submit">Login</button>
+          <div id="loginError" class="error" style="display: none"></div>
+          <div id="loginSuccess" class="success" style="display: none"></div>
+        </form>
+      </div>
+    </main>
+
+    <div class="links">
+      <a href="/signup">Don't have an account? Sign up</a>
+      <br />
+      <a href="/">Back to Home</a>
+    </div>
+
+    <script>
+      // Login form handler
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const username = formData.get("username");
+          const password = formData.get("password");
+
+          const errorDiv = document.getElementById("loginError");
+          const successDiv = document.getElementById("loginSuccess");
+
+          errorDiv.style.display = "none";
+          successDiv.style.display = "none";
+
+          try {
+            const response = await fetch("/api/auth/login", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username, password }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              successDiv.textContent = "Login successful! Redirecting...";
+              successDiv.style.display = "block";
+              setTimeout(() => {
+                window.location.href = "/create";
+              }, 1000);
+            } else {
+              errorDiv.textContent = data.error || "Login failed";
+              errorDiv.style.display = "block";
+            }
+          } catch (err) {
+            errorDiv.textContent = "An error occurred. Please try again.";
+            errorDiv.style.display = "block";
+          }
+        });
+    </script>
+  </body>
+</html>

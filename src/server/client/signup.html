@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body class="hero-image-signup">
+    <main class="signin-main">
+      <div class="form-section">
+        <h2>Sign Up</h2>
+        <form id="signupForm">
+          <label for="signupUsername">Username:</label>
+          <input type="text" name="username" id="signupUsername" required />
+
+          <label for="signupPassword">Password:</label>
+          <input
+            type="password"
+            name="password"
+            id="signupPassword"
+            required
+            minlength="6"
+          />
+
+          <button type="submit">Sign Up</button>
+          <div id="signupError" class="error" style="display: none"></div>
+          <div id="signupSuccess" class="success" style="display: none"></div>
+        </form>
+      </div>
+    </main>
+
+    <div class="links">
+      <a href="/signin">Already have an account? Sign in</a>
+      <br />
+      <a href="/">Back to Home</a>
+    </div>
+
+    <script>
+      // Signup form handler
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const username = formData.get("username");
+          const password = formData.get("password");
+
+          const errorDiv = document.getElementById("signupError");
+          const successDiv = document.getElementById("signupSuccess");
+
+          errorDiv.style.display = "none";
+          successDiv.style.display = "none";
+
+          try {
+            const response = await fetch("/api/auth/signup", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username, password }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              successDiv.textContent = "Account created! Redirecting...";
+              successDiv.style.display = "block";
+              setTimeout(() => {
+                window.location.href = "/create";
+              }, 1000);
+            } else {
+              errorDiv.textContent = data.error || "Signup failed";
+              errorDiv.style.display = "block";
+            }
+          } catch (err) {
+            errorDiv.textContent = "An error occurred. Please try again.";
+            errorDiv.style.display = "block";
+          }
+        });
+    </script>
+  </body>
+</html>

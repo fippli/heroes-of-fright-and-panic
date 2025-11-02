@@ -1,0 +1,161 @@
+@import url("https://fonts.googleapis.com/css2?family=Irish+Grover&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #111111;
+  color: lightgoldenrodyellow;
+  font-family: "Irish Grover", cursive;
+}
+
+.hero-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+.hero-image-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* justify-content: center; */
+
+  width: 100vw;
+  height: 100vh;
+  background-image: url("/img/hero-image-signin.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hero-image-signup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background-image: url("/img/hero-image-signup.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.landing-body {
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  /* justify-content: center; */
+  height: 100vh;
+  width: 100vw;
+  background-image: url("/img/hero-image-2.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.landing-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* height: 100vh; */
+  margin-top: 200px;
+  width: 100vw;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: 4rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+button,
+input[type="submit"],
+a {
+  background-color: #111111;
+  color: lightgoldenrodyellow;
+  padding: 10px 20px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-family: "Irish Grover", cursive;
+}
+
+@keyframes twist {
+  0% {
+    transform: rotate(-10deg);
+  }
+  20% {
+    transform: rotate(9deg);
+  }
+  40% {
+    transform: rotate(-8deg);
+  }
+  60% {
+    transform: rotate(6deg);
+  }
+  80% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(-10deg);
+  }
+}
+
+.button-twist {
+  animation: twist 1.3s infinite cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+button,
+input[type="submit"],
+a {
+  display: inline-block;
+  transition: box-shadow 0.2s;
+}
+
+button:hover,
+input[type="submit"]:hover,
+a:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.signin-main {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+  margin-top: 200px;
+  width: 800px;
+}

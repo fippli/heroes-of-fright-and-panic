@@ -1,13 +1,15 @@
 import express from "express";
-import gameRouter from "./game/router";
-import { fileURLToPath } from "url";
 import path from "path";
+import { fileURLToPath } from "url";
+import authRouter from "./auth/router";
+import gameRouter from "./game/router";
 
 const thisFile = fileURLToPath(import.meta.url);
 const thisDir = path.dirname(thisFile);
 
 const apiRouter = express.Router();
 
+apiRouter.use("/auth", authRouter);
 apiRouter.use("/game", gameRouter);
 
 apiRouter.get("/", (_req, res) => {

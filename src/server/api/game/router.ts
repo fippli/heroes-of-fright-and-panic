@@ -1,13 +1,13 @@
+import { Tile } from "@shared/map/tile";
+import { Piece } from "@shared/piece";
+import { Player } from "@shared/player";
+import { ResourceMap } from "@shared/player/resource-map";
+import { compose } from "@shared/utils/compose";
 import express from "express";
-import { Database, Game } from "../../database";
 import type { Filter } from "mongodb";
 import { ObjectId } from "mongodb";
 import { GameMap } from "../../../shared/map/map";
-import { compose } from "@shared/utils/compose";
-import { Piece } from "@shared/piece";
-import { Player } from "@shared/player";
-import { Tile } from "@shared/map/tile";
-import { ResourceMap } from "@shared/player/resource-map";
+import { Database, Game } from "../../database";
 
 const gameRouter = express.Router();
 
@@ -22,6 +22,14 @@ database
   .catch((err) => {
     console.error("❌ Failed to connect to MongoDB:", err);
   });
+
+// Authentication middleware - protect all game routes
+gameRouter.use((req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  return res.status(401).json({ error: "Authentication required" });
+});
 
 // POST / → create a new game and redirect
 gameRouter.post("/", async (req, res) => {

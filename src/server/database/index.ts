@@ -1,21 +1,21 @@
 // src/database/index.ts
 import {
-  MongoClient,
   Db,
+  MongoClient,
   Collection as MongoCollection,
   ObjectId,
 } from "mongodb";
 
+import { Player } from "@shared/player";
 import type {
-  InsertOneResult,
-  Filter,
-  UpdateFilter,
   Document,
-  WithId,
+  Filter,
+  InsertOneResult,
   OptionalUnlessRequiredId,
+  UpdateFilter,
+  WithId,
 } from "mongodb";
 import { Tile } from "../../shared/map/tile";
-import { Player } from "@shared/player";
 
 // Narrow environment variable to a definite string
 const MONGODB_URI: string = (() => {
@@ -34,6 +34,14 @@ export interface Game extends Document {
   nightPlayer: Player;
   player: Player;
   size: number;
+}
+
+export interface User extends Document {
+  _id?: ObjectId;
+  username: string;
+  password: string; // hashed password
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 class Repository<TSchema extends Document> {
@@ -87,5 +95,9 @@ export class Database {
 
   games(): Repository<Game> {
     return new Repository<Game>(this._db.collection<Game>("games"));
+  }
+
+  users(): Repository<User> {
+    return new Repository<User>(this._db.collection<User>("users"));
   }
 }

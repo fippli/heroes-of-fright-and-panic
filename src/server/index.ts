@@ -1,4 +1,6 @@
 import express from "express";
+import session from "express-session";
+import passport from "passport";
 import path from "path";
 import { fileURLToPath } from "url";
 import apiRouter from "./api/router";
@@ -10,6 +12,25 @@ const thisDir = path.dirname(thisFile);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Session configuration
+app.use(
+  session({
+    secret:
+      process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }),
+);
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Middleware: parse URL-encoded bodies
 app.use(express.urlencoded({ extended: true }));
 
@@ -20,6 +41,9 @@ app.use("/api", apiRouter);
 
 const imgDir = path.resolve(thisDir, "../../static/img");
 app.use("/img", express.static(imgDir));
+
+const cssDir = path.resolve(thisDir, "../../static/css");
+app.use("/css", express.static(cssDir));
 
 app.use("/", clientRouter);
 

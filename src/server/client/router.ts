@@ -1,6 +1,6 @@
 import express from "express";
-import { fileURLToPath } from "url";
 import path from "path";
+import { fileURLToPath } from "url";
 
 const thisFile = fileURLToPath(import.meta.url);
 const thisDir = path.dirname(thisFile);
@@ -26,6 +26,16 @@ clientRouter.get("/", (_req, res) => {
 // Explicit route for /create → create.html
 clientRouter.get("/create", (_req, res) => {
   res.sendFile(path.join(thisDir, "create.html"));
+});
+
+// Explicit route for /signin → signin.html
+clientRouter.get("/signin", (_req, res) => {
+  res.sendFile(path.join(thisDir, "signin.html"));
+});
+
+// Explicit route for /signup → signup.html
+clientRouter.get("/signup", (_req, res) => {
+  res.sendFile(path.join(thisDir, "signup.html"));
 });
 
 // SPA fallback — any other GET (except /api etc) serve index.html
