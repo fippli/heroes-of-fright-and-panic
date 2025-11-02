@@ -1,9 +1,6 @@
-import { ImageAssets } from "../images";
-import { Hexagon } from "./Hexagon";
-import { Piece } from "./Piece";
-import type { Player } from "./Player";
-import { ResourceMap } from "./ResourceMap";
-import type { TilePosition } from "./Tile";
+import { Piece } from "@shared/piece";
+import type { Player } from "@shared/player";
+import { ResourceMap } from "@shared/player/resource-map";
 
 export enum BuildingType {
   house = "house",
@@ -43,23 +40,6 @@ export class Building {
     this.cost = cost;
     this.production = production;
     this.owner = owner;
-  }
-
-  render(ctx: CanvasRenderingContext2D, position: TilePosition) {
-    ctx.save();
-
-    const x = Hexagon.x(position.row, position.column);
-    const y = Hexagon.y(position.row);
-
-    ctx.clip(Hexagon.path(x, y));
-
-    ImageAssets.buildingImage(this.type).render(
-      ctx,
-      x - Hexagon.width / 2,
-      y - Hexagon.height / 2,
-    );
-
-    ctx.restore();
   }
 
   static house(owner: Player) {

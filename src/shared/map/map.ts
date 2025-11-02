@@ -1,6 +1,6 @@
 import { compose } from "@shared/utils/compose";
 import { Landscape } from "./landscape";
-import { Tile } from "./tile";
+import { Tile, TilePosition } from "./tile";
 
 export class GameMap {
   static generate(size: number) {
@@ -24,8 +24,6 @@ export class GameMap {
       );
     }, startTiles);
 
-    // cleanup map
-
     return compose(
       Landscape.cleanupSingles,
       Landscape.createBeaches,
@@ -35,27 +33,40 @@ export class GameMap {
     )(mapTiles);
   }
 
-  static isSameRow(a: Tile, b: Tile) {
+  static findTile(tile: Tile, tiles: Tile[]) {
+    return tiles.find(
+      (compare: Tile) =>
+        tile.row === compare.row && tile.column === compare.column,
+    );
+  }
+
+  static replaceTile(tile: TilePosition & Partial<Tile>, tiles: Tile[]) {
+    return tiles.map((compare: Tile) =>
+      GameMap.isThis(compare, tile) ? { ...compare, ...tile } : compare,
+    ) as Tile[];
+  }
+
+  static isSameRow(a: TilePosition, b: TilePosition) {
     return a.row === b.row;
   }
 
-  static isSameCol(a: Tile, b: Tile) {
+  static isSameCol(a: TilePosition, b: TilePosition) {
     return a.column === b.column;
   }
 
-  static isThis(a: Tile, b: Tile) {
+  static isThis(a: TilePosition, b: TilePosition) {
     return GameMap.isSameRow(a, b) && GameMap.isSameCol(a, b);
   }
 
-  static isEastOf(a: Tile, b: Tile) {
+  static isEastOf(a: TilePosition, b: TilePosition) {
     return GameMap.isSameRow(a, b) && a.column === b.column + 1;
   }
 
-  static isWestOf(a: Tile, b: Tile) {
+  static isWestOf(a: TilePosition, b: TilePosition) {
     return GameMap.isSameRow(a, b) && a.column === b.column - 1;
   }
 
-  static isNorthEastOf(a: Tile, b: Tile) {
+  static isNorthEastOf(a: TilePosition, b: TilePosition) {
     if (a.row % 2 === 0) {
       return a.row === b.row - 1 && a.column === b.column;
     } else {
@@ -63,7 +74,7 @@ export class GameMap {
     }
   }
 
-  static isNorthWestOf(a: Tile, b: Tile) {
+  static isNorthWestOf(a: TilePosition, b: TilePosition) {
     if (a.row % 2 === 0) {
       return a.row === b.row - 1 && a.column === b.column - 1;
     } else {
@@ -71,7 +82,7 @@ export class GameMap {
     }
   }
 
-  static isSouthEastOf(a: Tile, b: Tile) {
+  static isSouthEastOf(a: TilePosition, b: TilePosition) {
     if (a.row % 2 === 0) {
       return a.row === b.row + 1 && a.column === b.column;
     } else {
@@ -79,7 +90,7 @@ export class GameMap {
     }
   }
 
-  static isSouthWestOf(a: Tile, b: Tile) {
+  static isSouthWestOf(a: TilePosition, b: TilePosition) {
     if (a.row % 2 === 0) {
       return a.row === b.row + 1 && a.column === b.column - 1;
     } else {
@@ -87,7 +98,7 @@ export class GameMap {
     }
   }
 
-  static isNeighborTo(tile: Tile, compareTile: Tile) {
+  static isNeighborTo(tile: TilePosition, compareTile: TilePosition) {
     if (!tile) return false;
 
     return (

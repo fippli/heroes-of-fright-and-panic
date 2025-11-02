@@ -141,11 +141,11 @@ export class Hexagon {
     ctx.restore();
   }
 
-  static x(row: number, col: number) {
+  static x(row: number, column: number) {
     if (row % 2 === 0) {
-      return this.width * col;
+      return this.width * column;
     } else {
-      return this.width * (col + 1 / 2);
+      return this.width * (column + 1 / 2);
     }
   }
 

@@ -3,6 +3,11 @@ import { Database, Game } from "../../database";
 import type { Filter } from "mongodb";
 import { ObjectId } from "mongodb";
 import { GameMap } from "../../../shared/map/map";
+import { compose } from "@shared/utils/compose";
+import { Piece } from "@shared/piece";
+import { Player } from "@shared/player";
+import { Tile } from "@shared/map/tile";
+import { ResourceMap } from "@shared/player/resource-map";
 
 const gameRouter = express.Router();
 
@@ -25,13 +30,50 @@ gameRouter.post("/", async (req, res) => {
     const boardSize = req.body.size;
 
     const now = new Date();
+
+    const center = Math.floor(boardSize / 2);
+
+    const dayPlayer = new Player({
+      type: "day",
+      resources: new ResourceMap({}),
+    });
+    const nightPlayer = new Player({
+      type: "night",
+      resources: new ResourceMap({}),
+    });
+
+    const tiles = compose(
+      (tiles: Tile[]): Tile[] => {
+        return GameMap.replaceTile(
+          {
+            row: Math.floor(Math.random() * center),
+            column: Math.floor(Math.random() * center),
+            piece: Piece.peasant(dayPlayer),
+          },
+          tiles,
+        );
+      },
+      (tiles) => {
+        return GameMap.replaceTile(
+          {
+            row: Math.floor(Math.random() * center),
+            column: Math.floor(Math.random() * center),
+            piece: Piece.peasant(nightPlayer),
+          },
+          tiles,
+        );
+      },
+    )(GameMap.generate(boardSize)) as Tile[];
+
     const result = await games.create({
       createdAt: now,
       updatedAt: now,
-      board: {
-        size: boardSize,
-        tiles: GameMap.generate(boardSize),
-      },
+
+      size: boardSize,
+      tiles: tiles,
+      player: dayPlayer,
+      dayPlayer,
+      nightPlayer,
     });
 
     // redirect to the new game path
@@ -48,6 +90,12 @@ gameRouter.get("/:gameId", async (_req, res) => {
     _id: new ObjectId(_req.params.gameId),
   } as Filter<Game>);
   res.json(game);
+});
+
+gameRouter.post("/:gameId/click", async (req, res) => {
+  console.log("clicked", req.body);
+
+  res.json({ clicked: req.body });
 });
 
 export default gameRouter;

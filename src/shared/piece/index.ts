@@ -1,9 +1,6 @@
-import { ImageAssets } from "../images";
-import { Hexagon } from "./Hexagon";
-import { LandscapeType } from "./Landscape";
-import type { Player } from "./Player";
-import { ResourceMap } from "./ResourceMap";
-import type { TilePosition } from "./Tile";
+import { LandscapeType } from "@shared/map/landscape";
+import type { Player } from "@shared/player";
+import { ResourceMap } from "@shared/player/resource-map";
 
 export enum PieceType {
   peasant = "peasant",
@@ -43,14 +40,6 @@ export class Piece {
     this.upgradeCost = upgradeCost;
     this.walkableLandscape = walkableLandscape;
     this.lootableLandscape = lootableLandscape ?? [];
-  }
-
-  render(ctx: CanvasRenderingContext2D, position: TilePosition) {
-    ctx.save();
-    const x = Hexagon.x(position.row, position.column) - Hexagon.width / 2;
-    const y = Hexagon.y(position.row) - Hexagon.height / 2;
-    ImageAssets.pieceImage(this.owner, this.type).render(ctx, x, y);
-    ctx.restore();
   }
 
   static peasant(owner: Player) {
@@ -152,6 +141,6 @@ export class Piece {
   }
 
   isOwnedBy(player: Player) {
-    return this.owner.type === player.type;
+    return this.owner === player;
   }
 }

@@ -55,7 +55,7 @@ canvas {
 }
 
 .resource-icon {
-  width: 20px;
+  width: 30px;
   aspect-ratio: 1/1;
 }
 
@@ -75,16 +75,6 @@ canvas {
   background-color: #444;
   border-radius: 2px;
   overflow: hidden;
-}
-
-#health-bar-fill {
-  height: 100%;
-  background-color: #11dd11;
-}
-
-#food-bar-fill {
-  height: 100%;
-  background-color: #dd8800;
 }
 
 .right-aligned {
