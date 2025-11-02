@@ -8,14 +8,14 @@ import { ResourceMap } from "./ResourceMap";
 
 export type TilePosition = {
   row: number;
-  col: number;
+  column: number;
 };
 
 export class Tile {
   readonly x: number;
   readonly y: number;
   readonly row: number;
-  readonly col: number;
+  readonly column: number;
   explored: boolean = false;
   landscape: Landscape | null;
   building?: Building;
@@ -23,14 +23,14 @@ export class Tile {
 
   constructor({
     row,
-    col,
+    column,
     explored,
     landscape,
     piece,
     building,
   }: {
     row: number;
-    col: number;
+    column: number;
     explored?: boolean;
     landscape?: Landscape;
     piece?: Piece;
@@ -38,10 +38,10 @@ export class Tile {
   }) {
     this.piece = piece;
     this.building = building;
-    this.x = Hexagon.x(row, col);
+    this.x = Hexagon.x(row, column);
     this.y = Hexagon.y(row);
     this.row = row;
-    this.col = col;
+    this.column = column;
     this.explored = explored ?? false;
     this.landscape = landscape ?? null;
   }
@@ -121,55 +121,63 @@ export class Tile {
     return new Tile({ ...this, explored: true, landscape: landscape });
   }
 
-  isSameRow(position: { row: number; col: number }) {
+  isSameRow(position: { row: number; column: number }) {
     return this.row === position.row;
   }
 
-  isSameCol(position: { row: number; col: number }) {
-    return this.col === position.col;
+  isSameCol(position: { row: number; column: number }) {
+    return this.column === position.column;
   }
 
-  isThis(position: { row: number; col: number }) {
+  isThis(position: { row: number; column: number }) {
     return this.isSameRow(position) && this.isSameCol(position);
   }
 
-  isEastOf(position: { row: number; col: number }) {
-    return this.isSameRow(position) && this.col === position.col + 1;
+  isEastOf(position: { row: number; column: number }) {
+    return this.isSameRow(position) && this.column === position.column + 1;
   }
 
   isWestOf(position: TilePosition) {
-    return this.isSameRow(position) && this.col === position.col - 1;
+    return this.isSameRow(position) && this.column === position.column - 1;
   }
 
   isNorthEastOf(position: TilePosition) {
     if (position.row % 2 === 0) {
-      return this.row === position.row - 1 && this.col === position.col;
+      return this.row === position.row - 1 && this.column === position.column;
     } else {
-      return this.row === position.row - 1 && this.col === position.col + 1;
+      return (
+        this.row === position.row - 1 && this.column === position.column + 1
+      );
     }
   }
 
   isNorthWestOf(position: TilePosition) {
     if (position.row % 2 === 0) {
-      return this.row === position.row - 1 && this.col === position.col - 1;
+      return (
+        this.row === position.row - 1 && this.column === position.column - 1
+      );
     } else {
-      return this.row === position.row - 1 && this.col === position.col;
+      return this.row === position.row - 1 && this.column === position.column;
     }
   }
 
   isSouthEastOf(position: TilePosition) {
     if (position.row % 2 === 0) {
-      return this.row === position.row + 1 && this.col === position.col;
+      return this.row === position.row + 1 && this.column === position.column;
     } else {
-      return this.row === position.row + 1 && this.col === position.col + 1;
+      return (
+        this.row === position.row + 1 && this.column === position.column + 1
+      );
     }
   }
 
   isSouthWestOf(position: TilePosition) {
     if (position.row % 2 === 0) {
-      return this.row === position.row + 1 && this.col === position.col - 1;
+      return (
+        this.row === position.row + 1 && this.column === position.column - 1
+      );
     } else {
-      return this.row === position.row + 1 && this.col === position.col;
+      return this.row === position.row + 1 && this.column === position.column;
     }
   }
 
@@ -218,7 +226,7 @@ export class Tile {
   }
 
   has(tilePosition: TilePosition) {
-    return this.row === tilePosition.row && this.col === tilePosition.col;
+    return this.row === tilePosition.row && this.column === tilePosition.column;
   }
 
   hasAny(tilePositions: TilePosition[]) {
@@ -258,11 +266,15 @@ export class Tile {
   }
 
   distance(compareTile: Tile) {
-    return Math.abs(this.row - compareTile.row + (this.col - compareTile.col));
+    return Math.abs(
+      this.row - compareTile.row + (this.column - compareTile.column),
+    );
   }
 
   distanceTo(compareTile: Tile) {
-    return Math.abs(this.row - compareTile.row + (this.col - compareTile.col));
+    return Math.abs(
+      this.row - compareTile.row + (this.column - compareTile.column),
+    );
   }
 
   inRangeOf(compareTile: Tile) {

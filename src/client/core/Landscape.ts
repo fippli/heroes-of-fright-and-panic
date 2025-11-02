@@ -31,7 +31,7 @@ export class Landscape {
 
   render(ctx: CanvasRenderingContext2D, tilePosition: TilePosition) {
     ctx.save();
-    const x = Hexagon.x(tilePosition.row, tilePosition.col);
+    const x = Hexagon.x(tilePosition.row, tilePosition.column);
     const y = Hexagon.y(tilePosition.row);
     const centerX = x - Hexagon.width / 2;
     const centerY = y - Hexagon.height / 2;

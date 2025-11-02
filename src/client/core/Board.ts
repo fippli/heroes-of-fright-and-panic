@@ -14,7 +14,8 @@ import { Tile } from "./Tile";
 
 const dialog = new Dialog();
 
-export class Board {
+export class Game {
+  id: string;
   canvas: Canvas;
   tiles: Tile[];
   clock: Clock = new Clock();
@@ -32,50 +33,39 @@ export class Board {
     this.dayPlayer = new Player({ type: "day" });
     this.nightPlayer = new Player({ type: "night" });
 
-    this.player = this.dayPlayer;
+    // this.player = this.dayPlayer;
   }
 
-  parseTiles(
+  parse(game: {
+    id: string;
+    size: number;
+    player: Player;
+    dayPlayer: Player;
+    nightPlayer: Player;
     tiles: {
       row: number;
       column: number;
       landscape: { type: LandscapeType; lootDrop?: ResourceMap };
       building: Building;
       piece: Piece;
-    }[],
-  ) {
-    console.log("parsing board");
-    this.tiles = tiles.map(
+    }[];
+  }) {
+    this.id = game.id;
+    this.player = new Player(game.player);
+    this.dayPlayer = new Player(game.dayPlayer);
+    this.nightPlayer = new Player(game.nightPlayer);
+
+    this.tiles = game.tiles.map(
       (tile) =>
         new Tile({
           row: tile.row,
-          col: tile.column,
+          column: tile.column,
           landscape: new Landscape(tile.landscape),
           building: tile.building,
-          piece: tile.piece,
+          piece: tile.piece ? new Piece(tile.piece) : undefined,
         }),
     );
 
-    const size = 55;
-
-    const center = Math.floor(size / 2);
-
-    const dayPlayerStartTile = this.findTile({
-      row: Math.floor(Math.random() * center),
-      col: Math.floor(Math.random() * center),
-    });
-
-    const nightPlayerStartTile = this.findTile({
-      row: center + Math.floor(Math.random() * (size - center)),
-      col: center + Math.floor(Math.random() * (size - center)),
-    });
-
-    if (dayPlayerStartTile) {
-      dayPlayerStartTile.place(Piece.peasant(this.dayPlayer));
-    }
-    if (nightPlayerStartTile) {
-      nightPlayerStartTile.place(Piece.peasant(this.nightPlayer));
-    }
     console.log("board parsed", this.tiles);
   }
 
@@ -111,10 +101,10 @@ export class Board {
 
   generateMap(size: number) {
     const startTiles = Array.from({ length: size * size }, (_, tileNumber) => {
-      const col = tileNumber % size;
+      const column = tileNumber % size;
       const row = Math.floor(tileNumber / size);
 
-      return new Tile({ col, row });
+      return new Tile({ column, row });
     }) as Tile[];
 
     const mapTiles = startTiles.reduce((acc, tile) => {
@@ -122,7 +112,9 @@ export class Board {
         Landscape.generate(tile.getNeighbors(acc)),
       );
       return acc.map((tile) =>
-        tile.row === newTile.row && tile.col === newTile.col ? newTile : tile,
+        tile.row === newTile.row && tile.column === newTile.column
+          ? newTile
+          : tile,
       );
     }, startTiles);
 
@@ -139,7 +131,7 @@ export class Board {
 
   replaceTile(tile: Tile) {
     return this.tiles.map((t) =>
-      t.row === tile.row && t.col === tile.col ? tile : t,
+      t.row === tile.row && t.column === tile.column ? tile : t,
     );
   }
 
@@ -177,19 +169,31 @@ export class Board {
     }
   }
 
-  findTile(pos: { x: number; y: number } | { row: number; col: number }) {
+  findTile(pos: { x: number; y: number } | { row: number; column: number }) {
     if ("x" in pos && "y" in pos) {
       return this.tiles.find((tile) => {
         return tile.isMouseOver(pos.x, pos.y);
       });
     } else {
       return this.tiles.find((tile) => {
-        return tile.row === pos.row && tile.col === pos.col;
+        return tile.row === pos.row && tile.column === pos.column;
       });
     }
   }
 
   click({ x, y }: { x: number; y: number }) {
+    fetch(`/api/game/${this.id}/click`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ x, y }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+      });
+
     const clickedTile = this.findTile({ x, y });
 
     if (clickedTile == null) {

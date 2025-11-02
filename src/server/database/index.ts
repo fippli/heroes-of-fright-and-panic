@@ -15,6 +15,7 @@ import type {
   OptionalUnlessRequiredId,
 } from "mongodb";
 import { Tile } from "../../shared/map/tile";
+import { Player } from "@shared/player";
 
 // Narrow environment variable to a definite string
 const MONGODB_URI: string = (() => {
@@ -28,9 +29,11 @@ export interface Game extends Document {
   _id?: ObjectId; // optional when creating; will be required on reads via WithId<T>
   createdAt: Date;
   updatedAt: Date;
-  board: {
-    tiles: Tile[];
-  };
+  tiles: Tile[];
+  dayPlayer: Player;
+  nightPlayer: Player;
+  player: Player;
+  size: number;
 }
 
 class Repository<TSchema extends Document> {
