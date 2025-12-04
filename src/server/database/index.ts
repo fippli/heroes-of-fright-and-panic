@@ -24,6 +24,13 @@ const MONGODB_URI: string = (() => {
   return v;
 })();
 
+// Clock state for the game
+export interface GameClock {
+  time: number; // Hour of day (0-23), advances with actions
+  hasDawned: boolean;
+  hasDusked: boolean;
+}
+
 // Your entity should be a Document
 export interface Game extends Document {
   _id?: ObjectId; // optional when creating; will be required on reads via WithId<T>
@@ -32,7 +39,8 @@ export interface Game extends Document {
   tiles: Tile[];
   dayPlayer: Player;
   nightPlayer: Player;
-  player: Player;
+  currentPlayer: "day" | "night"; // Which player's turn it is
+  clock: GameClock; // Game time state
   size: number;
 }
 
