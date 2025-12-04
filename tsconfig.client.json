@@ -7,10 +7,7 @@
     "types": ["vite/client"],
     "noEmit": true,
     "verbatimModuleSyntax": true,
-    "jsx": "react-jsx",
-    "paths": {
-      "@shared/*": ["src/shared/*"]
-    }
+    "jsx": "react-jsx"
   },
   "include": ["src/client", "src/shared"]
 }

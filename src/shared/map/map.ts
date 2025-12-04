@@ -1,6 +1,6 @@
 import { compose } from "@shared/utils/compose";
 import { Landscape } from "./landscape";
-import { Tile, TilePosition } from "./tile";
+import type { Tile, TilePosition } from "./tile";
 
 export class GameMap {
   static generate(size: number) {

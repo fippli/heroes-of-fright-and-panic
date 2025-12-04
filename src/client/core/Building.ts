@@ -1,6 +1,5 @@
 import { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
-import { Piece } from "./Piece";
 import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
@@ -13,6 +12,10 @@ export enum BuildingType {
   farm = "farm",
 }
 
+/**
+ * Building - Client-side building representation
+ * Building logic is handled on the server, this is just for rendering
+ */
 export class Building {
   readonly type: BuildingType;
   readonly cost: ResourceMap;
@@ -31,21 +34,21 @@ export class Building {
     owner,
   }: {
     type: BuildingType;
-    walkable: boolean;
-    production: ResourceMap;
-    cost: ResourceMap;
+    walkable?: boolean;
+    production?: ResourceMap;
+    cost?: ResourceMap;
     viewRange?: number;
     owner: Player;
   }) {
-    this.walkable = walkable;
+    this.walkable = walkable ?? true;
     this.viewRange = viewRange ?? 1;
     this.type = type;
-    this.cost = cost;
-    this.production = production;
+    this.cost = cost ?? new ResourceMap({});
+    this.production = production ?? new ResourceMap({});
     this.owner = owner;
   }
 
-  render(ctx: CanvasRenderingContext2D, position: TilePosition) {
+  render(ctx: CanvasRenderingContext2D, position: TilePosition): void {
     ctx.save();
 
     const x = Hexagon.x(position.row, position.column);
@@ -62,121 +65,7 @@ export class Building {
     ctx.restore();
   }
 
-  static house(owner: Player) {
-    return new Building({
-      type: BuildingType.house,
-      production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 2 }),
-      walkable: true,
-      owner,
-    });
-  }
-
-  static castle(owner: Player) {
-    return new Building({
-      type: BuildingType.castle,
-      production: new ResourceMap({ food: 0 }),
-      cost: new ResourceMap({ wood: 10, stone: 10 }),
-      walkable: true,
-      viewRange: 3,
-      owner,
-    });
-  }
-
-  static farm(owner: Player) {
-    return new Building({
-      type: BuildingType.farm,
-      production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 1 }),
-      walkable: true,
-      owner,
-    });
-  }
-
-  static tower(owner: Player) {
-    return new Building({
-      type: BuildingType.tower,
-      production: new ResourceMap({ food: 0 }),
-      cost: new ResourceMap({ wood: 1, stone: 3 }),
-      walkable: true,
-      viewRange: 4,
-      owner,
-    });
-  }
-
-  static boat(owner: Player) {
-    return new Building({
-      type: BuildingType.boat,
-      production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
-      walkable: true,
-      owner,
-    });
-  }
-
-  static price(buildingType: BuildingType): ResourceMap {
-    switch (buildingType) {
-      case BuildingType.house: {
-        return new ResourceMap({});
-      }
-      case BuildingType.tower: {
-        return new ResourceMap({});
-      }
-      case BuildingType.castle: {
-        return new ResourceMap({});
-      }
-      case BuildingType.boat: {
-        return new ResourceMap({});
-      }
-      default: {
-        return new ResourceMap({});
-      }
-    }
-  }
-
-  static build(buildingType: BuildingType, owner: Player) {
-    if (!owner.canAfford(Building.price(buildingType))) {
-      return undefined;
-    }
-
-    owner.pay(Building.price(buildingType));
-
-    switch (buildingType) {
-      case BuildingType.house: {
-        return Building.house(owner);
-      }
-      case BuildingType.tower: {
-        return Building.tower(owner);
-      }
-
-      case BuildingType.castle: {
-        return Building.castle(owner);
-      }
-      case BuildingType.boat: {
-        return Building.boat(owner);
-      }
-      case BuildingType.farm: {
-        return Building.farm(owner);
-      }
-      default: {
-        throw new Error(`Invalid building type: ${buildingType}`);
-      }
-    }
-  }
-
-  spawn(owner: Player) {
-    switch (this.type) {
-      case BuildingType.house: {
-        return Piece.peasant(owner);
-      }
-
-      default: {
-        throw new Error(`Invalid building type: ${this.type}`);
-      }
-    }
-  }
-
-  isOwnedBy(player: Player) {
-    return this.owner === player;
+  isOwnedBy(player: Player): boolean {
+    return this.owner?.type === player?.type;
   }
 }

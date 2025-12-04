@@ -1,82 +1,199 @@
 import type { Canvas } from "../canvas";
 import type { Coordinate } from "../types/coordinate";
-import { compose } from "../utils/compose";
 import { Building, BuildingType } from "./Building";
 import { Clock } from "./Clock";
 import { Dialog } from "./Dialog";
 import { Hexagon } from "./Hexagon";
 import { Landscape, LandscapeType } from "./Landscape";
 import { Piece, PieceType } from "./Piece";
-
 import { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
 import { Tile } from "./Tile";
 
 const dialog = new Dialog();
 
-export class Game {
-  id: string;
-  canvas: Canvas;
-  tiles: Tile[];
-  clock: Clock = new Clock();
-  player: Player;
+// Types for API communication
+type PlayerType = "day" | "night";
 
+interface GameAction {
+  type: string;
+  player: PlayerType;
+  position?: { row: number; column: number };
+  selectedPosition?: { row: number; column: number };
+  buildingType?: BuildingType;
+  targetType?: PieceType;
+}
+
+interface GameClock {
+  time: number;
+  hasDawned: boolean;
+  hasDusked: boolean;
+}
+
+interface ServerGameState {
+  id: string;
+  _id?: string;
+  size: number;
+  currentPlayer: PlayerType;
+  clock: GameClock;
+  dayPlayer: {
+    type: "day";
+    resources: { wood: number; gold: number; stone: number; food: number };
+  };
+  nightPlayer: {
+    type: "night";
+    resources: { wood: number; gold: number; stone: number; food: number };
+  };
+  tiles: {
+    row: number;
+    column: number;
+    landscape: { type: LandscapeType; lootDrop?: ResourceMap } | null;
+    building: Building | null;
+    piece: Piece | null;
+  }[];
+}
+
+interface ActionResponse {
+  result: {
+    success: boolean;
+    error?: string;
+    message?: string;
+  };
+  game: ServerGameState;
+}
+
+/**
+ * Game class - Client-side render-only implementation
+ * All game logic is handled on the server.
+ * This class only:
+ * - Renders the game state
+ * - Sends user inputs to the server
+ * - Parses server responses
+ */
+export class Game {
+  id: string = "";
+  canvas: Canvas;
+  tiles: Tile[] = [];
+  clock: Clock = new Clock();
+
+  // Current player (whose turn it is)
+  currentPlayer: PlayerType = "day";
+
+  // Player states
   dayPlayer: Player;
   nightPlayer: Player;
 
+  // UI state (client-only, not persisted)
   selectedTile: Tile | undefined | null = undefined;
+
+  // Loading state for API calls
+  private isProcessingAction: boolean = false;
+
+  // Track previous time for transition detection
+  private previousWasDay: boolean = true;
 
   constructor(canvas: Canvas) {
     this.canvas = canvas;
-    this.tiles = [];
-
     this.dayPlayer = new Player({ type: "day" });
     this.nightPlayer = new Player({ type: "night" });
-
-    // this.player = this.dayPlayer;
   }
 
-  parse(game: {
-    id: string;
-    size: number;
-    player: Player;
-    dayPlayer: Player;
-    nightPlayer: Player;
-    tiles: {
-      row: number;
-      column: number;
-      landscape: { type: LandscapeType; lootDrop?: ResourceMap };
-      building: Building;
-      piece: Piece;
-    }[];
-  }) {
-    this.id = game.id;
-    this.player = new Player(game.player);
-    this.dayPlayer = new Player(game.dayPlayer);
-    this.nightPlayer = new Player(game.nightPlayer);
+  /**
+   * Get the active player based on current turn
+   */
+  get player(): Player {
+    return this.currentPlayer === "day" ? this.dayPlayer : this.nightPlayer;
+  }
 
+  /**
+   * Parse game state from server response
+   */
+  parse(game: ServerGameState): void {
+    this.id = game.id || game._id || "";
+
+    // Parse clock
+    this.clock = new Clock(game.clock?.time ?? 6);
+    const wasDay = this.previousWasDay;
+    const isNowDay = this.clock.isDay();
+
+    // Detect time transitions for dialogs
+    if (wasDay && !isNowDay) {
+      dialog.open({ title: "Dusk", content: "The sun is setting" });
+    } else if (!wasDay && isNowDay) {
+      dialog.open({ title: "Dawn", content: "The sun is rising" });
+    }
+    this.previousWasDay = isNowDay;
+
+    // Parse current player
+    this.currentPlayer = game.currentPlayer || "day";
+
+    // Parse players
+    this.dayPlayer = new Player({
+      type: "day",
+      resources: new ResourceMap(game.dayPlayer?.resources || {}),
+    });
+    this.nightPlayer = new Player({
+      type: "night",
+      resources: new ResourceMap(game.nightPlayer?.resources || {}),
+    });
+
+    // Parse tiles
     this.tiles = game.tiles.map(
       (tile) =>
         new Tile({
           row: tile.row,
           column: tile.column,
-          landscape: new Landscape(tile.landscape),
-          building: tile.building,
-          piece: tile.piece ? new Piece(tile.piece) : undefined,
+          landscape: tile.landscape
+            ? new Landscape(tile.landscape)
+            : undefined,
+          building: tile.building
+            ? new Building({
+                type: tile.building.type,
+                production: new ResourceMap(tile.building.production || {}),
+                cost: new ResourceMap(tile.building.cost || {}),
+                walkable: tile.building.walkable ?? true,
+                viewRange: tile.building.viewRange ?? 1,
+                owner: new Player({
+                  type: tile.building.owner?.type || "day",
+                }),
+              })
+            : undefined,
+          piece: tile.piece
+            ? new Piece({
+                type: tile.piece.type,
+                viewRange: tile.piece.viewRange ?? 1,
+                owner: new Player({ type: tile.piece.owner?.type || "day" }),
+                upgradeCost: new ResourceMap(tile.piece.upgradeCost || {}),
+                walkableLandscape: tile.piece.walkableLandscape || [],
+                lootableLandscape: tile.piece.lootableLandscape || [],
+              })
+            : undefined,
         }),
     );
 
-    console.log("board parsed", this.tiles);
+    console.log("Game state parsed", {
+      id: this.id,
+      currentPlayer: this.currentPlayer,
+      clock: this.clock.toString(),
+    });
   }
 
-  render() {
+  /**
+   * Render the game state - this is called every frame
+   */
+  render(): void {
     const canvas = this.canvas;
     canvas.ctx.save();
 
+    // Calculate exploration based on current player's view
+    this.calculateExploration();
+
+    // Render all tiles
     this.tiles.forEach((tile: Tile) => {
       tile.render(canvas.ctx);
     });
 
+    // Render selected tile highlight
     if (this.selectedTile) {
       this.selectedTile.renderArea(canvas.ctx, this.tiles);
       Hexagon.render(
@@ -87,238 +204,277 @@ export class Game {
       );
     }
 
+    // Render hovered tile
     const hoveredTile = this.findTile(canvas.mousePosition);
-
     if (hoveredTile) {
       hoveredTile.renderHovered(canvas.ctx);
     }
 
     canvas.ctx.restore();
 
+    // Render UI
     this.player.resources.render();
     this.clock.render();
   }
 
-  generateMap(size: number) {
-    const startTiles = Array.from({ length: size * size }, (_, tileNumber) => {
-      const column = tileNumber % size;
-      const row = Math.floor(tileNumber / size);
+  /**
+   * Calculate which tiles are explored based on current player's units and buildings
+   */
+  private calculateExploration(): void {
+    // First, unexplore all tiles
+    this.tiles.forEach((tile) => (tile.explored = false));
 
-      return new Tile({ column, row });
-    }) as Tile[];
+    // Then explore tiles visible to the current player
+    this.tiles.forEach((tile) => {
+      // Check if tile has a piece owned by current player
+      if (tile.piece?.owner?.type === this.currentPlayer) {
+        tile.explored = true;
+        const viewRange = Math.max(
+          tile.building?.viewRange ?? 0,
+          tile.piece?.viewRange ?? 0,
+        );
+        const tilesInRange = tile.getTilesInRange(this.tiles, viewRange);
+        tilesInRange.forEach((t) => (t.explored = true));
+      }
 
-    const mapTiles = startTiles.reduce((acc, tile) => {
-      const newTile = tile.giveLandscape(
-        Landscape.generate(tile.getNeighbors(acc)),
-      );
-      return acc.map((tile) =>
-        tile.row === newTile.row && tile.column === newTile.column
-          ? newTile
-          : tile,
-      );
-    }, startTiles);
-
-    // cleanup map
-
-    return compose(
-      Landscape.cleanupSingles,
-      Landscape.createBeaches,
-      Landscape.cleanupSand,
-      Landscape.placeTrees,
-      Landscape.placeMountains,
-    )(mapTiles);
-  }
-
-  replaceTile(tile: Tile) {
-    return this.tiles.map((t) =>
-      t.row === tile.row && t.column === tile.column ? tile : t,
-    );
-  }
-
-  exploreTiles() {
-    this.tiles.forEach((tile) => tile.explore(this.tiles, this.player));
-  }
-
-  unExploredTiles() {
-    this.tiles.filter((tile) => tile.unexplore());
-  }
-
-  calculateNextState(_canvas: Canvas) {
-    this.unExploredTiles();
-    this.exploreTiles();
-
-    this.clock.dusk(() => {
-      this.selectedTile = undefined;
-      dialog.open({ title: "Dusk", content: "The sun is setting" });
-      const production = this.nightPlayer.produce(this.tiles);
-      this.nightPlayer.collect(production);
+      // Check if tile has a building owned by current player
+      if (tile.building?.owner?.type === this.currentPlayer) {
+        tile.explored = true;
+      }
     });
-
-    this.clock.dawn(() => {
-      this.selectedTile = undefined;
-      dialog.open({ title: "Dawn", content: "The sun is rising" });
-
-      const production = this.dayPlayer.produce(this.tiles);
-      this.dayPlayer.collect(production);
-    });
-
-    if (this.clock.isNight()) {
-      this.player = this.nightPlayer;
-    } else {
-      this.player = this.dayPlayer;
-    }
   }
 
-  findTile(pos: { x: number; y: number } | { row: number; column: number }) {
+  /**
+   * Find a tile by pixel position or row/column
+   */
+  findTile(
+    pos: { x: number; y: number } | { row: number; column: number },
+  ): Tile | undefined {
     if ("x" in pos && "y" in pos) {
-      return this.tiles.find((tile) => {
-        return tile.isMouseOver(pos.x, pos.y);
-      });
+      return this.tiles.find((tile) => tile.isMouseOver(pos.x, pos.y));
     } else {
-      return this.tiles.find((tile) => {
-        return tile.row === pos.row && tile.column === pos.column;
+      return this.tiles.find(
+        (tile) => tile.row === pos.row && tile.column === pos.column,
+      );
+    }
+  }
+
+  /**
+   * Convert pixel coordinates to tile position
+   */
+  private pixelToTilePosition(
+    pos: Coordinate,
+  ): { row: number; column: number } | null {
+    const tile = this.findTile(pos);
+    if (!tile) return null;
+    return { row: tile.row, column: tile.column };
+  }
+
+  /**
+   * Get the selected tile position (if any)
+   */
+  private getSelectedPosition(): { row: number; column: number } | undefined {
+    if (!this.selectedTile) return undefined;
+    return { row: this.selectedTile.row, column: this.selectedTile.column };
+  }
+
+  // ============================================
+  // API COMMUNICATION
+  // ============================================
+
+  /**
+   * Send an action to the server and update local state with response
+   */
+  private async sendAction(action: GameAction): Promise<boolean> {
+    if (this.isProcessingAction) {
+      console.log("Action already in progress, ignoring");
+      return false;
+    }
+
+    this.isProcessingAction = true;
+
+    try {
+      const response = await fetch(`/api/game/${this.id}/action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(action),
       });
-    }
-  }
 
-  click({ x, y }: { x: number; y: number }) {
-    fetch(`/api/game/${this.id}/click`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ x, y }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(data);
-      });
+      const data: ActionResponse = await response.json();
 
-    const clickedTile = this.findTile({ x, y });
+      if (data.result.success) {
+        // Update local state with server response
+        this.parse(data.game);
 
-    if (clickedTile == null) {
-      return;
-    }
-
-    if (clickedTile.piece) {
-      this.selectedTile = clickedTile;
-      return;
-    }
-
-    if (this.selectedTile == null) {
-      if (clickedTile.building || clickedTile.piece) {
-        this.selectedTile = clickedTile;
-        return;
-      }
-    }
-
-    if (this.selectedTile?.piece) {
-      if (clickedTile.isNeighborTo(this.selectedTile)) {
-        if (this.selectedTile.canLoot(clickedTile)) {
-          const { lootDrop, nextLandscape } = clickedTile.loot();
-          this.player.collect(lootDrop);
-          clickedTile.landscape = nextLandscape;
-          this.clock.tick();
-          return;
+        if (data.result.message) {
+          console.log("Action result:", data.result.message);
         }
-
-        if (this.selectedTile.canWalkOn(clickedTile)) {
-          clickedTile.place(this.selectedTile.piece);
-          this.selectedTile.unplace();
-          this.selectedTile = clickedTile;
-          this.clock.tick();
-          return;
-        }
-      }
-    }
-
-    if (this.selectedTile?.building) {
-      this.selectedTile = clickedTile;
-    }
-  }
-
-  build(buildingType: BuildingType, { x, y }: { x: number; y: number }) {
-    const tile = this.findTile({ x, y });
-
-    if (!tile) return;
-
-    // if the tile has a neighbour with a piece
-    const neighborWithPiece = tile.getNeighbors(this.tiles).some((tile) => {
-      return tile.piece !== undefined;
-    });
-
-    if (neighborWithPiece) {
-      const building = Building.build(buildingType, this.player);
-      if (building) {
-        tile.build(building);
-        this.clock.tick();
-      }
-    }
-  }
-
-  buildFarm({ x, y }: Coordinate) {
-    const tile = this.findTile({ x, y });
-    if (!tile) return;
-
-    const isNeighborToHouse = tile.getNeighbors(this.tiles).some((tile) => {
-      return tile.building?.type === BuildingType.house;
-    });
-
-    if (
-      isNeighborToHouse &&
-      this.selectedTile?.building?.type === BuildingType.house &&
-      this.selectedTile.building.owner === this.player &&
-      this.selectedTile.piece?.type === PieceType.peasant
-    ) {
-      tile.build(Building.farm(this.player));
-      this.clock.tick();
-      return;
-    }
-  }
-
-  createPeasant({ x, y }: Coordinate) {
-    const tile = this.findTile({ x, y });
-    if (!tile) return;
-
-    if (tile.building?.type === BuildingType.house) {
-      if (this.player.canAfford(Piece.costOfUpgrade(PieceType.peasant))) {
-        this.player.pay(Piece.costOfUpgrade(PieceType.peasant));
-        tile.place(Piece.peasant(this.player));
       } else {
-        return;
+        console.warn("Action failed:", data.result.error);
+        // Still update state in case server made partial changes
+        if (data.game) {
+          this.parse(data.game);
+        }
       }
+
+      return data.result.success;
+    } catch (error) {
+      console.error("Error sending action:", error);
+      return false;
+    } finally {
+      this.isProcessingAction = false;
     }
   }
 
-  upgrade({ x, y }: { x: number; y: number }) {
-    const tile = this.findTile({ x, y });
+  // ============================================
+  // USER INPUT HANDLERS
+  // ============================================
 
-    if (!tile) return;
+  /**
+   * Handle click on the canvas
+   */
+  async click({ x, y }: Coordinate): Promise<void> {
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (!tilePosition) return;
 
-    if (tile.piece) {
-      tile.piece = tile.piece.upgrade();
+    const clickedTile = this.findTile(tilePosition);
+    if (!clickedTile) return;
+
+    // If clicking on a tile with our piece, just select it locally
+    if (clickedTile.piece?.owner?.type === this.currentPlayer) {
+      this.selectedTile = clickedTile;
       return;
+    }
+
+    // If clicking on a tile with our building (and no piece), select it
+    if (
+      clickedTile.building?.owner?.type === this.currentPlayer &&
+      !clickedTile.piece
+    ) {
+      this.selectedTile = clickedTile;
+      return;
+    }
+
+    // If we have a selected tile, try to perform an action
+    if (this.selectedTile) {
+      const success = await this.sendAction({
+        type: "click",
+        player: this.currentPlayer,
+        position: tilePosition,
+        selectedPosition: this.getSelectedPosition(),
+      });
+
+      // If the action moved a piece, update selection to the new position
+      if (success) {
+        const newTile = this.findTile(tilePosition);
+        if (newTile?.piece?.owner?.type === this.currentPlayer) {
+          this.selectedTile = newTile;
+        } else {
+          // Clear selection after looting or other actions
+          this.selectedTile = undefined;
+        }
+      }
+    } else {
+      // No selection, just clicking on empty tile
+      this.selectedTile = clickedTile;
     }
   }
 
-  upgradeArcher({ x, y }: { x: number; y: number }) {
-    const tile = this.findTile({ x, y });
-    if (!tile) return;
+  /**
+   * Build a structure at the given position
+   */
+  async build(buildingType: BuildingType, { x, y }: Coordinate): Promise<void> {
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (!tilePosition) return;
 
-    if (tile.piece) {
-      tile.piece = Piece.archer(this.player);
-      return;
-    }
+    await this.sendAction({
+      type: "build",
+      player: this.currentPlayer,
+      buildingType,
+      position: tilePosition,
+      selectedPosition: this.getSelectedPosition(),
+    });
   }
 
-  attack({ x, y }: { x: number; y: number }) {
-    const tile = this.findTile({ x, y });
-    if (!tile) return;
+  /**
+   * Build a farm at the given position
+   */
+  async buildFarm({ x, y }: Coordinate): Promise<void> {
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (!tilePosition) return;
 
-    // if the piece is in range, attack the tile
-    if (this.selectedTile?.inRangeOf(tile)) {
-      tile.piece = undefined;
+    await this.sendAction({
+      type: "build",
+      player: this.currentPlayer,
+      buildingType: BuildingType.farm,
+      position: tilePosition,
+      selectedPosition: this.getSelectedPosition(),
+    });
+  }
+
+  /**
+   * Create a peasant at the given position
+   */
+  async createPeasant({ x, y }: Coordinate): Promise<void> {
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (!tilePosition) return;
+
+    await this.sendAction({
+      type: "createPeasant",
+      player: this.currentPlayer,
+      position: tilePosition,
+    });
+  }
+
+  /**
+   * Upgrade a unit at the given position
+   */
+  async upgrade({ x, y }: Coordinate): Promise<void> {
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (!tilePosition) return;
+
+    await this.sendAction({
+      type: "upgrade",
+      player: this.currentPlayer,
+      position: tilePosition,
+    });
+  }
+
+  /**
+   * Upgrade a unit to archer at the given position
+   */
+  async upgradeArcher({ x, y }: Coordinate): Promise<void> {
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (!tilePosition) return;
+
+    await this.sendAction({
+      type: "upgrade",
+      player: this.currentPlayer,
+      position: tilePosition,
+      targetType: PieceType.archer,
+    });
+  }
+
+  /**
+   * Attack a target at the given position
+   */
+  async attack({ x, y }: Coordinate): Promise<void> {
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (!tilePosition) return;
+
+    const selectedPosition = this.getSelectedPosition();
+    if (!selectedPosition) {
+      console.warn("No unit selected to attack with");
       return;
     }
+
+    await this.sendAction({
+      type: "attack",
+      player: this.currentPlayer,
+      position: tilePosition,
+      selectedPosition,
+    });
   }
 }

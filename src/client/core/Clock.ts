@@ -1,54 +1,33 @@
 const timeElement = document.getElementById("time") as HTMLDivElement;
 
+/**
+ * Clock - Client-side display-only clock
+ * Time is managed by the server, this just displays it
+ */
 export class Clock {
   private time: number;
-  hasDawned: boolean = false;
-  hasDusked: boolean = false;
 
-  constructor() {
-    this.time = 6;
+  constructor(initialTime: number = 6) {
+    this.time = initialTime;
   }
 
-  tick() {
-    this.time = this.time + 1;
-  }
-
-  dusk(fn: () => void) {
-    if (!this.hasDusked && this.isNight()) {
-      console.log("Dusk");
-      fn();
-      this.hasDusked = true;
-      this.hasDawned = false;
-    }
-  }
-
-  dawn(fn: () => void) {
-    if (!this.hasDawned && this.isDay()) {
-      console.log("Dawn");
-      fn();
-      this.hasDawned = true;
-      this.hasDusked = false;
-    }
-  }
-
-  isNight() {
+  isNight(): boolean {
     return !this.isDay();
   }
 
-  isDay() {
+  isDay(): boolean {
     return this.time % 24 >= 6 && this.time % 24 < 18;
   }
 
-  toString() {
-    // should display the time in 24 hour format
+  toString(): string {
     const hours = this.time % 24;
-    const minutes = 0;
     const hoursString = hours.toString().padStart(2, "0");
-    const minutesString = minutes.toString().padStart(2, "0");
-    return `${hoursString}:${minutesString} ${this.isDay() ? "(day)" : "(night)"}`;
+    return `${hoursString}:00 ${this.isDay() ? "(day)" : "(night)"}`;
   }
 
-  render() {
-    timeElement.textContent = this.toString();
+  render(): void {
+    if (timeElement) {
+      timeElement.textContent = this.toString();
+    }
   }
 }

@@ -4,7 +4,6 @@ import { Hexagon } from "./Hexagon";
 import { Landscape, LandscapeType } from "./Landscape";
 import type { Piece } from "./Piece";
 import type { Player } from "./Player";
-import { ResourceMap } from "./ResourceMap";
 
 export type TilePosition = {
   row: number;
@@ -261,10 +260,6 @@ export class Tile {
     this.building = undefined;
   }
 
-  walkable() {
-    return this.building?.walkable || this.landscape?.walkable;
-  }
-
   distance(compareTile: Tile) {
     return Math.abs(
       this.row - compareTile.row + (this.column - compareTile.column),
@@ -292,17 +287,11 @@ export class Tile {
     );
   }
 
-  canLoot(tile: Tile) {
+  canLoot(tile: Tile): boolean {
     if (!tile.landscape) return false;
     if (!tile.landscape.lootDrop) return false;
     return (
       this.piece?.lootableLandscape.includes(tile.landscape?.type) ?? false
     );
-  }
-
-  loot() {
-    if (!this.landscape)
-      return { lootDrop: new ResourceMap({}), nextLandscape: this.landscape };
-    return this.landscape.loot();
   }
 }
