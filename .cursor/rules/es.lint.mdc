@@ -1,0 +1,46 @@
+# Title: Code Linting – oxlint
+
+## Scope
+
+- Applies **whenever you set up linting** for a Node.js, JavaScript, or TypeScript project.
+- Applies when configuring **linters** and **code quality tools**.
+
+## Canonical rule
+
+- **You must use oxlint as the linter**:
+  - Create a `.oxlintrc.json` file in the project root.
+  - Configure it with the following structure:
+    ```json
+    {
+      "categories": {
+        "correctness": "error",
+        "suspicious": "warn",
+        "pedantic": "warn",
+        "perf": "warn",
+        "style": "warn"
+      }
+    }
+    ```
+
+## Clarifications and priority
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this setup for a particular project.
+
+## Examples
+
+✅ **Compliant – .oxlintrc.json file**
+
+```json
+{
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "pedantic": "warn",
+    "perf": "warn",
+    "style": "warn"
+  }
+}
+```

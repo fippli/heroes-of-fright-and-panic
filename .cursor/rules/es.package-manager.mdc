@@ -1,0 +1,48 @@
+---
+alwaysApply: false
+---
+# Title: Package Manager – pnpm
+
+## Scope
+
+- Applies **whenever you install dependencies** or manage packages in a Node.js, JavaScript, or TypeScript project.
+- Applies when using **package managers** and **dependency installation commands**.
+
+## Canonical rule
+
+- **You must use pnpm as the package manager**:
+  - All dependencies must be installed using `pnpm` commands (e.g., `pnpm install`, `pnpm add`, `pnpm add -D`).
+  - Never use `npm` or `yarn` commands for installing dependencies.
+
+## Clarifications and priority
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this setup for a particular project.
+
+## Examples
+
+✅ **Compliant – Using pnpm commands**
+
+```bash
+pnpm install
+pnpm add some-package
+pnpm add -D dev-package
+```
+
+🚫 **Non-compliant – Using npm instead of pnpm**
+
+```bash
+npm install some-package
+```
+
+*Must use `pnpm install` or `pnpm add` instead.*
+
+🚫 **Non-compliant – Using yarn instead of pnpm**
+
+```bash
+yarn add some-package
+```
+
+*Must use `pnpm add` instead.*

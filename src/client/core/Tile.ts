@@ -140,41 +140,46 @@ export class Tile {
     return this.isSameRow(position) && this.column === position.column - 1;
   }
 
+  // Diagonal neighbor rules for odd-r offset hex grid:
+  // - Even rows are NOT shifted
+  // - Odd rows are shifted RIGHT by half a hex
+  // The column offset depends on the SOURCE tile's row (position.row)
+
   isNorthEastOf(position: TilePosition) {
+    // From even row: NE is at (row-1, same col) because odd row above is shifted right
+    // From odd row: NE is at (row-1, col+1) because even row above is not shifted
     if (position.row % 2 === 0) {
       return this.row === position.row - 1 && this.column === position.column;
     } else {
-      return (
-        this.row === position.row - 1 && this.column === position.column + 1
-      );
+      return this.row === position.row - 1 && this.column === position.column + 1;
     }
   }
 
   isNorthWestOf(position: TilePosition) {
+    // From even row: NW is at (row-1, col-1)
+    // From odd row: NW is at (row-1, same col)
     if (position.row % 2 === 0) {
-      return (
-        this.row === position.row - 1 && this.column === position.column - 1
-      );
+      return this.row === position.row - 1 && this.column === position.column - 1;
     } else {
       return this.row === position.row - 1 && this.column === position.column;
     }
   }
 
   isSouthEastOf(position: TilePosition) {
+    // From even row: SE is at (row+1, same col)
+    // From odd row: SE is at (row+1, col+1)
     if (position.row % 2 === 0) {
       return this.row === position.row + 1 && this.column === position.column;
     } else {
-      return (
-        this.row === position.row + 1 && this.column === position.column + 1
-      );
+      return this.row === position.row + 1 && this.column === position.column + 1;
     }
   }
 
   isSouthWestOf(position: TilePosition) {
+    // From even row: SW is at (row+1, col-1)
+    // From odd row: SW is at (row+1, same col)
     if (position.row % 2 === 0) {
-      return (
-        this.row === position.row + 1 && this.column === position.column - 1
-      );
+      return this.row === position.row + 1 && this.column === position.column - 1;
     } else {
       return this.row === position.row + 1 && this.column === position.column;
     }
@@ -197,23 +202,33 @@ export class Tile {
     return tiles.filter((tile) => tile.isNeighborTo(this));
   }
 
-  getTilesInRange(
-    tiles: Tile[],
-    viewRange: number,
-    layer: number = 1,
-    neighbors: Tile[] = [this],
-  ): Tile[] {
-    if (layer > viewRange) {
-      return neighbors;
+  /**
+   * Get all tiles within a given range using BFS.
+   * Range 0 = just this tile, Range 1 = this + 6 neighbors, etc.
+   */
+  getTilesInRange(tiles: Tile[], viewRange: number): Tile[] {
+    const result: Tile[] = [this];
+    let currentLayer: Tile[] = [this];
+
+    for (let i = 0; i < viewRange; i++) {
+      const nextLayer: Tile[] = [];
+      for (const tile of currentLayer) {
+        const neighbors = tile.getNeighbors(tiles);
+        for (const neighbor of neighbors) {
+          // Check if already included using row/column (not reference equality)
+          const alreadyIncluded = result.some(
+            (r) => r.row === neighbor.row && r.column === neighbor.column,
+          );
+          if (!alreadyIncluded) {
+            result.push(neighbor);
+            nextLayer.push(neighbor);
+          }
+        }
+      }
+      currentLayer = nextLayer;
     }
 
-    const nextNeighbors = neighbors.flatMap((neighbor) => {
-      return neighbor.getNeighbors(tiles);
-    });
-
-    return this.getTilesInRange(tiles, viewRange, layer + 1, [
-      ...new Set<Tile>(nextNeighbors),
-    ]);
+    return result;
   }
 
   hasExploredNeighbor(tiles: Tile[]) {
@@ -260,16 +275,26 @@ export class Tile {
     this.building = undefined;
   }
 
-  distance(compareTile: Tile) {
-    return Math.abs(
-      this.row - compareTile.row + (this.column - compareTile.column),
-    );
+  /**
+   * Calculate hex distance using axial coordinates.
+   * For offset coordinates, we first convert to axial (cube) coordinates.
+   */
+  distance(compareTile: Tile): number {
+    return this.distanceTo(compareTile);
   }
 
-  distanceTo(compareTile: Tile) {
-    return Math.abs(
-      this.row - compareTile.row + (this.column - compareTile.column),
-    );
+  distanceTo(compareTile: Tile): number {
+    // Convert offset coordinates to axial coordinates
+    // For odd-r offset: q = col - (row - (row & 1)) / 2, r = row
+    const q1 = this.column - Math.floor((this.row - (this.row & 1)) / 2);
+    const r1 = this.row;
+    const q2 = compareTile.column - Math.floor((compareTile.row - (compareTile.row & 1)) / 2);
+    const r2 = compareTile.row;
+
+    // Hex distance in axial coordinates: (|dq| + |dq + dr| + |dr|) / 2
+    const dq = q1 - q2;
+    const dr = r1 - r2;
+    return (Math.abs(dq) + Math.abs(dq + dr) + Math.abs(dr)) / 2;
   }
 
   inRangeOf(compareTile: Tile) {

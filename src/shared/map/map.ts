@@ -66,8 +66,15 @@ export class GameMap {
     return GameMap.isSameRow(a, b) && a.column === b.column - 1;
   }
 
+  // Diagonal neighbor rules for odd-r offset hex grid:
+  // - Even rows are NOT shifted
+  // - Odd rows are shifted RIGHT by half a hex
+  // The column offset depends on the SOURCE tile's row (b.row), not the neighbor's row (a.row)
+
   static isNorthEastOf(a: TilePosition, b: TilePosition) {
-    if (a.row % 2 === 0) {
+    // From even row: NE is at (row-1, same col) because odd row above is shifted right
+    // From odd row: NE is at (row-1, col+1) because even row above is not shifted
+    if (b.row % 2 === 0) {
       return a.row === b.row - 1 && a.column === b.column;
     } else {
       return a.row === b.row - 1 && a.column === b.column + 1;
@@ -75,7 +82,9 @@ export class GameMap {
   }
 
   static isNorthWestOf(a: TilePosition, b: TilePosition) {
-    if (a.row % 2 === 0) {
+    // From even row: NW is at (row-1, col-1)
+    // From odd row: NW is at (row-1, same col)
+    if (b.row % 2 === 0) {
       return a.row === b.row - 1 && a.column === b.column - 1;
     } else {
       return a.row === b.row - 1 && a.column === b.column;
@@ -83,7 +92,9 @@ export class GameMap {
   }
 
   static isSouthEastOf(a: TilePosition, b: TilePosition) {
-    if (a.row % 2 === 0) {
+    // From even row: SE is at (row+1, same col)
+    // From odd row: SE is at (row+1, col+1)
+    if (b.row % 2 === 0) {
       return a.row === b.row + 1 && a.column === b.column;
     } else {
       return a.row === b.row + 1 && a.column === b.column + 1;
@@ -91,7 +102,9 @@ export class GameMap {
   }
 
   static isSouthWestOf(a: TilePosition, b: TilePosition) {
-    if (a.row % 2 === 0) {
+    // From even row: SW is at (row+1, col-1)
+    // From odd row: SW is at (row+1, same col)
+    if (b.row % 2 === 0) {
       return a.row === b.row + 1 && a.column === b.column - 1;
     } else {
       return a.row === b.row + 1 && a.column === b.column;

@@ -715,7 +715,7 @@ export class GameEngine {
           ...tile,
           piece: null,
           building: null,
-          landscape: { type: LandscapeType.unexplored, lootDrop: null },
+          landscape: new Landscape({ type: LandscapeType.unexplored }),
         } as Tile;
       }
     });

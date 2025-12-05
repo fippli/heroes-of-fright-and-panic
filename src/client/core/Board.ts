@@ -542,6 +542,12 @@ export class Game {
 
     // If we have a selected tile, try to perform an action
     if (this.selectedTile && myPlayer) {
+      const previousSelectedPosition = {
+        row: this.selectedTile.row,
+        column: this.selectedTile.column,
+      };
+      const isNeighborClick = clickedTile.isNeighborTo(previousSelectedPosition);
+
       const success = await this.sendAction({
         type: "click",
         player: myPlayer,
@@ -549,13 +555,22 @@ export class Game {
         selectedPosition: this.getSelectedPosition(),
       });
 
-      // If the action moved a piece, update selection to the new position
       if (success) {
         const newTile = this.findTile(tilePosition);
         if (newTile?.piece?.owner?.type === myPlayer) {
+          // Piece moved to clicked tile - select it there
           this.selectedTile = newTile;
+        } else if (isNeighborClick) {
+          // Clicked a neighbor (e.g. looting) - keep selection on original tile
+          // Re-fetch the tile using row/column (not pixel coords)
+          const updatedOriginalTile = this.findTile(previousSelectedPosition);
+          if (updatedOriginalTile?.piece?.owner?.type === myPlayer) {
+            this.selectedTile = updatedOriginalTile;
+          } else {
+            this.selectedTile = undefined;
+          }
         } else {
-          // Clear selection after looting or other actions
+          // Non-neighbor click - clear selection
           this.selectedTile = undefined;
         }
       }
