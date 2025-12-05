@@ -88,23 +88,23 @@ const unexploredImage = new GameImage({
   height: Hexagon.height,
 });
 const grassImage = new GameImage({
-  src: "/img/grass.png",
+  src: "/img/grass.svg",
   width: Hexagon.width,
   height: Hexagon.height,
 });
 const treeImage = new GameImage({
-  src: "/img/tree.png",
+  src: "/img/forest.svg",
   width: Hexagon.width,
   height: Hexagon.height,
 });
 
 const sandImage = new GameImage({
-  src: "/img/sand.png",
+  src: "/img/sand.svg",
   width: Hexagon.width,
   height: Hexagon.height,
 });
 const waterImage = new GameImage({
-  src: "/img/water.png",
+  src: "/img/water.svg",
   width: Hexagon.width,
   height: Hexagon.height,
 });

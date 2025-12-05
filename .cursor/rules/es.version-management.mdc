@@ -1,0 +1,84 @@
+---
+alwaysApply: true
+---
+
+# Title: Version Management – Node.js and pnpm
+
+## Scope
+
+- Applies **whenever you configure version constraints** for Node.js and package managers in a project.
+- Applies when setting up **version pinning**, **engine strictness**, and **dependency version management**.
+
+## Canonical rule
+
+- **You must configure Node.js version management**:
+  - Create a `.nvmrc` file in the project root specifying the exact Node.js version to use.
+  - The `.nvmrc` file must contain a single version number (e.g., `20.10.0`).
+
+- **You must enforce strict dependency versions**:
+  - Use dependency strict mode to fix versions of Node.js and pnpm to a single specific version.
+  - Specify the exact pnpm version in `package.json` using the `packageManager` field (e.g., `"packageManager": "pnpm@8.15.0"`).
+  - Create a `.npmrc` file in the project root with `engine-strict=true` to enforce the correct versions.
+
+## Clarifications and priority
+
+- The `.nvmrc` file must specify an exact Node.js version (not a range like `20.x` or `>=20.0.0`).
+
+- The `packageManager` field in `package.json` must specify an exact pnpm version (e.g., `"packageManager": "pnpm@8.15.0"`), not a range.
+
+- The `.npmrc` file with `engine-strict=true` ensures that pnpm will fail if the Node.js or pnpm versions don't match the specified versions in `package.json`.
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this setup for a particular project.
+
+## Examples
+
+✅ **Compliant – .nvmrc file**
+
+```
+20.10.0
+```
+
+✅ **Compliant – .npmrc file**
+
+```
+engine-strict=true
+```
+
+✅ **Compliant – package.json with packageManager field**
+
+```json
+{
+  "name": "my-project",
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": "20.10.0",
+    "pnpm": "8.15.0"
+  }
+}
+```
+
+🚫 **Non-compliant – Missing packageManager field**
+
+```json
+{
+  "name": "my-project",
+  "scripts": {}
+}
+```
+
+*Must include `packageManager` field specifying exact pnpm version.*
+
+🚫 **Non-compliant – .nvmrc with version range**
+
+```
+20.x
+```
+
+*Must specify exact version like `20.10.0`.*
+
+🚫 **Non-compliant – Missing .npmrc file**
+
+*Must create `.npmrc` file with `engine-strict=true` to enforce version constraints.*
