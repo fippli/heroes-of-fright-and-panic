@@ -8,8 +8,9 @@ import { Piece } from "@shared/piece";
 import { Player } from "@shared/player";
 import { Tile } from "@shared/map/tile";
 import { ResourceMap } from "@shared/player/resource-map";
-import type { GameAction } from "@shared/actions";
+import type { GameAction, PlayerType } from "@shared/actions";
 import { processAction } from "../../game/actions";
+import { GameEngine } from "../../game/engine";
 
 const gameRouter = express.Router();
 
@@ -93,6 +94,8 @@ gameRouter.post("/", async (req, res) => {
 });
 
 // GET /:gameId → get game state
+// Query params:
+//   - player: "day" | "night" - which player's perspective to return (filtered fog of war)
 gameRouter.get("/:gameId", async (req, res) => {
   try {
     const games = database.games();
@@ -105,7 +108,31 @@ gameRouter.get("/:gameId", async (req, res) => {
       return;
     }
 
-    // Return game state with ID as string for client convenience
+    // Get player perspective from query param
+    const playerParam = req.query.player as string | undefined;
+
+    // Validate player param if provided
+    if (playerParam && playerParam !== "day" && playerParam !== "night") {
+      res.status(400).json({ error: "Invalid player parameter. Must be 'day' or 'night'" });
+      return;
+    }
+
+    const playerType = playerParam as PlayerType | undefined;
+
+    // If player is specified, return filtered game state (fog of war)
+    if (playerType) {
+      const engine = new GameEngine(game);
+      const filteredGame = engine.getFilteredGameState(playerType);
+
+      res.json({
+        ...filteredGame,
+        id: filteredGame._id.toString(),
+        viewingAs: playerType, // Let client know which player they are
+      });
+      return;
+    }
+
+    // No player specified - return full game state (for debugging/spectating)
     res.json({
       ...game,
       id: game._id.toString(),
@@ -117,6 +144,7 @@ gameRouter.get("/:gameId", async (req, res) => {
 });
 
 // POST /:gameId/action → process a game action
+// The action.player field determines whose turn it is and what filtered view to return
 gameRouter.post("/:gameId/action", async (req, res) => {
   try {
     const games = database.games();
@@ -158,12 +186,16 @@ gameRouter.post("/:gameId/action", async (req, res) => {
       );
     }
 
-    // Return result and updated game state
+    // Return filtered game state for the player who made the action
+    const engine = new GameEngine(updatedGame);
+    const filteredGame = engine.getFilteredGameState(action.player);
+
     res.json({
       result,
       game: {
-        ...updatedGame,
-        id: updatedGame._id.toString(),
+        ...filteredGame,
+        id: filteredGame._id.toString(),
+        viewingAs: action.player,
       },
     });
   } catch (err) {

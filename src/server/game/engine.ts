@@ -692,6 +692,106 @@ export class GameEngine {
     return this.game;
   }
 
+  /**
+   * Get the game state filtered for a specific player's perspective.
+   * Only tiles that are visible to the player are fully revealed.
+   * Other tiles are shown as "unexplored" with no piece/building info.
+   */
+  getFilteredGameState(forPlayer: PlayerType): WithId<Game> {
+    const visibleTilePositions = this.getVisibleTilesForPlayer(forPlayer);
+
+    const filteredTiles = this.game.tiles.map((tile) => {
+      const isVisible = visibleTilePositions.some(
+        (pos) => pos.row === tile.row && pos.column === tile.column,
+      );
+
+      if (isVisible) {
+        // Player can see this tile - return full info
+        return tile;
+      } else {
+        // Player cannot see this tile - hide piece and building info
+        // but keep the tile coordinates
+        return {
+          ...tile,
+          piece: null,
+          building: null,
+          landscape: { type: LandscapeType.unexplored, lootDrop: null },
+        } as Tile;
+      }
+    });
+
+    // Return the game state with filtered tiles
+    // Only return the player's own resources
+    const player = this.getPlayer(forPlayer);
+
+    return {
+      ...this.game,
+      tiles: filteredTiles,
+      // Only expose the current player's own detailed resources
+      dayPlayer:
+        forPlayer === "day"
+          ? this.game.dayPlayer
+          : new Player({ type: "day", resources: new ResourceMap({}) }),
+      nightPlayer:
+        forPlayer === "night"
+          ? this.game.nightPlayer
+          : new Player({ type: "night", resources: new ResourceMap({}) }),
+    };
+  }
+
+  /**
+   * Get all tile positions visible to a specific player.
+   * A player can see tiles:
+   * - Where they have a piece (and within that piece's view range)
+   * - Where they have a building
+   */
+  private getVisibleTilesForPlayer(playerType: PlayerType): TilePosition[] {
+    const visiblePositions: TilePosition[] = [];
+
+    for (const tile of this.game.tiles) {
+      // Check if tile has a piece owned by this player
+      if (tile.piece?.owner?.type === playerType) {
+        // Add this tile
+        visiblePositions.push({ row: tile.row, column: tile.column });
+
+        // Add tiles in view range
+        const viewRange = tile.piece.viewRange ?? 1;
+        const tilesInRange = this.getTilesInRange(
+          { row: tile.row, column: tile.column },
+          viewRange,
+        );
+        visiblePositions.push(...tilesInRange);
+      }
+
+      // Check if tile has a building owned by this player
+      if (tile.building?.owner?.type === playerType) {
+        // Add this tile
+        visiblePositions.push({ row: tile.row, column: tile.column });
+
+        // Buildings also have view range
+        const viewRange = tile.building.viewRange ?? 1;
+        const tilesInRange = this.getTilesInRange(
+          { row: tile.row, column: tile.column },
+          viewRange,
+        );
+        visiblePositions.push(...tilesInRange);
+      }
+    }
+
+    // Deduplicate
+    const uniquePositions: TilePosition[] = [];
+    for (const pos of visiblePositions) {
+      const exists = uniquePositions.some(
+        (p) => p.row === pos.row && p.column === pos.column,
+      );
+      if (!exists) {
+        uniquePositions.push(pos);
+      }
+    }
+
+    return uniquePositions;
+  }
+
   getClockDisplay(): string {
     const hours = this.game.clock.time % 24;
     const hoursString = hours.toString().padStart(2, "0");
