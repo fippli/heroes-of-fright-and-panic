@@ -76,8 +76,12 @@ export class Game {
   tiles: Tile[] = [];
   clock: Clock = new Clock();
 
-  // Current player (whose turn it is)
+  // Current player (whose turn it is based on game time)
   currentPlayer: PlayerType = "day";
+
+  // The player type assigned to this client (day or night)
+  // This is set from the URL parameter and doesn't change
+  readonly myPlayerType: PlayerType | null;
 
   // Player states
   dayPlayer: Player;
@@ -92,17 +96,34 @@ export class Game {
   // Track previous time for transition detection
   private previousWasDay: boolean = true;
 
-  constructor(canvas: Canvas) {
+  // Polling interval for game state updates
+  private pollIntervalId: number | null = null;
+  private readonly POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
+
+  constructor(canvas: Canvas, myPlayerType: PlayerType | null = null) {
     this.canvas = canvas;
+    this.myPlayerType = myPlayerType;
     this.dayPlayer = new Player({ type: "day" });
     this.nightPlayer = new Player({ type: "night" });
   }
 
   /**
-   * Get the active player based on current turn
+   * Get the player instance for this client
+   * Returns the player assigned to this client (myPlayerType), not the current turn player
    */
   get player(): Player {
+    if (this.myPlayerType === "day") return this.dayPlayer;
+    if (this.myPlayerType === "night") return this.nightPlayer;
+    // Fallback to current player if no assignment (spectator mode)
     return this.currentPlayer === "day" ? this.dayPlayer : this.nightPlayer;
+  }
+
+  /**
+   * Check if it's this client's turn to play
+   */
+  get isMyTurn(): boolean {
+    if (!this.myPlayerType) return false;
+    return this.currentPlayer === this.myPlayerType;
   }
 
   /**
@@ -174,8 +195,114 @@ export class Game {
     console.log("Game state parsed", {
       id: this.id,
       currentPlayer: this.currentPlayer,
+      myPlayerType: this.myPlayerType,
+      isMyTurn: this.isMyTurn,
       clock: this.clock.toString(),
     });
+
+    // Start polling for updates if not already polling
+    this.startPolling();
+  }
+
+  /**
+   * Start polling for game state updates
+   * This allows us to see when the other player makes a move
+   */
+  private startPolling(): void {
+    if (this.pollIntervalId !== null) return; // Already polling
+
+    this.pollIntervalId = window.setInterval(async () => {
+      // Don't poll while we're processing an action
+      if (this.isProcessingAction) return;
+
+      try {
+        const playerParam = this.myPlayerType ? `?player=${this.myPlayerType}` : "";
+        const response = await fetch(`/api/game/${this.id}${playerParam}`);
+        if (response.ok) {
+          const gameData = await response.json();
+          // Only update if something changed (compare timestamps or state)
+          this.parseQuiet(gameData);
+        }
+      } catch (error) {
+        console.warn("Polling error:", error);
+      }
+    }, this.POLL_INTERVAL_MS);
+  }
+
+  /**
+   * Parse game state without logging (for polling updates)
+   */
+  private parseQuiet(game: ServerGameState): void {
+    // Store old state to detect changes
+    const oldCurrentPlayer = this.currentPlayer;
+    const wasMyTurn = this.isMyTurn;
+
+    // Parse clock
+    this.clock = new Clock(game.clock?.time ?? 6);
+    const wasDay = this.previousWasDay;
+    const isNowDay = this.clock.isDay();
+
+    // Detect time transitions for dialogs
+    if (wasDay && !isNowDay) {
+      dialog.open({ title: "Dusk", content: "The sun is setting" });
+    } else if (!wasDay && isNowDay) {
+      dialog.open({ title: "Dawn", content: "The sun is rising" });
+    }
+    this.previousWasDay = isNowDay;
+
+    // Parse current player
+    this.currentPlayer = game.currentPlayer || "day";
+
+    // Parse players
+    this.dayPlayer = new Player({
+      type: "day",
+      resources: new ResourceMap(game.dayPlayer?.resources || {}),
+    });
+    this.nightPlayer = new Player({
+      type: "night",
+      resources: new ResourceMap(game.nightPlayer?.resources || {}),
+    });
+
+    // Parse tiles
+    this.tiles = game.tiles.map(
+      (tile) =>
+        new Tile({
+          row: tile.row,
+          column: tile.column,
+          landscape: tile.landscape
+            ? new Landscape(tile.landscape)
+            : undefined,
+          building: tile.building
+            ? new Building({
+                type: tile.building.type,
+                production: new ResourceMap(tile.building.production || {}),
+                cost: new ResourceMap(tile.building.cost || {}),
+                walkable: tile.building.walkable ?? true,
+                viewRange: tile.building.viewRange ?? 1,
+                owner: new Player({
+                  type: tile.building.owner?.type || "day",
+                }),
+              })
+            : undefined,
+          piece: tile.piece
+            ? new Piece({
+                type: tile.piece.type,
+                viewRange: tile.piece.viewRange ?? 1,
+                owner: new Player({ type: tile.piece.owner?.type || "day" }),
+                upgradeCost: new ResourceMap(tile.piece.upgradeCost || {}),
+                walkableLandscape: tile.piece.walkableLandscape || [],
+                lootableLandscape: tile.piece.lootableLandscape || [],
+              })
+            : undefined,
+        }),
+    );
+
+    // Notify if turn changed
+    const isNowMyTurn = this.isMyTurn;
+    if (!wasMyTurn && isNowMyTurn) {
+      console.log("🎮 It's your turn!");
+      dialog.open({ title: "Your Turn!", content: `It's ${this.myPlayerType} player's turn` });
+    }
   }
 
   /**
@@ -215,19 +342,59 @@ export class Game {
     // Render UI
     this.player.resources.render();
     this.clock.render();
+    this.renderPlayerIndicator();
   }
 
   /**
-   * Calculate which tiles are explored based on current player's units and buildings
+   * Render an indicator showing which player we are and if it's our turn
+   */
+  private renderPlayerIndicator(): void {
+    const ctx = this.canvas.ctx;
+    ctx.save();
+
+    // Position in top-right corner
+    const x = this.canvas.width - 20;
+    const y = 20;
+
+    // Background
+    ctx.fillStyle = this.isMyTurn ? "#22aa22" : "#444444";
+    ctx.beginPath();
+    ctx.roundRect(x - 180, y - 10, 180, 60, 8);
+    ctx.fill();
+
+    // Player type indicator
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 16px sans-serif";
+    ctx.textAlign = "right";
+
+    const playerEmoji = this.myPlayerType === "day" ? "☀️" : "🌙";
+    const playerLabel = this.myPlayerType === "day" ? "Day Player" : "Night Player";
+    ctx.fillText(`${playerEmoji} ${playerLabel}`, x - 10, y + 10);
+
+    // Turn indicator
+    ctx.font = "14px sans-serif";
+    ctx.fillStyle = this.isMyTurn ? "#ccffcc" : "#aaaaaa";
+    const turnText = this.isMyTurn ? "Your turn!" : `Waiting for ${this.currentPlayer}...`;
+    ctx.fillText(turnText, x - 10, y + 35);
+
+    ctx.restore();
+  }
+
+  /**
+   * Calculate which tiles are explored based on this client's player's units and buildings
+   * Uses myPlayerType (not currentPlayer) so each client sees their own fog of war
    */
   private calculateExploration(): void {
+    // If no player assigned (spectator), show everything
+    const viewingPlayer = this.myPlayerType || this.currentPlayer;
+
     // First, unexplore all tiles
     this.tiles.forEach((tile) => (tile.explored = false));
 
-    // Then explore tiles visible to the current player
+    // Then explore tiles visible to our player
     this.tiles.forEach((tile) => {
-      // Check if tile has a piece owned by current player
-      if (tile.piece?.owner?.type === this.currentPlayer) {
+      // Check if tile has a piece owned by our player
+      if (tile.piece?.owner?.type === viewingPlayer) {
         tile.explored = true;
         const viewRange = Math.max(
           tile.building?.viewRange ?? 0,
@@ -237,8 +404,8 @@ export class Game {
         tilesInRange.forEach((t) => (t.explored = true));
       }
 
-      // Check if tile has a building owned by current player
-      if (tile.building?.owner?.type === this.currentPlayer) {
+      // Check if tile has a building owned by our player
+      if (tile.building?.owner?.type === viewingPlayer) {
         tile.explored = true;
       }
     });
@@ -286,6 +453,18 @@ export class Game {
    * Send an action to the server and update local state with response
    */
   private async sendAction(action: GameAction): Promise<boolean> {
+    // Check if we have a player assigned
+    if (!this.myPlayerType) {
+      console.warn("No player assigned - cannot send actions");
+      return false;
+    }
+
+    // Check if it's our turn
+    if (!this.isMyTurn) {
+      console.warn("Not your turn - action blocked");
+      return false;
+    }
+
     if (this.isProcessingAction) {
       console.log("Action already in progress, ignoring");
       return false;
@@ -305,8 +484,8 @@ export class Game {
       const data: ActionResponse = await response.json();
 
       if (data.result.success) {
-        // Update local state with server response
-        this.parse(data.game);
+        // Update local state with server response (quiet parse since we just made the action)
+        this.parseQuiet(data.game);
 
         if (data.result.message) {
           console.log("Action result:", data.result.message);
@@ -315,7 +494,7 @@ export class Game {
         console.warn("Action failed:", data.result.error);
         // Still update state in case server made partial changes
         if (data.game) {
-          this.parse(data.game);
+          this.parseQuiet(data.game);
         }
       }
 
@@ -342,15 +521,19 @@ export class Game {
     const clickedTile = this.findTile(tilePosition);
     if (!clickedTile) return;
 
+    // Use myPlayerType for ownership checks (our player's pieces/buildings)
+    const myPlayer = this.myPlayerType;
+
     // If clicking on a tile with our piece, just select it locally
-    if (clickedTile.piece?.owner?.type === this.currentPlayer) {
+    if (myPlayer && clickedTile.piece?.owner?.type === myPlayer) {
       this.selectedTile = clickedTile;
       return;
     }
 
     // If clicking on a tile with our building (and no piece), select it
     if (
-      clickedTile.building?.owner?.type === this.currentPlayer &&
+      myPlayer &&
+      clickedTile.building?.owner?.type === myPlayer &&
       !clickedTile.piece
     ) {
       this.selectedTile = clickedTile;
@@ -358,10 +541,10 @@ export class Game {
     }
 
     // If we have a selected tile, try to perform an action
-    if (this.selectedTile) {
+    if (this.selectedTile && myPlayer) {
       const success = await this.sendAction({
         type: "click",
-        player: this.currentPlayer,
+        player: myPlayer,
         position: tilePosition,
         selectedPosition: this.getSelectedPosition(),
       });
@@ -369,7 +552,7 @@ export class Game {
       // If the action moved a piece, update selection to the new position
       if (success) {
         const newTile = this.findTile(tilePosition);
-        if (newTile?.piece?.owner?.type === this.currentPlayer) {
+        if (newTile?.piece?.owner?.type === myPlayer) {
           this.selectedTile = newTile;
         } else {
           // Clear selection after looting or other actions
@@ -386,12 +569,14 @@ export class Game {
    * Build a structure at the given position
    */
   async build(buildingType: BuildingType, { x, y }: Coordinate): Promise<void> {
+    if (!this.myPlayerType) return;
+
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (!tilePosition) return;
 
     await this.sendAction({
       type: "build",
-      player: this.currentPlayer,
+      player: this.myPlayerType,
       buildingType,
       position: tilePosition,
       selectedPosition: this.getSelectedPosition(),
@@ -402,12 +587,14 @@ export class Game {
    * Build a farm at the given position
    */
   async buildFarm({ x, y }: Coordinate): Promise<void> {
+    if (!this.myPlayerType) return;
+
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (!tilePosition) return;
 
     await this.sendAction({
       type: "build",
-      player: this.currentPlayer,
+      player: this.myPlayerType,
       buildingType: BuildingType.farm,
       position: tilePosition,
       selectedPosition: this.getSelectedPosition(),
@@ -418,12 +605,14 @@ export class Game {
    * Create a peasant at the given position
    */
   async createPeasant({ x, y }: Coordinate): Promise<void> {
+    if (!this.myPlayerType) return;
+
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (!tilePosition) return;
 
     await this.sendAction({
       type: "createPeasant",
-      player: this.currentPlayer,
+      player: this.myPlayerType,
       position: tilePosition,
     });
   }
@@ -432,12 +621,14 @@ export class Game {
    * Upgrade a unit at the given position
    */
   async upgrade({ x, y }: Coordinate): Promise<void> {
+    if (!this.myPlayerType) return;
+
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (!tilePosition) return;
 
     await this.sendAction({
       type: "upgrade",
-      player: this.currentPlayer,
+      player: this.myPlayerType,
       position: tilePosition,
     });
   }
@@ -446,12 +637,14 @@ export class Game {
    * Upgrade a unit to archer at the given position
    */
   async upgradeArcher({ x, y }: Coordinate): Promise<void> {
+    if (!this.myPlayerType) return;
+
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (!tilePosition) return;
 
     await this.sendAction({
       type: "upgrade",
-      player: this.currentPlayer,
+      player: this.myPlayerType,
       position: tilePosition,
       targetType: PieceType.archer,
     });
@@ -461,6 +654,8 @@ export class Game {
    * Attack a target at the given position
    */
   async attack({ x, y }: Coordinate): Promise<void> {
+    if (!this.myPlayerType) return;
+
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (!tilePosition) return;
 
@@ -472,7 +667,7 @@ export class Game {
 
     await this.sendAction({
       type: "attack",
-      player: this.currentPlayer,
+      player: this.myPlayerType,
       position: tilePosition,
       selectedPosition,
     });
