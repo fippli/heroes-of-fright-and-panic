@@ -1,5 +1,6 @@
 import express from "express";
 import gameRouter from "./game/router";
+import authRouter from "./auth/router";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -8,6 +9,7 @@ const thisDir = path.dirname(thisFile);
 
 const apiRouter = express.Router();
 
+apiRouter.use("/auth", authRouter);
 apiRouter.use("/game", gameRouter);
 
 apiRouter.get("/", (_req, res) => {

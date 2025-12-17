@@ -341,43 +341,7 @@ export class Game {
 
     // Render UI
     this.player.resources.render();
-    this.clock.render();
-    this.renderPlayerIndicator();
-  }
-
-  /**
-   * Render an indicator showing which player we are and if it's our turn
-   */
-  private renderPlayerIndicator(): void {
-    const ctx = this.canvas.ctx;
-    ctx.save();
-
-    // Position in top-right corner
-    const x = this.canvas.width - 20;
-    const y = 20;
-
-    // Background
-    ctx.fillStyle = this.isMyTurn ? "#22aa22" : "#444444";
-    ctx.beginPath();
-    ctx.roundRect(x - 180, y - 10, 180, 60, 8);
-    ctx.fill();
-
-    // Player type indicator
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 16px sans-serif";
-    ctx.textAlign = "right";
-
-    const playerEmoji = this.myPlayerType === "day" ? "☀️" : "🌙";
-    const playerLabel = this.myPlayerType === "day" ? "Day Player" : "Night Player";
-    ctx.fillText(`${playerEmoji} ${playerLabel}`, x - 10, y + 10);
-
-    // Turn indicator
-    ctx.font = "14px sans-serif";
-    ctx.fillStyle = this.isMyTurn ? "#ccffcc" : "#aaaaaa";
-    const turnText = this.isMyTurn ? "Your turn!" : `Waiting for ${this.currentPlayer}...`;
-    ctx.fillText(turnText, x - 10, y + 35);
-
-    ctx.restore();
+    this.clock.render(this.currentPlayer, this.myPlayerType ?? undefined);
   }
 
   /**

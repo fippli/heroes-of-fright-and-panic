@@ -1,4 +1,5 @@
 const timeElement = document.getElementById("time") as HTMLDivElement;
+const turnElement = document.getElementById("turn") as HTMLDivElement;
 
 /**
  * Clock - Client-side display-only clock
@@ -25,9 +26,16 @@ export class Clock {
     return `${hoursString}:00 ${this.isDay() ? "(day)" : "(night)"}`;
   }
 
-  render(): void {
+  render(currentPlayer?: "day" | "night", myPlayer?: "day" | "night"): void {
     if (timeElement) {
       timeElement.textContent = this.toString();
+    }
+
+    if (turnElement && currentPlayer) {
+      const isMyTurn = myPlayer ? currentPlayer === myPlayer : false;
+      turnElement.textContent = isMyTurn
+        ? "It's your turn!"
+        : `${currentPlayer.toUpperCase()} player's turn`;
     }
   }
 }

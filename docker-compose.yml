@@ -15,19 +15,29 @@ services:
       context: .
       dockerfile: dev.Dockerfile
     ports:
-      - "3000:3000"   # server
-      - "5173:5173"   # vite
+      - "3000:3000" # server
+      - "5173:5173" # vite
+    env_file:
+      - .env.secrets
     environment:
       NODE_ENV: development
       MONGODB_URI: "mongodb://mongo:27017/forest-game"
+      BASE_URL: "http://localhost:3000"
+      # SMTP Configuration (uncomment and fill in to enable email sending)
+      SMTP_HOST: "smtp.protonmail.ch"
+      SMTP_PORT: "587"
+      SMTP_USER: "dev@fippli.se"
+      SMTP_PASS: ${SMTP_TOKEN}
+      SMTP_FROM: "dev@fippli.se"
+      # SMTP_SECURE: "false"  # Set to "true" for port 465
       # Polling already set in Dockerfile; override here if needed
       CHOKIDAR_USEPOLLING: "1"
       WATCHPACK_POLLING: "true"
     volumes:
-      - ./src:/app/src             # mount your source code
-      - ./static:/app/static       # mount static assets folder
-      - /app/node_modules     # keep container node_modules (avoid being shadowed)
-      - /app/.pnpm-store      # optional: keep pnpm store in container
+      - ./src:/app/src # mount your source code
+      - ./static:/app/static # mount static assets folder
+      - /app/node_modules # keep container node_modules (avoid being shadowed)
+      - /app/.pnpm-store # optional: keep pnpm store in container
     command: ["pnpm", "dev"]
 
 volumes:

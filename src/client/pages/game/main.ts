@@ -1,46 +1,33 @@
-import { Canvas } from "./canvas";
-import { Game } from "./core/Board";
-import { BuildingType } from "./core/Building";
+import './game.css';
 
-import "./style.css";
-import type { Coordinate } from "./types/coordinate";
+import { Canvas } from '../../canvas';
+import { Game } from '../../core/Board';
+import { BuildingType } from '../../core/Building';
+import type { Coordinate } from '../../types/coordinate';
 
 const canvas = new Canvas();
 
 // Get game ID from path parameter
-const gameId = window.location.pathname.split("/").pop();
+const gameId = window.location.pathname.split('/').pop();
 
 // Get player type from URL query parameter (?player=day or ?player=night)
 const urlParams = new URLSearchParams(window.location.search);
-const playerParam = urlParams.get("player") as "day" | "night" | null;
+const playerParam = urlParams.get('player') as 'day' | 'night' | null;
 
 // Validate player param
-const myPlayerType: "day" | "night" | null =
-  playerParam === "day" || playerParam === "night" ? playerParam : null;
+const myPlayerType: 'day' | 'night' | null =
+  playerParam === 'day' || playerParam === 'night' ? playerParam : null;
 
 // Create game instance with assigned player type
 const game = new Game(canvas, myPlayerType);
 
 if (!gameId) {
-  console.error("No game ID found in URL");
+  console.error('No game ID found in URL');
+  showPlayerSelection('No game ID found');
 } else if (!myPlayerType) {
   // No player specified - show player selection
-  console.log("No player specified. Add ?player=day or ?player=night to the URL");
-  document.body.innerHTML = `
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #1a1a2e; color: white;">
-      <h1>Heroes of Fright and Panic</h1>
-      <h2>Choose your side</h2>
-      <div style="display: flex; gap: 20px; margin-top: 20px;">
-        <a href="?player=day" style="padding: 20px 40px; background: #ffd700; color: black; text-decoration: none; border-radius: 8px; font-size: 1.2em; font-weight: bold;">
-          ☀️ Day Player
-        </a>
-        <a href="?player=night" style="padding: 20px 40px; background: #4a4a8a; color: white; text-decoration: none; border-radius: 8px; font-size: 1.2em; font-weight: bold;">
-          🌙 Night Player
-        </a>
-      </div>
-      <p style="margin-top: 30px; color: #888;">Share the other link with your opponent!</p>
-    </div>
-  `;
+  console.log('No player specified. Add ?player=day or ?player=night to the URL');
+  showPlayerSelection();
 } else {
   // Fetch initial game state from server with player filter
   fetch(`/api/game/${gameId}?player=${myPlayerType}`)
@@ -52,12 +39,30 @@ if (!gameId) {
     })
     .then((gameData) => {
       game.parse(gameData);
-      console.log("Game loaded:", game.id, "Playing as:", myPlayerType);
+      console.log('Game loaded:', game.id, 'Playing as:', myPlayerType);
       startRenderLoop();
     })
     .catch((error) => {
-      console.error("Error loading game:", error);
+      console.error('Error loading game:', error);
     });
+}
+
+/**
+ * Show player selection screen
+ */
+function showPlayerSelection(errorMessage?: string) {
+  document.body.innerHTML = `
+    <div class="container container--centered">
+      <h1 class="hero-title text-gradient">Heroes of Fright and Panic</h1>
+      ${errorMessage ? `<p class="message message--error">${errorMessage}</p>` : ''}
+      <h2 class="subtitle">Choose your side</h2>
+      <div class="cta-buttons">
+        <a href="?player=day" class="btn btn--large btn--day">☀️ Day Player</a>
+        <a href="?player=night" class="btn btn--large btn--night">🌙 Night Player</a>
+      </div>
+      <p class="text-muted mt-lg">Share the other link with your opponent!</p>
+    </div>
+  `;
 }
 
 /**
