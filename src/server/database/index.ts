@@ -31,6 +31,34 @@ export interface GameClock {
   hasDusked: boolean;
 }
 
+// User account
+export interface User extends Document {
+  _id?: ObjectId;
+  email: string;
+  createdAt: Date;
+  lastLoginAt?: Date;
+}
+
+// Magic link token for passwordless auth
+export interface MagicToken extends Document {
+  _id?: ObjectId;
+  token: string;
+  email: string;
+  createdAt: Date;
+  expiresAt: Date;
+  usedAt?: Date;
+}
+
+// Session for authenticated users
+export interface Session extends Document {
+  _id?: ObjectId;
+  sessionId: string;
+  userId: ObjectId;
+  email: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
 // Your entity should be a Document
 export interface Game extends Document {
   _id?: ObjectId; // optional when creating; will be required on reads via WithId<T>
@@ -42,6 +70,13 @@ export interface Game extends Document {
   currentPlayer: "day" | "night"; // Which player's turn it is
   clock: GameClock; // Game time state
   size: number;
+  name?: string; // Game name
+  creatorEmail?: string; // Email of the game creator
+  dayPlayerEmail?: string | null; // Email of the day player
+  nightPlayerEmail?: string | null; // Email of the night player
+  dayPlayerLastMove?: Date | null; // Last move timestamp for day player
+  nightPlayerLastMove?: Date | null; // Last move timestamp for night player
+  invitedEmail?: string | null; // Email of invited player
 }
 
 class Repository<TSchema extends Document> {
@@ -95,5 +130,17 @@ export class Database {
 
   games(): Repository<Game> {
     return new Repository<Game>(this._db.collection<Game>("games"));
+  }
+
+  users(): Repository<User> {
+    return new Repository<User>(this._db.collection<User>("users"));
+  }
+
+  magicTokens(): Repository<MagicToken> {
+    return new Repository<MagicToken>(this._db.collection<MagicToken>("magic_tokens"));
+  }
+
+  sessions(): Repository<Session> {
+    return new Repository<Session>(this._db.collection<Session>("sessions"));
   }
 }

@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import cookieParser from "cookie-parser";
 import apiRouter from "./api/router";
 import clientRouter from "./client/router";
 
@@ -9,6 +10,9 @@ const thisDir = path.dirname(thisFile);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Middleware: parse cookies
+app.use(cookieParser());
 
 // Middleware: parse URL-encoded bodies
 app.use(express.urlencoded({ extended: true }));

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/img/tree.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Irish+Grover&display=swap"
+      rel="stylesheet"
+    />
+    <title>Game - Heroes of Fright and Panic</title>
+  </head>
+  <body class="game-body">
+    <div id="app">
+      <div class="board">
+        <div class="canvas-wrapper">
+          <canvas id="canvas" width="600" height="600"></canvas>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>Time</h2>
+          <div id="time" class="time-display"></div>
+          <div id="turn" class="turn-indicator"></div>
+        </section>
+        <section class="panel">
+          <h2>Resources</h2>
+          <div id="resources" class="stat-grid">
+            <div>
+              <img src="/img/wood.png" alt="wood" />
+              <div id="wood"></div>
+            </div>
+
+            <div>
+              <img src="/img/stone.png" alt="stone" />
+              <div id="stone"></div>
+            </div>
+
+            <div>
+              <img src="/img/food.png" alt="food" />
+              <div id="food"></div>
+            </div>
+
+            <div>
+              <img src="/img/gold.png" alt="gold" />
+              <div id="gold"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Buildings</h2>
+          <div id="buildings" class="stat-grid">
+            <div>
+              <img src="/img/house.png" alt="buildings" />
+              <div id="houses"></div>
+            </div>
+
+            <div>
+              <img src="/img/tower.png" alt="buildings" />
+              <div id="towers"></div>
+            </div>
+
+            <div>
+              <img src="/img/castle.png" alt="buildings" />
+              <div id="castles"></div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="dialog-wrapper">
+      <div class="dialog-content">
+        <h1 id="dialog-title">Dialog</h1>
+        <p id="dialog-text">This is a dialog</p>
+        <button id="close-dialog">Close</button>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
