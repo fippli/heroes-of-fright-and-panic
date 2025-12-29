@@ -1,0 +1,30 @@
+---
+alwaysApply: false
+---
+## Style and wording guidelines for rule authors
+
+- **Be specific, not clever**
+
+  - Aim for clarity over elegance. If a sentence could be misread, rewrite it.
+
+- **Prefer “must” / “must not” over “should”**
+
+  - Use **“must”** when a violation is an error.
+  - Use **“should”** only when deviation is sometimes acceptable and ideally give examples of when.
+
+- **Avoid open-ended lists**
+
+  - Phrases like “including but not limited to” or “etc.” are hard for LLMs to operationalize. List the important cases or define a clear pattern.
+
+- **Keep rules short but complete**
+
+  - Break long paragraphs into bullet points.
+  - If a rule exceeds ~5–7 bullets, consider splitting it into multiple focused rules.
+
+- **Use consistent terminology**
+
+  - Pick one term for a concept (e.g. “tool call”, “assistant message”, “system instruction”) and stick to it across rules.
+
+- **Write with enforcement in mind**
+  - Imagine an automated checker or another LLM reading the rule: could it **reliably** detect violations?
+  - If not, refine the rule until the desired behavior is easier to measure.

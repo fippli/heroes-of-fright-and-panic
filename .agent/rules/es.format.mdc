@@ -1,0 +1,40 @@
+# Title: Code Formatting – Prettier
+
+## Scope
+
+- Applies **whenever you set up formatting** for a Node.js, JavaScript, or TypeScript project.
+- Applies when configuring **code formatters** and **formatting tools**.
+
+## Canonical rule
+
+- **You must use Prettier as the code formatter**:
+  - Create a `.prettierrc` file in the project root.
+  - The `.prettierrc` file must be empty (contain no configuration) to use Prettier's default rules initially.
+
+## Clarifications and priority
+
+- The `.prettierrc` file should be empty initially to use Prettier defaults, but can be extended later with project-specific formatting rules if needed.
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this setup for a particular project.
+
+## Examples
+
+✅ **Compliant – .prettierrc file**
+
+```
+# Empty file - uses Prettier defaults
+```
+
+🚫 **Non-compliant – .prettierrc with custom rules initially**
+
+```json
+{
+  "semi": true,
+  "singleQuote": true
+}
+```
+
+*Should start with an empty file to use defaults first.*
