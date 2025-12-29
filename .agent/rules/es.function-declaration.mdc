@@ -1,0 +1,106 @@
+---
+alwaysApply: false
+---
+# Title: TypeScript Function Declarations – Arrow Function Form
+
+## Scope
+
+- Applies **whenever you write or edit Javascript/TypeScript functions** (including React components, utilities, and callbacks) in this project.
+- Applies to both **named** and **inline/anonymous** functions.
+
+## Canonical rule
+
+- **You must declare all new top-level TypeScript functions using the `const` + arrow function form**:
+
+  - Example pattern: `const f = (args: ArgType): ReturnType => { /* body */ }`
+
+- **You must not use the `function` keyword for new TypeScript function declarations**:
+
+  - Do **not** write `function f(...) { ... }` or `export function f(...) { ... }` for new code.
+
+- **For React components in TypeScript, you must also use the arrow form**:
+
+  - Example: `const MyComponent: React.FC<Props> = (props) => { /* body */ }`
+
+- **For callbacks and inline functions, prefer arrow functions**:
+
+  - Example: `array.map((item) => { /* body */ })` instead of `array.map(function (item) { /* body */ })`.
+
+- **When adding types, keep them on the parameters and the return type as needed**:
+
+  - Example: `const add = (a: number, b: number): number => a + b`
+
+- **When a function accepts more than one logical input, you must use a single named-parameter object instead of multiple positional parameters**:
+
+  - Prefer: `const f = ({ foo, bar, baz }: { foo: Foo; bar: Bar; baz: Baz }): Result => { /* body */ }`
+  - Avoid: `const f = (foo: Foo, bar: Bar, baz: Baz): Result => { /* body */ }`
+
+## Clarifications and priority
+
+- If this rule conflicts with a **project- or framework-specific constraint** that strictly requires the `function` keyword (e.g. certain decorators or metadata tools), you may use `function`, but you should:
+
+  - Prefer the `const` + arrow form in all other cases.
+  - Keep such exceptions **minimal and clearly motivated** in code comments if non-obvious.
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this style for a particular snippet.
+
+## Examples
+
+✅ **Compliant – utility function**
+
+```ts
+const toUpper = (value: string): string => {
+  return value.toUpperCase();
+};
+```
+
+🚫 **Non-compliant – utility function using `function` keyword**
+
+```ts
+function toUpper(value: string): string {
+  return value.toUpperCase();
+}
+```
+
+✅ **Compliant – React component**
+
+```ts
+const Button: React.FC<{ label: string }> = ({ label }) => {
+  return <button>{label}</button>;
+};
+```
+
+🚫 **Non-compliant – React component using `function` keyword**
+
+```ts
+function Button(props: { label: string }) {
+  return <button>{props.label}</button>;
+}
+```
+
+✅ **Compliant – function with multiple named inputs**
+
+```ts
+const buildUser = ({
+  id,
+  name,
+  isAdmin,
+}: {
+  id: string;
+  name: string;
+  isAdmin: boolean;
+}) => {
+  return { id, name, isAdmin };
+};
+```
+
+🚫 **Non-compliant – function with multiple positional parameters**
+
+```ts
+const buildUser = (id: string, name: string, isAdmin: boolean) => {
+  return { id, name, isAdmin };
+};
+```

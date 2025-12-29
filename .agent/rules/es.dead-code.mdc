@@ -1,0 +1,41 @@
+---
+alwaysApply: true
+---
+
+# Title: Dead Code Detection – knip
+
+## Scope
+
+- Applies **whenever you set up dead code detection** for a Node.js, JavaScript, or TypeScript project.
+- Applies when configuring **unused code detection**, **dependency analysis**, and **code cleanup tools**.
+
+## Canonical rule
+
+- **You must use knip for dead code management**:
+  - Install and configure knip to detect unused dependencies, exports, and files.
+  - Create a `knip.json` configuration file in the project root with the following structure:
+    ```json
+    {
+      "$schema": "https://unpkg.com/knip@5/schema.json"
+    }
+    ```
+  - Configure knip to understand the `@` path alias by ensuring it can resolve TypeScript path mappings (knip automatically reads `tsconfig.json` paths configuration).
+
+## Clarifications and priority
+
+- knip automatically reads TypeScript path aliases from `tsconfig.json`, so the `@` alias configured in `tsconfig.json` will be understood by knip without additional configuration.
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this setup for a particular project.
+
+## Examples
+
+✅ **Compliant – knip.json file**
+
+```json
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json"
+}
+```

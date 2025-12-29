@@ -1,0 +1,52 @@
+---
+alwaysApply: true
+---
+
+## Keeping dependency versions up to date
+
+### Scope
+
+- This rule applies **whenever you propose or execute commands or config changes that install or pin software versions**, including but not limited to:
+  - `npm`, `pnpm`, or `yarn` package installs (e.g. `npm install foo`, `npm install foo@1.2.3`).
+  - Docker base images (e.g. `FROM node:18`, `FROM postgres:14`).
+  - Runtime/tool versions in config files (e.g. Node, Python, Java, Go, bun, deno) such as `.nvmrc`, `package.json` `engines`, Dockerfiles, CI workflows.
+- It constrains **how you choose and justify versions**, not whether to use a particular tool or library.
+
+### Canonical rule text
+
+- You must **avoid suggesting clearly outdated versions** of common runtimes and dependencies when proposing commands or configuration changes.
+- When you propose a command that installs a dependency **without an explicit version** (e.g. `npm install foo`), you must **assume and state** that this means “install the latest stable version available in the environment”, unless the project already pins a different version of that dependency.
+- When you propose a command that installs a dependency **with an explicit version** (e.g. `npm install foo@1.2.3`, `FROM node:18`), you must:
+  - Prefer the **latest stable major/minor series that is widely supported** at the time of your training cut-off, and
+  - Explicitly say that the version may now be outdated and **recommend that the user check for a newer stable release** before adopting it.
+- When a project already contains a pinned version for a given dependency (e.g. in `package.json`, `Dockerfile`, lockfiles, or CI), you must **match the existing pin** unless the user asks you to update it.
+- When the user explicitly asks for a **specific older version** (e.g. “install `foo@1.0.0`”), you must follow their request but also briefly **warn that the version may be outdated** and suggest checking if a newer stable version is acceptable.
+- When you do not have live access to package registries or release data, you must **not claim that a specific version is the latest**; instead, phrase it as **“latest known stable version as of my training”** and recommend that the user verify against the current registry or documentation.
+- For **long-lived base images and runtimes** (e.g. `node`, `python`, `ubuntu`, `alpine` in Dockerfiles; Node versions in CI), you must:
+  - Prefer an **actively supported LTS or stable series** known at training time over EOL releases.
+  - Add a brief note that the user should **periodically update** to a newer LTS or stable version and verify compatibility.
+
+### Clarifications and priority
+
+- If this rule conflicts with **explicit project configuration** (e.g. an existing `Dockerfile` pin or `engines.node` field), you must **follow the project configuration first**, and may optionally recommend a version review.
+- If this rule conflicts with **explicit user instructions** about using a specific version, you must follow the user’s instructions while still **mentioning potential staleness**.
+- This rule is subordinate to any **system-level instructions** that explicitly require using a particular version range (e.g. “always use Node 18.x in this environment”).
+
+### Examples
+
+- **✅ Follows the rule**
+
+  - `npm install foo`
+    - Explanation: “This installs the latest stable version of `foo` available in your environment. If your project already pins `foo` elsewhere, align with that version instead.”
+  - `npm install foo@^3.2.0`
+    - Explanation: “`3.2.x` was the latest known stable minor line as of my training. Please check `npm view foo versions --json` or the npm registry to confirm whether there is a newer stable minor or major release.”
+  - `FROM node:18` in a Dockerfile
+    - Explanation: “Node 18 was an actively supported LTS at my training cut-off. You should confirm whether a newer LTS (e.g. Node 20 or later) is now recommended and update the base image accordingly.”
+
+- **🚫 Violates the rule**
+  - `npm install foo@0.9.0` with no explanation
+    - Problem: Suggests an old-looking pre-1.0 version without warning about its likely staleness or recommending checking for a newer stable release.
+  - `FROM node:12` for a new project
+    - Problem: Uses an obviously EOL Node version when newer LTS releases were already available at training time, with no justification or warning.
+  - “Run `npm install foo@1.2.3`, which is the latest version”
+    - Problem: Claims a specific version is “the latest” without acknowledging that your knowledge may be outdated or instructing the user to verify with the current registry.

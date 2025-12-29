@@ -1,0 +1,77 @@
+---
+alwaysApply: false
+---
+# Title: TypeScript Path Aliases
+
+## Scope
+
+- Applies **whenever you configure path aliases** in a TypeScript project.
+- Applies when setting up **import path resolution** and **module aliases**.
+
+## Canonical rule
+
+- **You must configure TypeScript path aliases**:
+  - Set up `@` paths in `tsconfig.json` so that all paths from `/src` can be referenced as `@/<module>`.
+  - Configure the `paths` option in `compilerOptions`:
+    ```json
+    {
+      "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+          "@/*": ["src/*"]
+        }
+      }
+    }
+    ```
+  - If using Vite, also configure the `resolve.alias` option in `vite.config.ts` to match the TypeScript paths.
+
+## Clarifications and priority
+
+- The `@` path alias must resolve to the `src` directory, allowing imports like `import { something } from '@/utils/helpers'` instead of `import { something } from '../../utils/helpers'`.
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this setup for a particular project.
+
+## Examples
+
+✅ **Compliant – tsconfig.json path aliases**
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  }
+}
+```
+
+✅ **Compliant – vite.config.ts with path alias**
+
+```ts
+import { defineConfig } from 'vite';
+import path from 'path';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+🚫 **Non-compliant – Missing path alias configuration**
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": "."
+  }
+}
+```
+
+*Must include `paths` configuration for `@/*` alias.*

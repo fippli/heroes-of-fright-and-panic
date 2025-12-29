@@ -1,0 +1,64 @@
+# Title: CSS and Styling Guidelines
+
+## Scope
+
+- Applies **whenever you make changes to CSS files** or add styling-related code.
+- Applies when **creating new components** or **modifying existing UI elements**.
+
+## Canonical rule
+
+- **You must be very minimal in style changes**:
+  - Only add semantic styling if an element does not have styling already.
+  - Do not modify existing styles unless explicitly requested by the user.
+  - Prefer using existing CSS classes and design tokens (CSS variables) over creating new styles.
+  - Avoid adding decorative or aesthetic styling changes.
+
+## Clarifications and priority
+
+- When adding new HTML elements:
+  - Check if existing CSS classes can be reused.
+  - Only add minimal semantic styling (e.g., basic layout, visibility) if absolutely necessary.
+  - Do not add colors, spacing, borders, or other visual styling unless the element has no styling at all.
+
+- When modifying existing components:
+  - Preserve existing styles unless the user explicitly requests changes.
+  - Do not "improve" or "enhance" styling without explicit user request.
+
+- This rule is **project-specific** and is secondary to:
+  - **System-level instructions** (e.g. global Cursor policies),
+  - **Safety and security constraints**,
+  - And any **explicit user instruction** that clearly overrides this guideline.
+
+## Examples
+
+✅ **Compliant – Minimal semantic styling only**
+
+```css
+/* Only adding display property because element has no styling */
+.new-component {
+  display: block;
+}
+```
+
+✅ **Compliant – Using existing classes**
+
+```html
+<!-- Reusing existing button styles instead of creating new ones -->
+<button class="btn--day">Click me</button>
+```
+
+🚫 **Non-compliant – Adding unnecessary styling**
+
+```css
+/* Adding colors, spacing, borders when element already has base styles */
+.new-component {
+  display: block;
+  padding: 16px;
+  background-color: #ffc800;
+  border: 2px solid #000;
+  border-radius: 8px;
+  color: #fff;
+}
+```
+
+*Should only add minimal semantic properties if no styling exists.*
