@@ -6,9 +6,9 @@ import { LandingApp } from "./pages/landing/LandingApp";
 import { SigninApp } from "./pages/signin/SigninApp";
 import { theme } from "./theme";
 
-export function App() {
+export const App = () => {
   return (
-    <ChakraProvider theme={theme}>
+    <ChakraProvider value={theme}>
       <BrowserRouter>
         <AuthProvider>
           <Routes>
@@ -25,4 +25,4 @@ export function App() {
       </BrowserRouter>
     </ChakraProvider>
   );
-}
+};

@@ -151,7 +151,9 @@ export class Tile {
     if (position.row % 2 === 0) {
       return this.row === position.row - 1 && this.column === position.column;
     } else {
-      return this.row === position.row - 1 && this.column === position.column + 1;
+      return (
+        this.row === position.row - 1 && this.column === position.column + 1
+      );
     }
   }
 
@@ -159,7 +161,9 @@ export class Tile {
     // From even row: NW is at (row-1, col-1)
     // From odd row: NW is at (row-1, same col)
     if (position.row % 2 === 0) {
-      return this.row === position.row - 1 && this.column === position.column - 1;
+      return (
+        this.row === position.row - 1 && this.column === position.column - 1
+      );
     } else {
       return this.row === position.row - 1 && this.column === position.column;
     }
@@ -171,7 +175,9 @@ export class Tile {
     if (position.row % 2 === 0) {
       return this.row === position.row + 1 && this.column === position.column;
     } else {
-      return this.row === position.row + 1 && this.column === position.column + 1;
+      return (
+        this.row === position.row + 1 && this.column === position.column + 1
+      );
     }
   }
 
@@ -179,7 +185,9 @@ export class Tile {
     // From even row: SW is at (row+1, col-1)
     // From odd row: SW is at (row+1, same col)
     if (position.row % 2 === 0) {
-      return this.row === position.row + 1 && this.column === position.column - 1;
+      return (
+        this.row === position.row + 1 && this.column === position.column - 1
+      );
     } else {
       return this.row === position.row + 1 && this.column === position.column;
     }
@@ -288,7 +296,9 @@ export class Tile {
     // For odd-r offset: q = col - (row - (row & 1)) / 2, r = row
     const q1 = this.column - Math.floor((this.row - (this.row & 1)) / 2);
     const r1 = this.row;
-    const q2 = compareTile.column - Math.floor((compareTile.row - (compareTile.row & 1)) / 2);
+    const q2 =
+      compareTile.column -
+      Math.floor((compareTile.row - (compareTile.row & 1)) / 2);
     const r2 = compareTile.row;
 
     // Hex distance in axial coordinates: (|dq| + |dq + dr| + |dr|) / 2

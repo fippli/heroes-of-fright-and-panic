@@ -164,9 +164,7 @@ export class Game {
         new Tile({
           row: tile.row,
           column: tile.column,
-          landscape: tile.landscape
-            ? new Landscape(tile.landscape)
-            : undefined,
+          landscape: tile.landscape ? new Landscape(tile.landscape) : undefined,
           building: tile.building
             ? new Building({
                 type: tile.building.type,
@@ -216,7 +214,9 @@ export class Game {
       if (this.isProcessingAction) return;
 
       try {
-        const playerParam = this.myPlayerType ? `?player=${this.myPlayerType}` : "";
+        const playerParam = this.myPlayerType
+          ? `?player=${this.myPlayerType}`
+          : "";
         const response = await fetch(`/api/game/${this.id}${playerParam}`);
         if (response.ok) {
           const gameData = await response.json();
@@ -269,9 +269,7 @@ export class Game {
         new Tile({
           row: tile.row,
           column: tile.column,
-          landscape: tile.landscape
-            ? new Landscape(tile.landscape)
-            : undefined,
+          landscape: tile.landscape ? new Landscape(tile.landscape) : undefined,
           building: tile.building
             ? new Building({
                 type: tile.building.type,
@@ -301,7 +299,10 @@ export class Game {
     const isNowMyTurn = this.isMyTurn;
     if (!wasMyTurn && isNowMyTurn) {
       console.log("🎮 It's your turn!");
-      dialog.open({ title: "Your Turn!", content: `It's ${this.myPlayerType} player's turn` });
+      dialog.open({
+        title: "Your Turn!",
+        content: `It's ${this.myPlayerType} player's turn`,
+      });
     }
   }
 
@@ -510,7 +511,9 @@ export class Game {
         row: this.selectedTile.row,
         column: this.selectedTile.column,
       };
-      const isNeighborClick = clickedTile.isNeighborTo(previousSelectedPosition);
+      const isNeighborClick = clickedTile.isNeighborTo(
+        previousSelectedPosition,
+      );
 
       const success = await this.sendAction({
         type: "click",

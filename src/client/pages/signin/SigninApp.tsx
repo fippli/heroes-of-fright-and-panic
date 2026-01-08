@@ -1,9 +1,9 @@
-import { FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authApi } from "../../shared/api";
 import { useAuth } from "../../shared/auth";
 
-export function SigninApp() {
+export const SigninApp = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
   const [email, setEmail] = useState("");
@@ -32,7 +32,8 @@ export function SigninApp() {
       await authApi.requestMagicLink(trimmedEmail);
       setLinkSentTo(trimmedEmail);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
+      const message =
+        err instanceof Error ? err.message : "Something went wrong";
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -56,7 +57,9 @@ export function SigninApp() {
           <br />
           We sent a magic link to <strong>{linkSentTo}</strong>.
           <br />
-          <small className="text-muted">(In dev mode, check the server console)</small>
+          <small className="text-muted">
+            (In dev mode, check the server console)
+          </small>
         </div>
       )}
 
@@ -87,4 +90,4 @@ export function SigninApp() {
       </div>
     </div>
   );
-}
+};

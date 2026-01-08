@@ -143,7 +143,7 @@ classDiagram
 ```mermaid
 graph LR
     subgraph LandscapeType
-        A[grass] 
+        A[grass]
         B[tree]
         C[sand]
         D[water]
@@ -152,14 +152,14 @@ graph LR
     end
 ```
 
-| Type | Walkable | Lootable | Loot Drop |
-|------|----------|----------|-----------|
-| `grass` | ✅ | ❌ | - |
-| `tree` | ❌ (Archers only) | ✅ | 1 Wood |
-| `sand` | ✅ | ❌ | - |
-| `water` | ❌ | ❌ | - |
-| `mountain` | ❌ | ✅ | 1 Stone |
-| `unexplored` | - | - | - |
+| Type         | Walkable          | Lootable | Loot Drop |
+| ------------ | ----------------- | -------- | --------- |
+| `grass`      | ✅                | ❌       | -         |
+| `tree`       | ❌ (Archers only) | ✅       | 1 Wood    |
+| `sand`       | ✅                | ❌       | -         |
+| `water`      | ❌                | ❌       | -         |
+| `mountain`   | ❌                | ✅       | 1 Stone   |
+| `unexplored` | -                 | -        | -         |
 
 ### PieceType
 
@@ -174,13 +174,13 @@ graph LR
     end
 ```
 
-| Type | View Range | Walkable Terrain | Can Loot | Upgrade Cost |
-|------|------------|------------------|----------|--------------|
-| `peasant` | 1 | grass, sand | tree, mountain | 1 Wood |
-| `soldier` | 1 | grass, sand | ❌ | 2 Wood |
-| `knight` | 2 | grass, sand | ❌ | 3 Wood |
-| `archer` | 2 | grass, tree, sand | ❌ | 3 Wood |
-| `boat` | - | - | - | - |
+| Type      | View Range | Walkable Terrain  | Can Loot       | Upgrade Cost |
+| --------- | ---------- | ----------------- | -------------- | ------------ |
+| `peasant` | 1          | grass, sand       | tree, mountain | 1 Wood       |
+| `soldier` | 1          | grass, sand       | ❌             | 2 Wood       |
+| `knight`  | 2          | grass, sand       | ❌             | 3 Wood       |
+| `archer`  | 2          | grass, tree, sand | ❌             | 3 Wood       |
+| `boat`    | -          | -                 | -              | -            |
 
 ### BuildingType
 
@@ -195,13 +195,13 @@ graph LR
     end
 ```
 
-| Type | Cost | Production | View Range | Can Spawn |
-|------|------|------------|------------|-----------|
-| `house` | 2 Wood | 1 Food | 1 | Peasant |
-| `castle` | 10 Wood, 10 Stone | - | 3 | ❌ |
-| `tower` | 1 Wood, 3 Stone | - | 4 | ❌ |
-| `farm` | 1 Wood | 1 Food | 1 | ❌ |
-| `boat` | Free | 1 Food | 1 | ❌ |
+| Type     | Cost              | Production | View Range | Can Spawn |
+| -------- | ----------------- | ---------- | ---------- | --------- |
+| `house`  | 2 Wood            | 1 Food     | 1          | Peasant   |
+| `castle` | 10 Wood, 10 Stone | -          | 3          | ❌        |
+| `tower`  | 1 Wood, 3 Stone   | -          | 4          | ❌        |
+| `farm`   | 1 Wood            | 1 Food     | 1          | ❌        |
+| `boat`   | Free              | 1 Food     | 1          | ❌        |
 
 ## Unit Upgrade Path
 
@@ -216,6 +216,7 @@ flowchart LR
 ## Tile Coordinate System
 
 The game uses a hexagonal offset coordinate system where:
+
 - Tiles are identified by `(row, column)`
 - Even rows are aligned to the left
 - Odd rows are offset by half a hexagon width
@@ -227,13 +228,13 @@ graph TD
         A1["(0,1)"]
         A2["(0,2)"]
     end
-    
+
     subgraph "Row 1 (Odd - Offset)"
         B0["(1,0)"]
         B1["(1,1)"]
         B2["(1,2)"]
     end
-    
+
     subgraph "Row 2 (Even)"
         C0["(2,0)"]
         C1["(2,1)"]
@@ -244,6 +245,7 @@ graph TD
 ### Neighbor Directions
 
 Each hexagon has 6 neighbors:
+
 - **East** / **West** (same row)
 - **North-East** / **North-West** (row - 1)
 - **South-East** / **South-West** (row + 1)
@@ -265,7 +267,7 @@ flowchart TB
         S6[ResourceMap]
         S7[GameMap]
     end
-    
+
     subgraph "Client (with rendering)"
         C1[Tile + render]
         C2[Landscape + render]
@@ -277,13 +279,13 @@ flowchart TB
         C8[Canvas]
         C9[Hexagon]
     end
-    
+
     subgraph "Server"
         SE1[Database]
         SE2[Game Repository]
         SE3[Express Routes]
     end
-    
+
     S1 -.-> C1
     S2 -.-> C2
     S3 -.-> C3
@@ -291,7 +293,7 @@ flowchart TB
     S5 -.-> C5
     S6 -.-> C6
     S7 -.-> C7
-    
+
     SE1 --> SE2
     SE2 --> SE3
     SE3 <--> C7

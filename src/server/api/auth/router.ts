@@ -17,9 +17,9 @@ const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 /**
  * Generate a secure random token
  */
-function generateToken(): string {
+const generateToken = (): string => {
   return crypto.randomBytes(32).toString("hex");
-}
+};
 
 /**
  * POST /api/auth/magic-link
@@ -57,7 +57,8 @@ authRouter.post("/magic-link", async (req, res) => {
     });
 
     // Build magic link URL
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const baseUrl =
+      process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
     const magicLink = `${baseUrl}/auth/verify?token=${token}`;
 
     // Send the magic link email
@@ -65,7 +66,9 @@ authRouter.post("/magic-link", async (req, res) => {
 
     if (!emailSent && isSmtpConfigured) {
       // SMTP is configured but email failed to send
-      res.status(500).json({ error: "Failed to send magic link email. Please try again." });
+      res
+        .status(500)
+        .json({ error: "Failed to send magic link email. Please try again." });
       return;
     }
 
@@ -115,10 +118,9 @@ authRouter.get("/verify", async (req, res) => {
     }
 
     // Mark token as used
-    await database.magicTokens().updateOne(
-      { _id: magicToken._id },
-      { $set: { usedAt: new Date() } }
-    );
+    await database
+      .magicTokens()
+      .updateOne({ _id: magicToken._id }, { $set: { usedAt: new Date() } });
 
     // Find or create user
     let user = await database.users().findOne({ email: magicToken.email });
@@ -138,10 +140,9 @@ authRouter.get("/verify", async (req, res) => {
     }
 
     // Update last login
-    await database.users().updateOne(
-      { _id: user._id },
-      { $set: { lastLoginAt: new Date() } }
-    );
+    await database
+      .users()
+      .updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
 
     // Create session
     const sessionId = generateToken();

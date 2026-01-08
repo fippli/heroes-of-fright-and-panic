@@ -29,7 +29,9 @@ database
 /**
  * Helper function to get current user from session
  */
-async function getCurrentUser(req: express.Request): Promise<{ email: string; id: string } | null> {
+const getCurrentUser = async (
+  req: express.Request,
+): Promise<{ email: string; id: string } | null> => {
   try {
     const sessionId = req.cookies?.session;
     if (!sessionId) {
@@ -54,14 +56,14 @@ async function getCurrentUser(req: express.Request): Promise<{ email: string; id
     console.error("Error getting current user:", error);
     return null;
   }
-}
+};
 
 // GET / → list all games
 gameRouter.get("/", async (req, res) => {
   try {
     const games = database.games();
     const db = database.db;
-    
+
     // Get all games, sorted by most recent first
     const gamesList = await db
       .collection("games")
@@ -122,9 +124,7 @@ gameRouter.post("/", async (req, res) => {
     let tiles = GameMap.generate(boardSize) as Tile[];
 
     // Find all grass tiles
-    const grassTiles = tiles.filter(
-      (tile) => tile.landscape?.type === "grass"
-    );
+    const grassTiles = tiles.filter((tile) => tile.landscape?.type === "grass");
 
     // Find grass tile closest to lower-left corner (high row, low column) for Day player
     // Distance from lower-left = sqrt((maxRow - row)^2 + column^2)
@@ -137,7 +137,7 @@ gameRouter.post("/", async (req, res) => {
     for (const tile of grassTiles) {
       // Distance from lower-left corner (maxRow, 0)
       const distance = Math.sqrt(
-        Math.pow(maxRow - tile.row, 2) + Math.pow(tile.column, 2)
+        Math.pow(maxRow - tile.row, 2) + Math.pow(tile.column, 2),
       );
       if (distance < minDayDistance) {
         minDayDistance = distance;
@@ -152,7 +152,7 @@ gameRouter.post("/", async (req, res) => {
     for (const tile of grassTiles) {
       // Distance from upper-right corner (0, maxCol)
       const distance = Math.sqrt(
-        Math.pow(tile.row, 2) + Math.pow(maxCol - tile.column, 2)
+        Math.pow(tile.row, 2) + Math.pow(maxCol - tile.column, 2),
       );
       if (distance < minNightDistance) {
         minNightDistance = distance;
@@ -181,8 +181,10 @@ gameRouter.post("/", async (req, res) => {
     ) as Tile[];
 
     // Assign creator to selected alliance, invited player to opposite
-    const dayPlayerEmail = alliance === "day" ? user.email : (inviteEmail || null);
-    const nightPlayerEmail = alliance === "night" ? user.email : (inviteEmail || null);
+    const dayPlayerEmail =
+      alliance === "day" ? user.email : inviteEmail || null;
+    const nightPlayerEmail =
+      alliance === "night" ? user.email : inviteEmail || null;
 
     const result = await games.create({
       createdAt: now,
@@ -248,7 +250,9 @@ gameRouter.get("/:gameId", async (req, res) => {
 
     // Validate player param if provided
     if (playerParam && playerParam !== "day" && playerParam !== "night") {
-      res.status(400).json({ error: "Invalid player parameter. Must be 'day' or 'night'" });
+      res
+        .status(400)
+        .json({ error: "Invalid player parameter. Must be 'day' or 'night'" });
       return;
     }
 
@@ -302,13 +306,13 @@ gameRouter.post("/:gameId/action", async (req, res) => {
     }
 
     // Process the action
-    const { result, updatedGame } = processAction(game, action);
+    const { result, updatedGame } = processAction({ game, action });
 
     if (result.success) {
       // Get current user to track last move
       const user = await getCurrentUser(req);
       const now = new Date();
-      
+
       // Determine which player's last move to update
       const updateFields: any = {
         tiles: updatedGame.tiles,
@@ -327,10 +331,9 @@ gameRouter.post("/:gameId/action", async (req, res) => {
       }
 
       // Save updated game state
-      await games.updateOne(
-        { _id: gameId } as Filter<Game>,
-        { $set: updateFields },
-      );
+      await games.updateOne({ _id: gameId } as Filter<Game>, {
+        $set: updateFields,
+      });
     }
 
     // Return filtered game state for the player who made the action
@@ -385,15 +388,12 @@ gameRouter.post("/:gameId/join", async (req, res) => {
     }
 
     // Join as night player
-    await games.updateOne(
-      { _id: gameId } as Filter<Game>,
-      {
-        $set: {
-          nightPlayerEmail: user.email,
-          updatedAt: new Date(),
-        },
+    await games.updateOne({ _id: gameId } as Filter<Game>, {
+      $set: {
+        nightPlayerEmail: user.email,
+        updatedAt: new Date(),
       },
-    );
+    });
 
     res.json({ success: true, message: "Joined game as night player" });
   } catch (err) {
@@ -425,7 +425,9 @@ gameRouter.delete("/:gameId", async (req, res) => {
 
     // Check if user is the creator
     if (game.creatorEmail !== user.email) {
-      res.status(403).json({ error: "Only the game creator can delete this game" });
+      res
+        .status(403)
+        .json({ error: "Only the game creator can delete this game" });
       return;
     }
 

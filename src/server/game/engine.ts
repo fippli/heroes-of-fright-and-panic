@@ -167,10 +167,7 @@ export class GameEngine {
     );
   }
 
-  private getTilesInRange(
-    center: TilePosition,
-    range: number,
-  ): TilePosition[] {
+  private getTilesInRange(center: TilePosition, range: number): TilePosition[] {
     const result: TilePosition[] = [center];
     let currentLayer = [center];
 
@@ -296,9 +293,7 @@ export class GameEngine {
     };
   }
 
-  private transformLandscape(
-    landscape: Tile["landscape"],
-  ): Tile["landscape"] {
+  private transformLandscape(landscape: Tile["landscape"]): Tile["landscape"] {
     if (!landscape) return null;
 
     if (

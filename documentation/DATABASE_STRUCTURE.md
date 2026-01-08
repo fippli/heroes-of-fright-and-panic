@@ -25,19 +25,19 @@ erDiagram
         Object nightPlayer
         Array tiles
     }
-    
+
     PLAYER {
         String type "day | night"
         Object resources
     }
-    
+
     RESOURCE_MAP {
         Number wood
         Number gold
         Number stone
         Number food
     }
-    
+
     TILE {
         Number column
         Number row
@@ -45,12 +45,12 @@ erDiagram
         Object piece
         Object building
     }
-    
+
     LANDSCAPE {
         String type "grass|tree|sand|water|mountain|unexplored"
         Object lootDrop
     }
-    
+
     PIECE {
         String type "peasant|soldier|knight|archer|boat"
         Number viewRange
@@ -59,7 +59,7 @@ erDiagram
         Array walkableLandscape
         Array lootableLandscape
     }
-    
+
     BUILDING {
         String type "house|castle|tower|farm|boat"
         Object cost
@@ -68,7 +68,7 @@ erDiagram
         Boolean walkable
         Number viewRange
     }
-    
+
     GAME ||--|| PLAYER : "player (current)"
     GAME ||--|| PLAYER : "dayPlayer"
     GAME ||--|| PLAYER : "nightPlayer"
@@ -89,14 +89,14 @@ erDiagram
 
 ```typescript
 interface Game {
-  _id?: ObjectId;           // MongoDB auto-generated ID
-  createdAt: Date;          // Game creation timestamp
-  updatedAt: Date;          // Last update timestamp
-  size: number;             // Map size (size × size grid)
-  player: Player;           // Reference to current active player
-  dayPlayer: Player;        // Day player state
-  nightPlayer: Player;      // Night player state
-  tiles: Tile[];            // Array of all map tiles
+  _id?: ObjectId; // MongoDB auto-generated ID
+  createdAt: Date; // Game creation timestamp
+  updatedAt: Date; // Last update timestamp
+  size: number; // Map size (size × size grid)
+  player: Player; // Reference to current active player
+  dayPlayer: Player; // Day player state
+  nightPlayer: Player; // Night player state
+  tiles: Tile[]; // Array of all map tiles
 }
 ```
 
@@ -104,8 +104,8 @@ interface Game {
 
 ```typescript
 interface Player {
-  type: "day" | "night";    // Player faction
-  resources: ResourceMap;    // Player's resource inventory
+  type: "day" | "night"; // Player faction
+  resources: ResourceMap; // Player's resource inventory
 }
 ```
 
@@ -113,10 +113,10 @@ interface Player {
 
 ```typescript
 interface ResourceMap {
-  wood: number;             // Wood resource count
-  gold: number;             // Gold resource count
-  stone: number;            // Stone resource count
-  food: number;             // Food resource count
+  wood: number; // Wood resource count
+  gold: number; // Gold resource count
+  stone: number; // Stone resource count
+  food: number; // Food resource count
 }
 ```
 
@@ -124,10 +124,10 @@ interface ResourceMap {
 
 ```typescript
 interface Tile {
-  column: number;           // X coordinate in grid
-  row: number;              // Y coordinate in grid
-  landscape: Landscape | null;  // Terrain type
-  piece: Piece | null;      // Unit on this tile (if any)
+  column: number; // X coordinate in grid
+  row: number; // Y coordinate in grid
+  landscape: Landscape | null; // Terrain type
+  piece: Piece | null; // Unit on this tile (if any)
   building: Building | null; // Structure on this tile (if any)
 }
 ```
@@ -136,8 +136,8 @@ interface Tile {
 
 ```typescript
 interface Landscape {
-  type: LandscapeType;      // "grass" | "tree" | "sand" | "water" | "mountain" | "unexplored"
-  lootDrop?: ResourceMap;   // Resources gained when looted
+  type: LandscapeType; // "grass" | "tree" | "sand" | "water" | "mountain" | "unexplored"
+  lootDrop?: ResourceMap; // Resources gained when looted
 }
 ```
 
@@ -145,12 +145,12 @@ interface Landscape {
 
 ```typescript
 interface Piece {
-  type: PieceType;          // "peasant" | "soldier" | "knight" | "archer" | "boat"
-  viewRange: number;        // Vision radius
-  owner: Player;            // Reference to owning player
+  type: PieceType; // "peasant" | "soldier" | "knight" | "archer" | "boat"
+  viewRange: number; // Vision radius
+  owner: Player; // Reference to owning player
   upgradeCost: ResourceMap; // Cost to upgrade this piece
-  walkableLandscape: LandscapeType[];  // Terrain types this piece can traverse
-  lootableLandscape: LandscapeType[];  // Terrain types this piece can harvest
+  walkableLandscape: LandscapeType[]; // Terrain types this piece can traverse
+  lootableLandscape: LandscapeType[]; // Terrain types this piece can harvest
 }
 ```
 
@@ -158,12 +158,12 @@ interface Piece {
 
 ```typescript
 interface Building {
-  type: BuildingType;       // "house" | "castle" | "tower" | "farm" | "boat"
-  cost: ResourceMap;        // Construction cost
-  production: ResourceMap;  // Resources produced per turn
-  owner: Player;            // Reference to owning player
-  walkable: boolean;        // Whether units can enter
-  viewRange: number;        // Vision radius
+  type: BuildingType; // "house" | "castle" | "tower" | "farm" | "boat"
+  cost: ResourceMap; // Construction cost
+  production: ResourceMap; // Resources produced per turn
+  owner: Player; // Reference to owning player
+  walkable: boolean; // Whether units can enter
+  viewRange: number; // Vision radius
 }
 ```
 
@@ -264,7 +264,7 @@ classDiagram
         +disconnect()
         +games() Repository~Game~
     }
-    
+
     class Repository~TSchema~ {
         -MongoCollection collection
         +create(doc) InsertOneResult
@@ -272,7 +272,7 @@ classDiagram
         +updateOne(filter, update) UpdateResult
         +deleteOne(filter) DeleteResult
     }
-    
+
     class Game {
         +ObjectId _id
         +Date createdAt
@@ -283,17 +283,17 @@ classDiagram
         +Player player
         +Number size
     }
-    
+
     Database --> Repository : creates
     Repository --> Game : manages
 ```
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/game` | Create a new game |
-| `GET` | `/api/game/:gameId` | Retrieve game state |
+| Method | Endpoint                  | Description            |
+| ------ | ------------------------- | ---------------------- |
+| `POST` | `/api/game`               | Create a new game      |
+| `GET`  | `/api/game/:gameId`       | Retrieve game state    |
 | `POST` | `/api/game/:gameId/click` | Process a click action |
 
 ### Create Game Flow
@@ -303,7 +303,7 @@ sequenceDiagram
     participant C as Client
     participant S as Server
     participant DB as MongoDB
-    
+
     C->>S: POST /api/game { size: 15 }
     S->>S: Generate map tiles
     S->>S: Create Day & Night players
@@ -320,7 +320,7 @@ sequenceDiagram
     participant C as Client
     participant S as Server
     participant DB as MongoDB
-    
+
     C->>S: GET /api/game/:gameId
     S->>DB: games.findOne({ _id: gameId })
     DB-->>S: Game document
