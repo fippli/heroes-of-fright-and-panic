@@ -16,7 +16,7 @@ export interface Game {
   id: string;
   _id?: string;
   size: number;
-  currentPlayer: 'day' | 'night';
+  currentPlayer: "day" | "night";
   createdAt: string;
   updatedAt: string;
   creatorEmail?: string | null;
@@ -29,30 +29,31 @@ export interface Game {
 /**
  * Generic fetch wrapper with error handling
  */
-async function fetchApi<T>(
-  url: string,
-  options?: RequestInit
-): Promise<T> {
+async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      "Content-Type": "application/json",
+      Accept: "application/json",
       ...options?.headers,
     },
   });
 
   // Check if response is JSON
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
+  const contentType = response.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
     const text = await response.text();
-    throw new Error(`Expected JSON response but got ${contentType}. Response: ${text.substring(0, 200)}`);
+    throw new Error(
+      `Expected JSON response but got ${contentType}. Response: ${text.substring(0, 200)}`,
+    );
   }
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error((data as ApiError).error || `Request failed: ${response.statusText}`);
+    throw new Error(
+      (data as ApiError).error || `Request failed: ${response.statusText}`,
+    );
   }
 
   return data as T;
@@ -65,9 +66,11 @@ export const authApi = {
   /**
    * Request a magic link email
    */
-  async requestMagicLink(email: string): Promise<{ success: boolean; message: string }> {
-    return fetchApi('/api/auth/magic-link', {
-      method: 'POST',
+  async requestMagicLink(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return fetchApi("/api/auth/magic-link", {
+      method: "POST",
       body: JSON.stringify({ email }),
     });
   },
@@ -76,7 +79,7 @@ export const authApi = {
    * Get the current authenticated user
    */
   async getCurrentUser(): Promise<User> {
-    return fetchApi('/api/auth/me');
+    return fetchApi("/api/auth/me");
   },
 
   /**
@@ -95,7 +98,7 @@ export const authApi = {
    * Log out the current user
    */
   async logout(): Promise<void> {
-    await fetchApi('/api/auth/logout', { method: 'POST' });
+    await fetchApi("/api/auth/logout", { method: "POST" });
   },
 };
 
@@ -107,13 +110,13 @@ export const gamesApi = {
    * Get all games
    */
   async getAll(): Promise<Game[]> {
-    return fetchApi('/api/game');
+    return fetchApi("/api/game");
   },
 
   /**
    * Get a specific game
    */
-  async get(id: string, player?: 'day' | 'night'): Promise<Game> {
+  async get(id: string, player?: "day" | "night"): Promise<Game> {
     const url = player ? `/api/game/${id}?player=${player}` : `/api/game/${id}`;
     return fetchApi(url);
   },
@@ -124,11 +127,11 @@ export const gamesApi = {
   async create(params: {
     name: string;
     size: number;
-    alliance: 'day' | 'night';
+    alliance: "day" | "night";
     inviteEmail?: string | null;
   }): Promise<Game> {
-    return fetchApi('/api/game', {
-      method: 'POST',
+    return fetchApi("/api/game", {
+      method: "POST",
       body: JSON.stringify(params),
     });
   },
@@ -138,7 +141,7 @@ export const gamesApi = {
    */
   async delete(id: string): Promise<void> {
     return fetchApi(`/api/game/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   },
 };

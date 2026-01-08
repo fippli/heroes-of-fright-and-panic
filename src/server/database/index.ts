@@ -137,7 +137,9 @@ export class Database {
   }
 
   magicTokens(): Repository<MagicToken> {
-    return new Repository<MagicToken>(this._db.collection<MagicToken>("magic_tokens"));
+    return new Repository<MagicToken>(
+      this._db.collection<MagicToken>("magic_tokens"),
+    );
   }
 
   sessions(): Repository<Session> {

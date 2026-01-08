@@ -1,9 +1,9 @@
-import { FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authApi } from "../../shared/api";
 import { useAuth } from "../../shared/auth";
 
-export function LandingApp() {
+export const LandingApp = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
   const [email, setEmail] = useState("");
@@ -33,7 +33,8 @@ export function LandingApp() {
       await authApi.requestMagicLink(trimmedEmail);
       setSuccessEmail(trimmedEmail);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
+      const message =
+        err instanceof Error ? err.message : "Something went wrong";
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -84,4 +85,4 @@ export function LandingApp() {
       </main>
     </>
   );
-}
+};

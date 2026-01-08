@@ -15,17 +15,17 @@ flowchart TB
         INPUT[Input Handler]
         PARSE[State Parser]
     end
-    
+
     subgraph Server ["Server (Node.js)"]
         API[REST API]
         ENGINE[Game Engine]
         ACTIONS[Action Handlers]
     end
-    
+
     subgraph DB ["Database"]
         MONGO[(MongoDB)]
     end
-    
+
     INPUT -->|User Action| API
     API -->|GameAction| ENGINE
     ENGINE -->|Process| ACTIONS
@@ -37,37 +37,37 @@ flowchart TB
 
 ## Implementation Decisions
 
-| Question | Decision |
-|----------|----------|
-| Communication | **Request-Response** - Each action returns updated game state |
-| Selected Tile | **Client-side** - Client tracks selection, sends with actions |
-| Time System | **Action-based** - Each action advances time by 1 hour |
-| Player Identity | **Request body** - Player type sent with each action |
-| Fog of War | **Client-filtered** - Server sends all tiles, client applies fog |
-| Response Size | **Full state** - Every action returns complete game state |
+| Question        | Decision                                                         |
+| --------------- | ---------------------------------------------------------------- |
+| Communication   | **Request-Response** - Each action returns updated game state    |
+| Selected Tile   | **Client-side** - Client tracks selection, sends with actions    |
+| Time System     | **Action-based** - Each action advances time by 1 hour           |
+| Player Identity | **Request body** - Player type sent with each action             |
+| Fog of War      | **Client-filtered** - Server sends all tiles, client applies fog |
+| Response Size   | **Full state** - Every action returns complete game state        |
 
 ## Files Created
 
-| File | Purpose |
-|------|---------|
+| File                          | Purpose                                              |
+| ----------------------------- | ---------------------------------------------------- |
 | `src/shared/actions/index.ts` | Action type definitions shared between client/server |
-| `src/server/game/engine.ts` | Main game logic engine |
-| `src/server/game/actions.ts` | Action dispatch and handlers |
+| `src/server/game/engine.ts`   | Main game logic engine                               |
+| `src/server/game/actions.ts`  | Action dispatch and handlers                         |
 
 ## Files Modified
 
-| File | Changes |
-|------|---------|
-| `src/server/database/index.ts` | Added `GameClock` interface, updated `Game` schema |
-| `src/server/api/game/router.ts` | Added `/action` endpoint, starting resources |
-| `src/client/core/Board.ts` | Removed game logic, added API calls |
-| `src/client/core/Clock.ts` | Simplified to display-only |
-| `src/client/core/Player.ts` | Simplified, removed `produce()` method |
-| `src/client/core/Building.ts` | Removed game logic, keep rendering only |
-| `src/client/core/Piece.ts` | Removed game logic, keep rendering only |
-| `src/client/core/Landscape.ts` | Removed map generation, keep rendering only |
-| `src/client/core/Tile.ts` | Removed `loot()` and `walkable()` methods |
-| `src/client/main.ts` | Simplified game loop |
+| File                            | Changes                                            |
+| ------------------------------- | -------------------------------------------------- |
+| `src/server/database/index.ts`  | Added `GameClock` interface, updated `Game` schema |
+| `src/server/api/game/router.ts` | Added `/action` endpoint, starting resources       |
+| `src/client/core/Board.ts`      | Removed game logic, added API calls                |
+| `src/client/core/Clock.ts`      | Simplified to display-only                         |
+| `src/client/core/Player.ts`     | Simplified, removed `produce()` method             |
+| `src/client/core/Building.ts`   | Removed game logic, keep rendering only            |
+| `src/client/core/Piece.ts`      | Removed game logic, keep rendering only            |
+| `src/client/core/Landscape.ts`  | Removed map generation, keep rendering only        |
+| `src/client/core/Tile.ts`       | Removed `loot()` and `walkable()` methods          |
+| `src/client/main.ts`            | Simplified game loop                               |
 
 ## New API Endpoint
 
@@ -76,18 +76,20 @@ flowchart TB
 Process a game action and return updated state.
 
 **Request Body:**
+
 ```typescript
 interface GameAction {
   type: "click" | "build" | "createPeasant" | "upgrade" | "attack";
   player: "day" | "night";
   position?: { row: number; column: number };
   selectedPosition?: { row: number; column: number };
-  buildingType?: BuildingType;  // for "build" action
-  targetType?: PieceType;       // for "upgrade" action (e.g., archer)
+  buildingType?: BuildingType; // for "build" action
+  targetType?: PieceType; // for "upgrade" action (e.g., archer)
 }
 ```
 
 **Response:**
+
 ```typescript
 interface ActionResponse {
   result: {
@@ -95,7 +97,7 @@ interface ActionResponse {
     error?: string;
     message?: string;
   };
-  game: GameState;  // Full updated game state
+  game: GameState; // Full updated game state
 }
 ```
 
@@ -112,19 +114,19 @@ sequenceDiagram
     U->>C: Click/Keypress
     C->>C: Convert to tile position
     C->>S: POST /api/game/:id/action
-    
+
     S->>DB: Load game state
     DB-->>S: Game document
-    
+
     S->>E: processAction(game, action)
     E->>E: Validate action
     E->>E: Apply game logic
     E->>E: Update clock/resources
     E-->>S: { result, updatedGame }
-    
+
     S->>DB: Save updated state
     S-->>C: { result, game }
-    
+
     C->>C: Parse new state
     C->>C: Update render
 ```
@@ -132,6 +134,7 @@ sequenceDiagram
 ## Client Simplification
 
 ### Before (Game Logic on Client)
+
 ```typescript
 // Client handled all game logic
 click(position) {
@@ -142,6 +145,7 @@ click(position) {
 ```
 
 ### After (Render Only)
+
 ```typescript
 // Client just sends actions and renders
 async click(position) {
@@ -184,8 +188,9 @@ interface Game {
   tiles: Tile[];
   dayPlayer: Player;
   nightPlayer: Player;
-  currentPlayer: "day" | "night";  // NEW: Whose turn
-  clock: {                          // NEW: Game time
+  currentPlayer: "day" | "night"; // NEW: Whose turn
+  clock: {
+    // NEW: Game time
     time: number;
     hasDawned: boolean;
     hasDusked: boolean;

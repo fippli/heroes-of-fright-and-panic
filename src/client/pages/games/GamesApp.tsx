@@ -1,4 +1,10 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { gamesApi, type Game } from "../../shared/api";
 import { useAuth } from "../../shared/auth";
@@ -11,7 +17,7 @@ interface CreateFormState {
   inviteEmail: string;
 }
 
-export function GamesApp() {
+export const GamesApp = () => {
   const navigate = useNavigate();
   const { user, requireAuth, logout: handleLogout } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
@@ -34,7 +40,8 @@ export function GamesApp() {
       const data = await gamesApi.getAll();
       setGames(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load games";
+      const message =
+        err instanceof Error ? err.message : "Failed to load games";
       setPageError(message);
     } finally {
       setIsLoading(false);
@@ -51,7 +58,8 @@ export function GamesApp() {
         await loadGames();
       } catch (err) {
         if (ignore) return;
-        const message = err instanceof Error ? err.message : "Failed to load games";
+        const message =
+          err instanceof Error ? err.message : "Failed to load games";
         setPageError(message);
       }
     })();
@@ -87,7 +95,8 @@ export function GamesApp() {
         navigate(`/game/${newGameId}?player=${formState.alliance}`);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create game";
+      const message =
+        err instanceof Error ? err.message : "Failed to create game";
       setModalError(message);
     } finally {
       setIsCreating(false);
@@ -104,7 +113,8 @@ export function GamesApp() {
         await gamesApi.delete(gameId);
         await loadGames();
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to delete game";
+        const message =
+          err instanceof Error ? err.message : "Failed to delete game";
         setPageError(message);
       }
     },
@@ -116,7 +126,9 @@ export function GamesApp() {
       <div className="modal__overlay" onClick={() => setIsModalOpen(false)} />
       <div className="modal__content">
         <h3>Create New Game</h3>
-        {modalError && <div className="message message--error">{modalError}</div>}
+        {modalError && (
+          <div className="message message--error">{modalError}</div>
+        )}
         <form id="create-form" onSubmit={handleCreateGame}>
           <div className="form-group">
             <label htmlFor="name">Name:</label>
@@ -126,7 +138,10 @@ export function GamesApp() {
               name="name"
               value={formState.name}
               onChange={(event) =>
-                setFormState((current) => ({ ...current, name: event.target.value }))
+                setFormState((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
               }
               required
             />
@@ -139,7 +154,10 @@ export function GamesApp() {
               name="size"
               value={String(formState.size)}
               onChange={(event) =>
-                setFormState((current) => ({ ...current, size: Number(event.target.value) }))
+                setFormState((current) => ({
+                  ...current,
+                  size: Number(event.target.value),
+                }))
               }
             >
               <option value="25">Small (25×25)</option>
@@ -176,13 +194,20 @@ export function GamesApp() {
               placeholder="email@example.com"
               value={formState.inviteEmail}
               onChange={(event) =>
-                setFormState((current) => ({ ...current, inviteEmail: event.target.value }))
+                setFormState((current) => ({
+                  ...current,
+                  inviteEmail: event.target.value,
+                }))
               }
             />
           </div>
 
           <div className="modal__actions">
-            <button type="button" id="cancel-btn" onClick={() => setIsModalOpen(false)}>
+            <button
+              type="button"
+              id="cancel-btn"
+              onClick={() => setIsModalOpen(false)}
+            >
               Cancel
             </button>
             <button type="submit" disabled={isCreating}>
@@ -229,11 +254,17 @@ export function GamesApp() {
           <p id="user-email" className="user-email">
             {user?.email || ""}
           </p>
-          {pageError && <div className="message message--error">{pageError}</div>}
+          {pageError && (
+            <div className="message message--error">{pageError}</div>
+          )}
           <button id="create-game-btn" onClick={() => setIsModalOpen(true)}>
             Create New Game
           </button>
-          <button id="logout-btn" className="btn btn--secondary" onClick={() => handleLogout()}>
+          <button
+            id="logout-btn"
+            className="btn btn--secondary"
+            onClick={() => handleLogout()}
+          >
             Sign Out
           </button>
         </aside>
@@ -247,7 +278,7 @@ export function GamesApp() {
       </main>
     </>
   );
-}
+};
 
 interface GameCardProps {
   game: Game;
@@ -255,7 +286,7 @@ interface GameCardProps {
   onDelete: (gameId: string) => void;
 }
 
-function GameCard({ game, userEmail, onDelete }: GameCardProps) {
+const GameCard = ({ game, userEmail, onDelete }: GameCardProps) => {
   const gameId = game.id || game._id || "";
   const playerType: "day" | "night" | null =
     game.dayPlayerEmail === userEmail
@@ -264,11 +295,16 @@ function GameCard({ game, userEmail, onDelete }: GameCardProps) {
         ? "night"
         : null;
   const isCreator = game.creatorEmail === userEmail;
-  const turnClass = game.currentPlayer === "day" ? "turn-badge--day" : "turn-badge--night";
+  const turnClass =
+    game.currentPlayer === "day" ? "turn-badge--day" : "turn-badge--night";
   const turnText = game.currentPlayer === "day" ? "Day" : "Night";
 
-  const dayLastMove = game.dayPlayerLastMove ? formatDate(game.dayPlayerLastMove) : "No moves yet";
-  const nightLastMove = game.nightPlayerLastMove ? formatDate(game.nightPlayerLastMove) : "No moves yet";
+  const dayLastMove = game.dayPlayerLastMove
+    ? formatDate(game.dayPlayerLastMove)
+    : "No moves yet";
+  const nightLastMove = game.nightPlayerLastMove
+    ? formatDate(game.nightPlayerLastMove)
+    : "No moves yet";
 
   return (
     <div className="game-card">
@@ -284,23 +320,32 @@ function GameCard({ game, userEmail, onDelete }: GameCardProps) {
         <div className="game-card__players">
           <div className="game-card__player">
             <span className="game-card__player-label">day:</span>
-            <span className="game-card__player-email">{game.dayPlayerEmail || "Not assigned"}</span>
+            <span className="game-card__player-email">
+              {game.dayPlayerEmail || "Not assigned"}
+            </span>
             <span className="game-card__player-move">{dayLastMove}</span>
           </div>
           <div className="game-card__player">
             <span className="game-card__player-label">night:</span>
-            <span className="game-card__player-email">{game.nightPlayerEmail || "Not assigned"}</span>
+            <span className="game-card__player-email">
+              {game.nightPlayerEmail || "Not assigned"}
+            </span>
             <span className="game-card__player-move">{nightLastMove}</span>
           </div>
         </div>
 
         <div className="game-card__footer">
           <div className="game-card__turn">
-            <span className={`turn-badge ${turnClass}`}>{turnText} player's turn</span>
+            <span className={`turn-badge ${turnClass}`}>
+              {turnText} player's turn
+            </span>
           </div>
           <div className="game-card__actions">
             {playerType && (
-              <Link to={`/game/${gameId}?player=${playerType}`} className="btn btn--small">
+              <Link
+                to={`/game/${gameId}?player=${playerType}`}
+                className="btn btn--small"
+              >
                 Play
               </Link>
             )}
@@ -318,4 +363,4 @@ function GameCard({ game, userEmail, onDelete }: GameCardProps) {
       </div>
     </div>
   );
-}
+};

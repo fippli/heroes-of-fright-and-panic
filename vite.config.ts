@@ -11,8 +11,12 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        // Main SPA entry point
-        main: path.resolve(__dirname, "src/client/index.html"),
+        // Landing page
+        landing: path.resolve(__dirname, "src/client/pages/landing/index.html"),
+        // Sign in page
+        signin: path.resolve(__dirname, "src/client/pages/signin/index.html"),
+        // Games list page
+        games: path.resolve(__dirname, "src/client/pages/games/index.html"),
         // Game canvas page (still separate as it uses vanilla JS)
         game: path.resolve(__dirname, "src/client/pages/game/index.html"),
       },

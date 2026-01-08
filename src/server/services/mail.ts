@@ -36,7 +36,9 @@ if (isSmtpConfigured) {
   });
 } else {
   console.log("⚠️ SMTP not configured - emails will be logged to console");
-  console.log("   Set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables to enable email sending");
+  console.log(
+    "   Set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables to enable email sending",
+  );
 }
 
 interface SendMailOptions {
@@ -88,7 +90,7 @@ export async function sendMail(options: SendMailOptions): Promise<boolean> {
  */
 export async function sendMagicLinkEmail(
   email: string,
-  magicLink: string
+  magicLink: string,
 ): Promise<boolean> {
   const subject = "🔮 Your Magic Link - Heroes of Fright and Panic";
 

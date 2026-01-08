@@ -11,17 +11,17 @@ graph TB
         CL[Client TypeScript]
         IMG[Image Assets]
     end
-    
+
     subgraph "Server (Node.js)"
         EXP[Express.js]
         API[REST API Routes]
         STATIC[Static File Server]
     end
-    
+
     subgraph "Database"
         MONGO[(MongoDB)]
     end
-    
+
     UI <--> CL
     IMG --> UI
     CL <-->|HTTP/JSON| API
@@ -97,19 +97,19 @@ sequenceDiagram
     participant S as Server
     participant V as Vite (Dev)
     participant DB as MongoDB
-    
+
     B->>S: GET /game/:id
     S->>S: Serve index.html (SPA)
     S-->>B: HTML page
-    
+
     B->>V: Request JS/CSS bundles
     V-->>B: Compiled assets
-    
+
     B->>S: GET /api/game/:id
     S->>DB: Find game by ID
     DB-->>S: Game document
     S-->>B: JSON game state
-    
+
     B->>B: Parse game data
     B->>B: Initialize Canvas
     B->>B: Start render loop
@@ -123,11 +123,11 @@ sequenceDiagram
     participant C as Canvas
     participant G as Game (Client)
     participant S as Server
-    
+
     U->>C: Click on tile
     C->>G: click({ x, y })
     G->>G: Find clicked tile
-    
+
     alt Selecting a piece
         G->>G: Set selectedTile
     else Moving a piece
@@ -139,7 +139,7 @@ sequenceDiagram
         G->>G: Transform landscape
         G->>G: Tick clock
     end
-    
+
     G->>S: POST /api/game/:id/click
     Note right of S: Future: persist state
     S-->>G: Acknowledgment
@@ -152,15 +152,15 @@ flowchart TD
     A[requestAnimationFrame] --> B[calculateNextState]
     B --> C[Update exploration]
     C --> D{Time transition?}
-    
+
     D -->|Dawn| E[Switch to Day Player]
     D -->|Dusk| F[Switch to Night Player]
     D -->|No| G[Continue]
-    
+
     E --> H[Produce Resources]
     F --> H
     H --> G
-    
+
     G --> I[Clear Canvas]
     I --> J[Apply Translation]
     J --> K[Render All Tiles]
@@ -190,7 +190,7 @@ graph TD
         Building --> ImageAssets
         Piece --> ImageAssets
     end
-    
+
     subgraph Server
         index --> apiRouter
         index --> clientRouter
@@ -198,7 +198,7 @@ graph TD
         gameRouter --> Database
         gameRouter --> GameMap
     end
-    
+
     subgraph Shared
         GameMap --> Landscape_S[Landscape]
         GameMap --> Tile_S[Tile]
@@ -222,6 +222,7 @@ graph LR
 ```
 
 **Commands:**
+
 - `pnpm dev` - Run both client (Vite watch) and server (tsx watch)
 - `pnpm dev:container` - Run in Docker with hot reload
 
@@ -236,6 +237,7 @@ graph LR
 ```
 
 **Commands:**
+
 - `pnpm build` - Build client and server
 - `pnpm start` - Run production server
 
@@ -247,21 +249,21 @@ graph TB
         APP[App Container]
         MONGO[MongoDB Container]
     end
-    
+
     APP -->|mongodb://mongo:27017| MONGO
     APP -->|:3000| EXT[External Network]
 ```
 
 ### Services
 
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| `app` | Custom (Dockerfile) | 3000 | Game server |
-| `mongo` | mongo:7 | 27017 | Database |
+| Service | Image               | Port  | Purpose     |
+| ------- | ------------------- | ----- | ----------- |
+| `app`   | Custom (Dockerfile) | 3000  | Game server |
+| `mongo` | mongo:7             | 27017 | Database    |
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | 3000 |
+| Variable      | Description               | Default  |
+| ------------- | ------------------------- | -------- |
+| `PORT`        | Server port               | 3000     |
 | `MONGODB_URI` | MongoDB connection string | Required |
