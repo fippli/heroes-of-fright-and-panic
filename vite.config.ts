@@ -10,21 +10,21 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/client"),
     emptyOutDir: true,
     rollupOptions: {
-      input: {
-        // Landing page
-        landing: path.resolve(__dirname, "src/client/pages/landing/index.html"),
-        // Sign in page
-        signin: path.resolve(__dirname, "src/client/pages/signin/index.html"),
-        // Games list page
-        games: path.resolve(__dirname, "src/client/pages/games/index.html"),
-        // Game canvas page (still separate as it uses vanilla JS)
-        game: path.resolve(__dirname, "src/client/pages/game/index.html"),
-      },
+      input: path.resolve(__dirname, "src/client/index.html"),
     },
   },
   resolve: {
     alias: {
       "@static": path.resolve(__dirname, "src/server/static"),
+      "@shared": path.resolve(__dirname, "src/shared"),
+    },
+  },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
     },
   },
 });
