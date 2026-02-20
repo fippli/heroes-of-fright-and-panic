@@ -1,33 +1,37 @@
-const dialogElement = document.querySelector(
-  ".dialog-wrapper",
-) as HTMLDivElement;
-
-const dialogCloseButton = document.querySelector(
-  "#close-dialog",
-) as HTMLButtonElement;
-
-const dialogTitle = document.querySelector(
-  "#dialog-title",
-) as HTMLHeadingElement;
-
-const dialogText = document.querySelector(
-  "#dialog-text",
-) as HTMLParagraphElement;
-
 export class Dialog {
+  private readonly dialogElement: HTMLDivElement;
+  private readonly dialogTitle: HTMLHeadingElement;
+  private readonly dialogText: HTMLParagraphElement;
+
   constructor() {
+    this.dialogElement = document.querySelector(
+      ".dialog-wrapper",
+    ) as HTMLDivElement;
+
+    this.dialogTitle = document.querySelector(
+      "#dialog-title",
+    ) as HTMLHeadingElement;
+
+    this.dialogText = document.querySelector(
+      "#dialog-text",
+    ) as HTMLParagraphElement;
+
+    const dialogCloseButton = document.querySelector(
+      "#close-dialog",
+    ) as HTMLButtonElement;
+
     dialogCloseButton.addEventListener("click", () => this.close());
   }
 
   open({ title, content }: { title: string; content: string }) {
-    dialogElement.style.display = "flex";
-    dialogTitle.textContent = title;
-    dialogText.textContent = content;
+    this.dialogElement.style.display = "flex";
+    this.dialogTitle.textContent = title;
+    this.dialogText.textContent = content;
   }
 
   close() {
-    dialogElement.style.display = "none";
-    dialogTitle.textContent = "";
-    dialogText.textContent = "";
+    this.dialogElement.style.display = "none";
+    this.dialogTitle.textContent = "";
+    this.dialogText.textContent = "";
   }
 }
