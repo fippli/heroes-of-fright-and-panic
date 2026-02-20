@@ -1,69 +1,23 @@
 import type { Canvas } from "../canvas";
 import type { Coordinate } from "../types/coordinate";
-import { Building, BuildingType } from "./Building";
+import { BuildingType } from "./Building";
 import { Clock } from "./Clock";
 import { Dialog } from "./Dialog";
+import { parseGameState } from "./GameParser";
+import type {
+  ActionResponse,
+  GameAction,
+  PlayerType,
+  ServerGameState,
+} from "./GameTypes";
 import { Hexagon } from "./Hexagon";
-import { Landscape, LandscapeType } from "./Landscape";
 import { Notifications } from "./Notifications";
-import { Piece, PieceType } from "./Piece";
+import { PieceType } from "./Piece";
 import { Player } from "./Player";
-import { renderResources, ResourceMap } from "./ResourceMap";
+import { renderResources } from "./ResourceMap";
 import { Tile } from "./Tile";
 
 const dialog = new Dialog();
-
-// Types for API communication
-type PlayerType = "day" | "night";
-
-type GameAction = {
-  type: string;
-  player: PlayerType;
-  position?: { row: number; column: number };
-  selectedPosition?: { row: number; column: number };
-  buildingType?: BuildingType;
-  targetType?: PieceType;
-};
-
-type GameClock = {
-  time: number;
-  hasDawned: boolean;
-  hasDusked: boolean;
-};
-
-type ServerGameState = {
-  id: string;
-  _id?: string;
-  size: number;
-  currentPlayer: PlayerType;
-  clock: GameClock;
-  gameOver?: boolean;
-  winner?: PlayerType | null;
-  dayPlayer: {
-    type: "day";
-    resources: { wood: number; gold: number; stone: number; food: number };
-  };
-  nightPlayer: {
-    type: "night";
-    resources: { wood: number; gold: number; stone: number; food: number };
-  };
-  tiles: {
-    row: number;
-    column: number;
-    landscape: { type: LandscapeType; lootDrop?: ResourceMap } | null;
-    building: Building | null;
-    piece: Piece | null;
-  }[];
-};
-
-type ActionResponse = {
-  result: {
-    success: boolean;
-    error?: string;
-    message?: string;
-  };
-  game: ServerGameState;
-};
 
 /**
  * Game class - Client-side render-only implementation
@@ -129,78 +83,41 @@ export class Game {
    * Check if it's this client's turn to play
    */
   get isMyTurn(): boolean {
-    if (!this.myPlayerType) return false;
+    if (this.myPlayerType === null) return false;
     return this.currentPlayer === this.myPlayerType;
   }
 
   /**
-   * Parse game state from server response
+   * Apply parsed game state to the board and detect time transitions
    */
-  parse(game: ServerGameState): void {
-    this.id = game.id ?? game._id ?? "";
+  private applyGameState(game: ServerGameState): void {
+    const parsed = parseGameState(game);
 
-    // Parse clock
-    this.clock = new Clock(game.clock?.time ?? 6);
-    const wasDay = this.previousWasDay;
-    const isNowDay = this.clock.isDay();
+    this.id = parsed.id;
+    this.clock = parsed.clock;
+    this.currentPlayer = parsed.currentPlayer;
+    this.dayPlayer = parsed.dayPlayer;
+    this.nightPlayer = parsed.nightPlayer;
+    this.tiles = parsed.tiles;
+    this.gameOver = parsed.gameOver;
+    this.winner = parsed.winner;
 
     // Detect time transitions for dialogs
+    const wasDay = this.previousWasDay;
+    const isNowDay = this.clock.isDay();
     if (wasDay && !isNowDay) {
       dialog.open({ title: "Dusk", content: "The sun is setting" });
     } else if (!wasDay && isNowDay) {
       dialog.open({ title: "Dawn", content: "The sun is rising" });
     }
     this.previousWasDay = isNowDay;
+  }
 
-    // Parse current player
-    this.currentPlayer = game.currentPlayer ?? "day";
-
-    // Parse players
-    this.dayPlayer = new Player({
-      type: "day",
-      resources: new ResourceMap(game.dayPlayer?.resources ?? {}),
-    });
-    this.nightPlayer = new Player({
-      type: "night",
-      resources: new ResourceMap(game.nightPlayer?.resources ?? {}),
-    });
-
-    // Parse tiles
-    this.tiles = game.tiles.map(
-      (tile) =>
-        new Tile({
-          row: tile.row,
-          column: tile.column,
-          landscape: tile.landscape ? new Landscape(tile.landscape) : undefined,
-          building: tile.building
-            ? new Building({
-                type: tile.building.type,
-                production: new ResourceMap(tile.building.production ?? {}),
-                cost: new ResourceMap(tile.building.cost ?? {}),
-                walkable: tile.building.walkable ?? true,
-                viewRange: tile.building.viewRange ?? 1,
-                owner: new Player({
-                  type: tile.building.owner?.type ?? "day",
-                }),
-              })
-            : undefined,
-          piece: tile.piece
-            ? new Piece({
-                type: tile.piece.type,
-                viewRange: tile.piece.viewRange ?? 1,
-                attackRange: tile.piece.attackRange ?? tile.piece.viewRange ?? 1,
-                owner: new Player({ type: tile.piece.owner?.type ?? "day" }),
-                upgradeCost: new ResourceMap(tile.piece.upgradeCost ?? {}),
-                walkableLandscape: tile.piece.walkableLandscape ?? [],
-                lootableLandscape: tile.piece.lootableLandscape ?? [],
-              })
-            : undefined,
-        }),
-    );
-
-    // Parse game over state
-    this.gameOver = game.gameOver ?? false;
-    this.winner = game.winner ?? null;
+  /**
+   * Parse game state from server response
+   */
+  parse(game: ServerGameState): void {
+    this.applyGameState(game);
 
     console.log("Game state parsed", {
       id: this.id,
@@ -237,9 +154,8 @@ export class Game {
       if (this.isProcessingAction) return;
 
       try {
-        const playerParam = this.myPlayerType
-          ? `?player=${this.myPlayerType}`
-          : "";
+        const playerParam =
+          this.myPlayerType !== null ? `?player=${this.myPlayerType}` : "";
         const response = await fetch(`/api/game/${this.id}${playerParam}`);
         if (response.ok) {
           const gameData = await response.json();
@@ -257,72 +173,10 @@ export class Game {
    */
   private parseQuiet(game: ServerGameState): void {
     // Store old state to detect changes
-    const oldCurrentPlayer = this.currentPlayer;
     const wasMyTurn = this.isMyTurn;
-
-    // Parse clock
-    this.clock = new Clock(game.clock?.time ?? 6);
-    const wasDay = this.previousWasDay;
-    const isNowDay = this.clock.isDay();
-
-    // Detect time transitions for dialogs
-    if (wasDay && !isNowDay) {
-      dialog.open({ title: "Dusk", content: "The sun is setting" });
-    } else if (!wasDay && isNowDay) {
-      dialog.open({ title: "Dawn", content: "The sun is rising" });
-    }
-    this.previousWasDay = isNowDay;
-
-    // Parse current player
-    this.currentPlayer = game.currentPlayer ?? "day";
-
-    // Parse players
-    this.dayPlayer = new Player({
-      type: "day",
-      resources: new ResourceMap(game.dayPlayer?.resources ?? {}),
-    });
-    this.nightPlayer = new Player({
-      type: "night",
-      resources: new ResourceMap(game.nightPlayer?.resources ?? {}),
-    });
-
-    // Parse tiles
-    this.tiles = game.tiles.map(
-      (tile) =>
-        new Tile({
-          row: tile.row,
-          column: tile.column,
-          landscape: tile.landscape ? new Landscape(tile.landscape) : undefined,
-          building: tile.building
-            ? new Building({
-                type: tile.building.type,
-                production: new ResourceMap(tile.building.production ?? {}),
-                cost: new ResourceMap(tile.building.cost ?? {}),
-                walkable: tile.building.walkable ?? true,
-                viewRange: tile.building.viewRange ?? 1,
-                owner: new Player({
-                  type: tile.building.owner?.type ?? "day",
-                }),
-              })
-            : undefined,
-          piece: tile.piece
-            ? new Piece({
-                type: tile.piece.type,
-                viewRange: tile.piece.viewRange ?? 1,
-                attackRange: tile.piece.attackRange ?? tile.piece.viewRange ?? 1,
-                owner: new Player({ type: tile.piece.owner?.type ?? "day" }),
-                upgradeCost: new ResourceMap(tile.piece.upgradeCost ?? {}),
-                walkableLandscape: tile.piece.walkableLandscape ?? [],
-                lootableLandscape: tile.piece.lootableLandscape ?? [],
-              })
-            : undefined,
-        }),
-    );
-
-    // Parse game over state
     const wasGameOver = this.gameOver;
-    this.gameOver = game.gameOver ?? false;
-    this.winner = game.winner ?? null;
+
+    this.applyGameState(game);
 
     // Handle game over (only show dialog once)
     if (this.gameOver && !wasGameOver) {
@@ -332,7 +186,7 @@ export class Game {
 
     // Notify if turn changed
     const isNowMyTurn = this.isMyTurn;
-    if (!wasMyTurn && isNowMyTurn && this.myPlayerType) {
+    if (!wasMyTurn && isNowMyTurn && this.myPlayerType !== null) {
       console.log("It's your turn!");
       Notifications.notifyTurnChange(this.myPlayerType);
       dialog.open({
@@ -353,16 +207,13 @@ export class Game {
     const isWinner = this.winner === this.myPlayerType;
     const winnerName = this.winner === "day" ? "Day" : "Night";
 
-    if (this.myPlayerType) {
+    if (this.myPlayerType !== null) {
       if (isWinner) {
         dialog.open({
           title: "Victory!",
           content: `Congratulations! The ${winnerName} Alliance has won!`,
         });
-        Notifications.showNotification(
-          "Victory!",
-          `You have won the battle!`,
-        );
+        Notifications.showNotification("Victory!", `You have won the battle!`);
       } else {
         dialog.open({
           title: "Defeat",
@@ -410,7 +261,7 @@ export class Game {
     });
 
     // Render selected tile highlight and valid moves/attacks
-    if (this.selectedTile) {
+    if (this.selectedTile !== undefined && this.selectedTile !== null) {
       // Show view range
       this.selectedTile.renderArea(canvas.ctx, this.tiles);
       // Show valid moves (green) and lootable tiles (yellow)
@@ -432,7 +283,7 @@ export class Game {
 
     // Render hovered tile
     const hoveredTile = this.findTile(canvas.mousePosition);
-    if (hoveredTile) {
+    if (hoveredTile !== undefined) {
       hoveredTile.renderHovered(canvas.ctx);
     }
 
@@ -464,7 +315,7 @@ export class Game {
           tile.piece?.viewRange ?? 0,
         );
         const tilesInRange = tile.getTilesInRange(this.tiles, viewRange);
-        tilesInRange.forEach((t) => (t.explored = true));
+        tilesInRange.forEach((rangeTile) => (rangeTile.explored = true));
       }
 
       // Check if tile has a building owned by our player
@@ -482,11 +333,10 @@ export class Game {
   ): Tile | undefined {
     if ("x" in pos && "y" in pos) {
       return this.tiles.find((tile) => tile.isMouseOver(pos.x, pos.y));
-    } else {
-      return this.tiles.find(
-        (tile) => tile.row === pos.row && tile.column === pos.column,
-      );
     }
+    return this.tiles.find(
+      (tile) => tile.row === pos.row && tile.column === pos.column,
+    );
   }
 
   /**
@@ -496,7 +346,7 @@ export class Game {
     pos: Coordinate,
   ): { row: number; column: number } | null {
     const tile = this.findTile(pos);
-    if (!tile) return null;
+    if (tile === undefined) return null;
     return { row: tile.row, column: tile.column };
   }
 
@@ -504,7 +354,8 @@ export class Game {
    * Get the selected tile position (if any)
    */
   private getSelectedPosition(): { row: number; column: number } | undefined {
-    if (!this.selectedTile) return undefined;
+    if (this.selectedTile === undefined || this.selectedTile === null)
+      return undefined;
     return { row: this.selectedTile.row, column: this.selectedTile.column };
   }
 
@@ -517,7 +368,7 @@ export class Game {
    */
   private async sendAction(action: GameAction): Promise<boolean> {
     // Check if we have a player assigned
-    if (!this.myPlayerType) {
+    if (this.myPlayerType === null) {
       console.warn("No player assigned - cannot send actions");
       return false;
     }
@@ -550,13 +401,13 @@ export class Game {
         // Update local state with server response (quiet parse since we just made the action)
         this.parseQuiet(data.game);
 
-        if (data.result.message) {
+        if (data.result.message !== undefined) {
           console.log("Action result:", data.result.message);
         }
       } else {
         console.warn("Action failed:", data.result.error);
         // Still update state in case server made partial changes
-        if (data.game) {
+        if (data.game !== undefined) {
           this.parseQuiet(data.game);
         }
       }
@@ -579,32 +430,36 @@ export class Game {
    */
   async click({ x, y }: Coordinate): Promise<void> {
     const tilePosition = this.pixelToTilePosition({ x, y });
-    if (!tilePosition) return;
+    if (tilePosition === null) return;
 
     const clickedTile = this.findTile(tilePosition);
-    if (!clickedTile) return;
+    if (clickedTile === undefined) return;
 
     // Use myPlayerType for ownership checks (our player's pieces/buildings)
     const myPlayer = this.myPlayerType;
 
     // If clicking on a tile with our piece, just select it locally
-    if (myPlayer && clickedTile.piece?.owner?.type === myPlayer) {
+    if (myPlayer !== null && clickedTile.piece?.owner?.type === myPlayer) {
       this.selectedTile = clickedTile;
       return;
     }
 
     // If clicking on a tile with our building (and no piece), select it
     if (
-      myPlayer &&
+      myPlayer !== null &&
       clickedTile.building?.owner?.type === myPlayer &&
-      !clickedTile.piece
+      clickedTile.piece === undefined
     ) {
       this.selectedTile = clickedTile;
       return;
     }
 
     // If we have a selected tile, try to perform an action
-    if (this.selectedTile && myPlayer) {
+    if (
+      this.selectedTile !== undefined &&
+      this.selectedTile !== null &&
+      myPlayer !== null
+    ) {
       const previousSelectedPosition = {
         row: this.selectedTile.row,
         column: this.selectedTile.column,
@@ -648,11 +503,14 @@ export class Game {
   /**
    * Build a structure at the given position
    */
-  async build(buildingType: BuildingType, { x, y }: Coordinate): Promise<void> {
-    if (!this.myPlayerType) return;
+  async build(
+    buildingType: BuildingType,
+    { x, y }: Coordinate,
+  ): Promise<void> {
+    if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
-    if (!tilePosition) return;
+    if (tilePosition === null) return;
 
     await this.sendAction({
       type: "build",
@@ -667,10 +525,10 @@ export class Game {
    * Build a farm at the given position
    */
   async buildFarm({ x, y }: Coordinate): Promise<void> {
-    if (!this.myPlayerType) return;
+    if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
-    if (!tilePosition) return;
+    if (tilePosition === null) return;
 
     await this.sendAction({
       type: "build",
@@ -685,10 +543,10 @@ export class Game {
    * Create a peasant at the given position
    */
   async createPeasant({ x, y }: Coordinate): Promise<void> {
-    if (!this.myPlayerType) return;
+    if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
-    if (!tilePosition) return;
+    if (tilePosition === null) return;
 
     await this.sendAction({
       type: "createPeasant",
@@ -701,10 +559,10 @@ export class Game {
    * Upgrade a unit at the given position
    */
   async upgrade({ x, y }: Coordinate): Promise<void> {
-    if (!this.myPlayerType) return;
+    if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
-    if (!tilePosition) return;
+    if (tilePosition === null) return;
 
     await this.sendAction({
       type: "upgrade",
@@ -717,10 +575,10 @@ export class Game {
    * Upgrade a unit to archer at the given position
    */
   async upgradeArcher({ x, y }: Coordinate): Promise<void> {
-    if (!this.myPlayerType) return;
+    if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
-    if (!tilePosition) return;
+    if (tilePosition === null) return;
 
     await this.sendAction({
       type: "upgrade",
@@ -734,13 +592,13 @@ export class Game {
    * Attack a target at the given position
    */
   async attack({ x, y }: Coordinate): Promise<void> {
-    if (!this.myPlayerType) return;
+    if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
-    if (!tilePosition) return;
+    if (tilePosition === null) return;
 
     const selectedPosition = this.getSelectedPosition();
-    if (!selectedPosition) {
+    if (selectedPosition === undefined) {
       console.warn("No unit selected to attack with");
       return;
     }
