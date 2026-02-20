@@ -1,3 +1,6 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json"
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/client/main.tsx", "src/server/index.ts"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["src/client/types/images.d.ts"]
 }
