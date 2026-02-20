@@ -1,3 +1,4 @@
+import * as hex from "@shared/map/hex";
 import type { TilePosition } from "@shared/map/tile";
 import type { Building } from "./Building";
 import { Hexagon } from "./Hexagon";
@@ -168,94 +169,13 @@ export class Tile {
     return new Tile({ ...this, explored: true, landscape: landscape });
   }
 
-  isSameRow(position: { row: number; column: number }) {
-    return this.row === position.row;
-  }
-
-  isSameCol(position: { row: number; column: number }) {
-    return this.column === position.column;
-  }
-
-  isThis(position: { row: number; column: number }) {
-    return this.isSameRow(position) && this.isSameCol(position);
-  }
-
-  isEastOf(position: { row: number; column: number }) {
-    return this.isSameRow(position) && this.column === position.column + 1;
-  }
-
-  isWestOf(position: TilePosition) {
-    return this.isSameRow(position) && this.column === position.column - 1;
-  }
-
-  // Diagonal neighbor rules for odd-r offset hex grid:
-  // - Even rows are NOT shifted
-  // - Odd rows are shifted RIGHT by half a hex
-  // The column offset depends on the SOURCE tile's row (position.row)
-
-  isNorthEastOf(position: TilePosition) {
-    // From even row: NE is at (row-1, same col) because odd row above is shifted right
-    // From odd row: NE is at (row-1, col+1) because even row above is not shifted
-    if (position.row % 2 === 0) {
-      return this.row === position.row - 1 && this.column === position.column;
-    } else {
-      return (
-        this.row === position.row - 1 && this.column === position.column + 1
-      );
-    }
-  }
-
-  isNorthWestOf(position: TilePosition) {
-    // From even row: NW is at (row-1, col-1)
-    // From odd row: NW is at (row-1, same col)
-    if (position.row % 2 === 0) {
-      return (
-        this.row === position.row - 1 && this.column === position.column - 1
-      );
-    } else {
-      return this.row === position.row - 1 && this.column === position.column;
-    }
-  }
-
-  isSouthEastOf(position: TilePosition) {
-    // From even row: SE is at (row+1, same col)
-    // From odd row: SE is at (row+1, col+1)
-    if (position.row % 2 === 0) {
-      return this.row === position.row + 1 && this.column === position.column;
-    } else {
-      return (
-        this.row === position.row + 1 && this.column === position.column + 1
-      );
-    }
-  }
-
-  isSouthWestOf(position: TilePosition) {
-    // From even row: SW is at (row+1, col-1)
-    // From odd row: SW is at (row+1, same col)
-    if (position.row % 2 === 0) {
-      return (
-        this.row === position.row + 1 && this.column === position.column - 1
-      );
-    } else {
-      return this.row === position.row + 1 && this.column === position.column;
-    }
-  }
-
   isNeighborTo(position: TilePosition | null | undefined) {
-    if (!position) return false;
-
-    return (
-      this.isEastOf(position) ||
-      this.isWestOf(position) ||
-      this.isNorthEastOf(position) ||
-      this.isNorthWestOf(position) ||
-      this.isSouthEastOf(position) ||
-      this.isSouthWestOf(position)
-    );
+    if (position == null) return false;
+    return hex.isNeighborTo(this, position);
   }
 
   getNeighbors(tiles: Tile[]) {
-    return tiles.filter((tile) => tile.isNeighborTo(this));
+    return hex.findNeighbors(this, tiles);
   }
 
   /**
@@ -296,7 +216,7 @@ export class Tile {
   }
 
   has(tilePosition: TilePosition) {
-    return this.row === tilePosition.row && this.column === tilePosition.column;
+    return hex.isSamePosition(this, tilePosition);
   }
 
   hasAny(tilePositions: TilePosition[]) {
