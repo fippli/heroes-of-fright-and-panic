@@ -17,8 +17,6 @@ import { Player } from "./Player";
 import { renderResources } from "./ResourceMap";
 import { Tile } from "./Tile";
 
-const dialog = new Dialog();
-
 /**
  * Game class - Client-side render-only implementation
  * All game logic is handled on the server.
@@ -32,6 +30,7 @@ export class Game {
   canvas: Canvas;
   tiles: Tile[] = [];
   clock: Clock = new Clock();
+  private readonly dialog: Dialog;
 
   // Current player (whose turn it is based on game time)
   currentPlayer: PlayerType = "day";
@@ -66,6 +65,7 @@ export class Game {
     this.myPlayerType = myPlayerType;
     this.dayPlayer = new Player({ type: "day" });
     this.nightPlayer = new Player({ type: "night" });
+    this.dialog = new Dialog();
   }
 
   /**
@@ -106,9 +106,9 @@ export class Game {
     const wasDay = this.previousWasDay;
     const isNowDay = this.clock.isDay();
     if (wasDay && !isNowDay) {
-      dialog.open({ title: "Dusk", content: "The sun is setting" });
+      this.dialog.open({ title: "Dusk", content: "The sun is setting" });
     } else if (!wasDay && isNowDay) {
-      dialog.open({ title: "Dawn", content: "The sun is rising" });
+      this.dialog.open({ title: "Dawn", content: "The sun is rising" });
     }
     this.previousWasDay = isNowDay;
   }
@@ -189,7 +189,7 @@ export class Game {
     if (!wasMyTurn && isNowMyTurn && this.myPlayerType !== null) {
       console.log("It's your turn!");
       Notifications.notifyTurnChange(this.myPlayerType);
-      dialog.open({
+      this.dialog.open({
         title: "Your Turn!",
         content: `It's ${this.myPlayerType} player's turn`,
       });
@@ -209,13 +209,13 @@ export class Game {
 
     if (this.myPlayerType !== null) {
       if (isWinner) {
-        dialog.open({
+        this.dialog.open({
           title: "Victory!",
           content: `Congratulations! The ${winnerName} Alliance has won!`,
         });
         Notifications.showNotification("Victory!", `You have won the battle!`);
       } else {
-        dialog.open({
+        this.dialog.open({
           title: "Defeat",
           content: `The ${winnerName} Alliance has won. Better luck next time!`,
         });
@@ -226,7 +226,7 @@ export class Game {
       }
     } else {
       // Spectator
-      dialog.open({
+      this.dialog.open({
         title: "Game Over",
         content: `The ${winnerName} Alliance has won!`,
       });
