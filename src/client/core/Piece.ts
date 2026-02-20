@@ -1,3 +1,4 @@
+import { PieceType } from "@shared/piece";
 import { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import { LandscapeType } from "./Landscape";
@@ -5,30 +6,26 @@ import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
 
-export enum PieceType {
-  peasant = "peasant",
-  knight = "knight",
-  soldier = "soldier",
-  archer = "archer",
-  boat = "boat",
-}
+export { PieceType };
 
 /**
  * Piece - Client-side piece/unit representation
  * Piece logic is handled on the server, this is just for rendering
  */
 export class Piece {
-  owner: Player;
-  type: PieceType;
-  boat: boolean = false;
-  viewRange: number = 1;
-  upgradeCost: ResourceMap;
+  readonly owner: Player;
+  readonly type: PieceType;
+  readonly boat: boolean = false;
+  readonly viewRange: number = 1;
+  readonly attackRange: number = 1;
+  readonly upgradeCost: ResourceMap;
   readonly walkableLandscape: LandscapeType[];
   readonly lootableLandscape: LandscapeType[];
 
   constructor({
     type,
     viewRange,
+    attackRange,
     owner,
     upgradeCost,
     walkableLandscape,
@@ -36,6 +33,7 @@ export class Piece {
   }: {
     type: PieceType;
     viewRange?: number;
+    attackRange?: number;
     owner: Player;
     upgradeCost?: ResourceMap;
     walkableLandscape?: LandscapeType[];
@@ -43,6 +41,7 @@ export class Piece {
   }) {
     this.type = type;
     this.viewRange = viewRange ?? 1;
+    this.attackRange = attackRange ?? 1;
     this.owner = owner;
     this.upgradeCost = upgradeCost ?? new ResourceMap({});
     this.walkableLandscape = walkableLandscape ?? [];

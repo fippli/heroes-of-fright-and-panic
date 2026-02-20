@@ -1,23 +1,17 @@
+import { LandscapeType } from "@shared/map/landscape";
 import { Hexagon } from "./Hexagon";
 import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
 import { ImageAssets } from "../images";
 
-export enum LandscapeType {
-  grass = "grass",
-  tree = "tree",
-  sand = "sand",
-  water = "water",
-  unexplored = "unexplored",
-  mountain = "mountain",
-}
+export { LandscapeType };
 
 /**
  * Landscape - Client-side landscape/terrain representation
  * Landscape generation is handled on the server, this is just for rendering
  */
 export class Landscape {
-  type: LandscapeType;
+  readonly type: LandscapeType;
   readonly lootDrop?: ResourceMap = undefined;
 
   constructor({
