@@ -1,12 +1,9 @@
-const timeElement = document.getElementById("time") as HTMLDivElement;
-const turnElement = document.getElementById("turn") as HTMLDivElement;
-
 /**
  * Clock - Client-side display-only clock
  * Time is managed by the server, this just displays it
  */
 export class Clock {
-  private time: number;
+  private readonly time: number;
 
   constructor(initialTime: number = 6) {
     this.time = initialTime;
@@ -27,12 +24,16 @@ export class Clock {
   }
 
   render(currentPlayer?: "day" | "night", myPlayer?: "day" | "night"): void {
-    if (timeElement) {
+    const timeElement = document.getElementById("time");
+    const turnElement = document.getElementById("turn");
+
+    if (timeElement !== null) {
       timeElement.textContent = this.toString();
     }
 
-    if (turnElement && currentPlayer) {
-      const isMyTurn = myPlayer ? currentPlayer === myPlayer : false;
+    if (turnElement !== null && currentPlayer !== undefined) {
+      const isMyTurn =
+        myPlayer !== undefined ? currentPlayer === myPlayer : false;
       turnElement.textContent = isMyTurn
         ? "It's your turn!"
         : `${currentPlayer.toUpperCase()} player's turn`;
