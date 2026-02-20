@@ -6,22 +6,26 @@ import type { Tile } from "@shared/map/tile";
 import { GameMap } from "@shared/map/map";
 
 export class Player {
-  type: "day" | "night";
-  resources: ResourceMap = new ResourceMap({});
+  readonly type: "day" | "night";
+  readonly resources: ResourceMap;
 
   constructor({
     type,
     resources,
   }: {
     type: "day" | "night";
-    resources: ResourceMap;
+    resources?: ResourceMap;
   }) {
     this.type = type;
-    this.resources = resources;
+    this.resources = resources ?? new ResourceMap({});
   }
 
-  collect(loot: ResourceMap) {
-    this.resources.add(loot);
+  withResources(resources: ResourceMap): Player {
+    return new Player({ type: this.type, resources });
+  }
+
+  collect(loot: ResourceMap): Player {
+    return this.withResources(this.resources.add(loot));
   }
 
   canAfford(cost: ResourceMap) {
@@ -38,8 +42,8 @@ export class Player {
     return canAfford;
   }
 
-  pay(cost: ResourceMap) {
-    this.resources.subtract(cost);
+  pay(cost: ResourceMap): Player {
+    return this.withResources(this.resources.subtract(cost));
   }
 
   produce(tiles: Tile[]): ResourceMap {
