@@ -1,16 +1,11 @@
+import { BuildingType } from "@shared/building";
 import { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
 
-export enum BuildingType {
-  house = "house",
-  castle = "castle",
-  tower = "tower",
-  boat = "boat",
-  farm = "farm",
-}
+export { BuildingType };
 
 /**
  * Building - Client-side building representation
@@ -21,9 +16,9 @@ export class Building {
   readonly cost: ResourceMap;
   readonly production: ResourceMap;
   readonly owner: Player;
-  populated: boolean = false;
-  walkable: boolean = false;
-  viewRange: number;
+  readonly populated: boolean = false;
+  readonly walkable: boolean = false;
+  readonly viewRange: number;
 
   constructor({
     type,
