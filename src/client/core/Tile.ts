@@ -1,3 +1,4 @@
+import type { TilePosition } from "@shared/map/tile";
 import type { Building } from "./Building";
 import { Hexagon } from "./Hexagon";
 
@@ -5,10 +6,7 @@ import { Landscape, LandscapeType } from "./Landscape";
 import type { Piece } from "./Piece";
 import type { Player } from "./Player";
 
-export type TilePosition = {
-  row: number;
-  column: number;
-};
+export type { TilePosition };
 
 export class Tile {
   readonly x: number;
@@ -16,7 +14,7 @@ export class Tile {
   readonly row: number;
   readonly column: number;
   explored: boolean = false;
-  landscape: Landscape | null;
+  readonly landscape: Landscape | null;
   building?: Building;
   piece?: Piece;
 
@@ -72,9 +70,59 @@ export class Tile {
       this.building?.viewRange ?? 0,
       this.piece?.viewRange ?? 0,
     );
-    this.getTilesInRange(tiles, viewRange).forEach((_tile: Tile) => {
-      // Hexagon.renderArea(ctx, tile.x, tile.y, "#00ffff11");
-      // Hexagon.render(ctx, tile.x, tile.y, "#00ffff44");
+    this.getTilesInRange(tiles, viewRange).forEach((tile: Tile) => {
+      // Subtle cyan overlay for view range
+      Hexagon.renderArea(ctx, tile.x, tile.y, "#00ffff11");
+    });
+    ctx.restore();
+  }
+
+  /**
+   * Render green overlay on tiles this piece can move to,
+   * and yellow overlay on tiles this piece can loot
+   */
+  renderValidMoves(ctx: CanvasRenderingContext2D, tiles: Tile[]) {
+    if (!this.piece) return;
+
+    ctx.save();
+    const neighbors = this.getNeighbors(tiles);
+
+    neighbors.forEach((tile) => {
+      // Check if can loot (yellow)
+      if (this.canLoot(tile)) {
+        Hexagon.renderArea(ctx, tile.x, tile.y, "#ffff0044");
+        Hexagon.render(ctx, tile.x, tile.y, "#ffff0088");
+      }
+      // Check if can walk (green) - only if no piece there
+      else if (this.canWalkOn(tile) && !tile.piece) {
+        Hexagon.renderArea(ctx, tile.x, tile.y, "#00ff0044");
+        Hexagon.render(ctx, tile.x, tile.y, "#00ff0088");
+      }
+    });
+    ctx.restore();
+  }
+
+  /**
+   * Render red overlay on tiles this piece can attack
+   */
+  renderValidAttacks(
+    ctx: CanvasRenderingContext2D,
+    tiles: Tile[],
+    myPlayerType: "day" | "night" | null,
+  ) {
+    if (!this.piece || !myPlayerType) return;
+
+    ctx.save();
+    // Use attackRange if available, otherwise fall back to viewRange
+    const attackRange = this.piece.attackRange ?? this.piece.viewRange ?? 1;
+    const tilesInRange = this.getTilesInRange(tiles, attackRange);
+
+    tilesInRange.forEach((tile) => {
+      // Check if tile has an enemy piece
+      if (tile.piece && tile.piece.owner?.type !== myPlayerType) {
+        Hexagon.renderArea(ctx, tile.x, tile.y, "#ff000044");
+        Hexagon.render(ctx, tile.x, tile.y, "#ff0000aa");
+      }
     });
     ctx.restore();
   }
@@ -215,28 +263,28 @@ export class Tile {
    * Range 0 = just this tile, Range 1 = this + 6 neighbors, etc.
    */
   getTilesInRange(tiles: Tile[], viewRange: number): Tile[] {
-    const result: Tile[] = [this];
-    let currentLayer: Tile[] = [this];
-
-    for (let i = 0; i < viewRange; i++) {
-      const nextLayer: Tile[] = [];
-      for (const tile of currentLayer) {
-        const neighbors = tile.getNeighbors(tiles);
-        for (const neighbor of neighbors) {
-          // Check if already included using row/column (not reference equality)
-          const alreadyIncluded = result.some(
-            (r) => r.row === neighbor.row && r.column === neighbor.column,
-          );
-          if (!alreadyIncluded) {
-            result.push(neighbor);
-            nextLayer.push(neighbor);
-          }
-        }
-      }
-      currentLayer = nextLayer;
-    }
-
-    return result;
+    return Array.from({ length: viewRange }, (_, index) => index).reduce<{
+      result: Tile[];
+      currentLayer: Tile[];
+    }>(
+      (acc, _) => {
+        const nextLayer = acc.currentLayer.flatMap((tile) =>
+          tile.getNeighbors(tiles).filter(
+            (neighbor) =>
+              !acc.result.some(
+                (existing) =>
+                  existing.row === neighbor.row &&
+                  existing.column === neighbor.column,
+              ),
+          ),
+        );
+        return {
+          result: [...acc.result, ...nextLayer],
+          currentLayer: nextLayer,
+        };
+      },
+      { result: [this], currentLayer: [this] },
+    ).result;
   }
 
   hasExploredNeighbor(tiles: Tile[]) {
