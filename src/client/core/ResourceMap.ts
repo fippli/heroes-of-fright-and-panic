@@ -1,49 +1,23 @@
-const woodElement = document.getElementById("wood") as HTMLDivElement;
-const stoneElement = document.getElementById("stone") as HTMLDivElement;
-const goldElement = document.getElementById("gold") as HTMLDivElement;
-const foodElement = document.getElementById("food") as HTMLDivElement;
+import { ResourceMap } from "@shared/player/resource-map";
 
-export class ResourceMap {
-  wood: number;
-  gold: number;
-  stone: number;
-  food: number;
+export { ResourceMap };
 
-  constructor({
-    wood = 0,
-    gold = 0,
-    stone = 0,
-    food = 0,
-  }: {
-    wood?: number;
-    gold?: number;
-    stone?: number;
-    food?: number;
-  }) {
-    this.wood = wood;
-    this.gold = gold;
-    this.stone = stone;
-    this.food = food;
+export const renderResources = (resourceMap: ResourceMap): void => {
+  const woodElement = document.getElementById("wood");
+  const stoneElement = document.getElementById("stone");
+  const goldElement = document.getElementById("gold");
+  const foodElement = document.getElementById("food");
+
+  if (woodElement !== null) {
+    woodElement.textContent = resourceMap.wood.toString();
   }
-
-  add(resourceMap: ResourceMap) {
-    this.wood += resourceMap.wood;
-    this.gold += resourceMap.gold;
-    this.stone += resourceMap.stone;
-    this.food += resourceMap.food;
+  if (stoneElement !== null) {
+    stoneElement.textContent = resourceMap.stone.toString();
   }
-
-  subtract(resourceMap: ResourceMap) {
-    this.wood -= resourceMap.wood;
-    this.gold -= resourceMap.gold;
-    this.stone -= resourceMap.stone;
-    this.food -= resourceMap.food;
+  if (goldElement !== null) {
+    goldElement.textContent = resourceMap.gold.toString();
   }
-
-  render() {
-    woodElement.textContent = this.wood.toString();
-    stoneElement.textContent = this.stone.toString();
-    goldElement.textContent = this.gold.toString();
-    foodElement.textContent = this.food.toString();
+  if (foodElement !== null) {
+    foodElement.textContent = resourceMap.food.toString();
   }
-}
+};

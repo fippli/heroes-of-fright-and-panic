@@ -5,9 +5,10 @@ import { Clock } from "./Clock";
 import { Dialog } from "./Dialog";
 import { Hexagon } from "./Hexagon";
 import { Landscape, LandscapeType } from "./Landscape";
+import { Notifications } from "./Notifications";
 import { Piece, PieceType } from "./Piece";
 import { Player } from "./Player";
-import { ResourceMap } from "./ResourceMap";
+import { renderResources, ResourceMap } from "./ResourceMap";
 import { Tile } from "./Tile";
 
 const dialog = new Dialog();
@@ -15,27 +16,29 @@ const dialog = new Dialog();
 // Types for API communication
 type PlayerType = "day" | "night";
 
-interface GameAction {
+type GameAction = {
   type: string;
   player: PlayerType;
   position?: { row: number; column: number };
   selectedPosition?: { row: number; column: number };
   buildingType?: BuildingType;
   targetType?: PieceType;
-}
+};
 
-interface GameClock {
+type GameClock = {
   time: number;
   hasDawned: boolean;
   hasDusked: boolean;
-}
+};
 
-interface ServerGameState {
+type ServerGameState = {
   id: string;
   _id?: string;
   size: number;
   currentPlayer: PlayerType;
   clock: GameClock;
+  gameOver?: boolean;
+  winner?: PlayerType | null;
   dayPlayer: {
     type: "day";
     resources: { wood: number; gold: number; stone: number; food: number };
@@ -51,16 +54,16 @@ interface ServerGameState {
     building: Building | null;
     piece: Piece | null;
   }[];
-}
+};
 
-interface ActionResponse {
+type ActionResponse = {
   result: {
     success: boolean;
     error?: string;
     message?: string;
   };
   game: ServerGameState;
-}
+};
 
 /**
  * Game class - Client-side render-only implementation
@@ -100,6 +103,10 @@ export class Game {
   private pollIntervalId: number | null = null;
   private readonly POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
 
+  // Game over state
+  gameOver: boolean = false;
+  winner: PlayerType | null = null;
+
   constructor(canvas: Canvas, myPlayerType: PlayerType | null = null) {
     this.canvas = canvas;
     this.myPlayerType = myPlayerType;
@@ -130,7 +137,7 @@ export class Game {
    * Parse game state from server response
    */
   parse(game: ServerGameState): void {
-    this.id = game.id || game._id || "";
+    this.id = game.id ?? game._id ?? "";
 
     // Parse clock
     this.clock = new Clock(game.clock?.time ?? 6);
@@ -146,16 +153,16 @@ export class Game {
     this.previousWasDay = isNowDay;
 
     // Parse current player
-    this.currentPlayer = game.currentPlayer || "day";
+    this.currentPlayer = game.currentPlayer ?? "day";
 
     // Parse players
     this.dayPlayer = new Player({
       type: "day",
-      resources: new ResourceMap(game.dayPlayer?.resources || {}),
+      resources: new ResourceMap(game.dayPlayer?.resources ?? {}),
     });
     this.nightPlayer = new Player({
       type: "night",
-      resources: new ResourceMap(game.nightPlayer?.resources || {}),
+      resources: new ResourceMap(game.nightPlayer?.resources ?? {}),
     });
 
     // Parse tiles
@@ -168,12 +175,12 @@ export class Game {
           building: tile.building
             ? new Building({
                 type: tile.building.type,
-                production: new ResourceMap(tile.building.production || {}),
-                cost: new ResourceMap(tile.building.cost || {}),
+                production: new ResourceMap(tile.building.production ?? {}),
+                cost: new ResourceMap(tile.building.cost ?? {}),
                 walkable: tile.building.walkable ?? true,
                 viewRange: tile.building.viewRange ?? 1,
                 owner: new Player({
-                  type: tile.building.owner?.type || "day",
+                  type: tile.building.owner?.type ?? "day",
                 }),
               })
             : undefined,
@@ -181,14 +188,19 @@ export class Game {
             ? new Piece({
                 type: tile.piece.type,
                 viewRange: tile.piece.viewRange ?? 1,
-                owner: new Player({ type: tile.piece.owner?.type || "day" }),
-                upgradeCost: new ResourceMap(tile.piece.upgradeCost || {}),
-                walkableLandscape: tile.piece.walkableLandscape || [],
-                lootableLandscape: tile.piece.lootableLandscape || [],
+                attackRange: tile.piece.attackRange ?? tile.piece.viewRange ?? 1,
+                owner: new Player({ type: tile.piece.owner?.type ?? "day" }),
+                upgradeCost: new ResourceMap(tile.piece.upgradeCost ?? {}),
+                walkableLandscape: tile.piece.walkableLandscape ?? [],
+                lootableLandscape: tile.piece.lootableLandscape ?? [],
               })
             : undefined,
         }),
     );
+
+    // Parse game over state
+    this.gameOver = game.gameOver ?? false;
+    this.winner = game.winner ?? null;
 
     console.log("Game state parsed", {
       id: this.id,
@@ -196,7 +208,18 @@ export class Game {
       myPlayerType: this.myPlayerType,
       isMyTurn: this.isMyTurn,
       clock: this.clock.toString(),
+      gameOver: this.gameOver,
+      winner: this.winner,
     });
+
+    // Handle game over
+    if (this.gameOver) {
+      this.handleGameOver();
+      return;
+    }
+
+    // Request notification permission for turn alerts
+    Notifications.requestPermission();
 
     // Start polling for updates if not already polling
     this.startPolling();
@@ -251,16 +274,16 @@ export class Game {
     this.previousWasDay = isNowDay;
 
     // Parse current player
-    this.currentPlayer = game.currentPlayer || "day";
+    this.currentPlayer = game.currentPlayer ?? "day";
 
     // Parse players
     this.dayPlayer = new Player({
       type: "day",
-      resources: new ResourceMap(game.dayPlayer?.resources || {}),
+      resources: new ResourceMap(game.dayPlayer?.resources ?? {}),
     });
     this.nightPlayer = new Player({
       type: "night",
-      resources: new ResourceMap(game.nightPlayer?.resources || {}),
+      resources: new ResourceMap(game.nightPlayer?.resources ?? {}),
     });
 
     // Parse tiles
@@ -273,12 +296,12 @@ export class Game {
           building: tile.building
             ? new Building({
                 type: tile.building.type,
-                production: new ResourceMap(tile.building.production || {}),
-                cost: new ResourceMap(tile.building.cost || {}),
+                production: new ResourceMap(tile.building.production ?? {}),
+                cost: new ResourceMap(tile.building.cost ?? {}),
                 walkable: tile.building.walkable ?? true,
                 viewRange: tile.building.viewRange ?? 1,
                 owner: new Player({
-                  type: tile.building.owner?.type || "day",
+                  type: tile.building.owner?.type ?? "day",
                 }),
               })
             : undefined,
@@ -286,23 +309,88 @@ export class Game {
             ? new Piece({
                 type: tile.piece.type,
                 viewRange: tile.piece.viewRange ?? 1,
-                owner: new Player({ type: tile.piece.owner?.type || "day" }),
-                upgradeCost: new ResourceMap(tile.piece.upgradeCost || {}),
-                walkableLandscape: tile.piece.walkableLandscape || [],
-                lootableLandscape: tile.piece.lootableLandscape || [],
+                attackRange: tile.piece.attackRange ?? tile.piece.viewRange ?? 1,
+                owner: new Player({ type: tile.piece.owner?.type ?? "day" }),
+                upgradeCost: new ResourceMap(tile.piece.upgradeCost ?? {}),
+                walkableLandscape: tile.piece.walkableLandscape ?? [],
+                lootableLandscape: tile.piece.lootableLandscape ?? [],
               })
             : undefined,
         }),
     );
 
+    // Parse game over state
+    const wasGameOver = this.gameOver;
+    this.gameOver = game.gameOver ?? false;
+    this.winner = game.winner ?? null;
+
+    // Handle game over (only show dialog once)
+    if (this.gameOver && !wasGameOver) {
+      this.handleGameOver();
+      return;
+    }
+
     // Notify if turn changed
     const isNowMyTurn = this.isMyTurn;
-    if (!wasMyTurn && isNowMyTurn) {
-      console.log("🎮 It's your turn!");
+    if (!wasMyTurn && isNowMyTurn && this.myPlayerType) {
+      console.log("It's your turn!");
+      Notifications.notifyTurnChange(this.myPlayerType);
       dialog.open({
         title: "Your Turn!",
         content: `It's ${this.myPlayerType} player's turn`,
       });
+    }
+  }
+
+  /**
+   * Handle game over state
+   */
+  private handleGameOver(): void {
+    // Stop polling
+    this.stopPolling();
+
+    // Determine if we won or lost
+    const isWinner = this.winner === this.myPlayerType;
+    const winnerName = this.winner === "day" ? "Day" : "Night";
+
+    if (this.myPlayerType) {
+      if (isWinner) {
+        dialog.open({
+          title: "Victory!",
+          content: `Congratulations! The ${winnerName} Alliance has won!`,
+        });
+        Notifications.showNotification(
+          "Victory!",
+          `You have won the battle!`,
+        );
+      } else {
+        dialog.open({
+          title: "Defeat",
+          content: `The ${winnerName} Alliance has won. Better luck next time!`,
+        });
+        Notifications.showNotification(
+          "Game Over",
+          `The ${winnerName} Alliance has won.`,
+        );
+      }
+    } else {
+      // Spectator
+      dialog.open({
+        title: "Game Over",
+        content: `The ${winnerName} Alliance has won!`,
+      });
+    }
+
+    Notifications.playSound();
+  }
+
+  /**
+   * Stop polling for game state updates
+   */
+  private stopPolling(): void {
+    if (this.pollIntervalId !== null) {
+      window.clearInterval(this.pollIntervalId);
+      this.pollIntervalId = null;
     }
   }
 
@@ -321,9 +409,19 @@ export class Game {
       tile.render(canvas.ctx);
     });
 
-    // Render selected tile highlight
+    // Render selected tile highlight and valid moves/attacks
     if (this.selectedTile) {
+      // Show view range
       this.selectedTile.renderArea(canvas.ctx, this.tiles);
+      // Show valid moves (green) and lootable tiles (yellow)
+      this.selectedTile.renderValidMoves(canvas.ctx, this.tiles);
+      // Show attackable enemies (red)
+      this.selectedTile.renderValidAttacks(
+        canvas.ctx,
+        this.tiles,
+        this.myPlayerType,
+      );
+      // Selection outline
       Hexagon.render(
         canvas.ctx,
         this.selectedTile.x,
@@ -341,7 +439,7 @@ export class Game {
     canvas.ctx.restore();
 
     // Render UI
-    this.player.resources.render();
+    renderResources(this.player.resources);
     this.clock.render(this.currentPlayer, this.myPlayerType ?? undefined);
   }
 
@@ -351,7 +449,7 @@ export class Game {
    */
   private calculateExploration(): void {
     // If no player assigned (spectator), show everything
-    const viewingPlayer = this.myPlayerType || this.currentPlayer;
+    const viewingPlayer = this.myPlayerType ?? this.currentPlayer;
 
     // First, unexplore all tiles
     this.tiles.forEach((tile) => (tile.explored = false));
