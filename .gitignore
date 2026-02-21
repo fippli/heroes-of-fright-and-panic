@@ -1,3 +1,5 @@
+.env
+
 # Logs
 logs
 *.log
@@ -24,3 +26,8 @@ dist-ssr
 *.sw?
 
 .env.secrets
+.claudia/
+
+# Copied shared code for Edge Functions (generated from src/shared)
+supabase/functions/shared/
+supabase/.temp/

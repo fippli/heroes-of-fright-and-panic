@@ -1,7 +1,7 @@
-import { compose } from "@shared/utils/compose";
-import * as hex from "./hex";
-import { Landscape } from "./landscape";
-import type { Tile, TilePosition } from "./tile";
+import { compose } from "@shared/utils/compose.ts";
+import * as hex from "./hex.ts";
+import { Landscape } from "./landscape.ts";
+import type { Tile, TilePosition } from "./tile.ts";
 
 export class GameMap {
   static generate(size: number) {

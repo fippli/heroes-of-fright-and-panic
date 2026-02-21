@@ -1,8 +1,8 @@
-// import { ResourceMap } from "./ResourceMap";
-import type { Tile } from "./tile";
-import { GameMap } from "./map";
-import { weightedRandom } from "@shared/utils/weightedRandom";
-import { ResourceMap } from "@shared/player/resource-map";
+// import { ResourceMap } from "./ResourceMap.ts";
+import type { Tile } from "./tile.ts";
+import { GameMap } from "./map.ts";
+import { weightedRandom } from "@shared/utils/weightedRandom.ts";
+import { ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum LandscapeType {
   grass = "grass",

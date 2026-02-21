@@ -1,5 +1,5 @@
-import type { Tile } from "../map/tile";
-import type { Player } from "../player";
+import type { Tile } from "../map/tile.ts";
+import type { Player } from "../player/index.ts";
 
 export type GameClock = {
   time: number; // Hour of day (0-23), advances with actions

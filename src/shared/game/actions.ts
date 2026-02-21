@@ -1,4 +1,4 @@
-import type { Game } from "./types";
+import type { Game } from "./types.ts";
 import type {
   GameAction,
   ActionResult,
@@ -7,8 +7,8 @@ import type {
   CreatePeasantAction,
   UpgradeAction,
   AttackAction,
-} from "../actions";
-import { GameEngine } from "./engine";
+} from "../actions/index.ts";
+import { GameEngine } from "./engine.ts";
 
 /**
  * Process a game action and return the result

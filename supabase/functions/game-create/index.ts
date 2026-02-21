@@ -3,11 +3,11 @@ import {
   createAdminClient,
   getUserFromRequest,
 } from "../_shared/supabase-client.ts";
-import { GameMap } from "@shared/map/map";
-import { Piece } from "@shared/piece";
-import { Player } from "@shared/player";
-import type { Tile } from "@shared/map/tile";
-import { ResourceMap } from "@shared/player/resource-map";
+import { GameMap } from "@shared/map/map.ts";
+import { Piece } from "@shared/piece/index.ts";
+import { Player } from "@shared/player/index.ts";
+import type { Tile } from "@shared/map/tile.ts";
+import { ResourceMap } from "@shared/player/resource-map.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);

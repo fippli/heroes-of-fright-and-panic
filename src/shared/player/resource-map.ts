@@ -1,8 +1,8 @@
 export class ResourceMap {
-  wood: number;
-  gold: number;
-  stone: number;
-  food: number;
+  readonly wood: number;
+  readonly gold: number;
+  readonly stone: number;
+  readonly food: number;
 
   constructor({
     wood = 0,
@@ -21,17 +21,21 @@ export class ResourceMap {
     this.food = food;
   }
 
-  add(resourceMap: ResourceMap) {
-    this.wood += resourceMap.wood;
-    this.gold += resourceMap.gold;
-    this.stone += resourceMap.stone;
-    this.food += resourceMap.food;
+  add(resourceMap: ResourceMap): ResourceMap {
+    return new ResourceMap({
+      wood: this.wood + resourceMap.wood,
+      gold: this.gold + resourceMap.gold,
+      stone: this.stone + resourceMap.stone,
+      food: this.food + resourceMap.food,
+    });
   }
 
-  subtract(resourceMap: ResourceMap) {
-    this.wood -= resourceMap.wood;
-    this.gold -= resourceMap.gold;
-    this.stone -= resourceMap.stone;
-    this.food -= resourceMap.food;
+  subtract(resourceMap: ResourceMap): ResourceMap {
+    return new ResourceMap({
+      wood: this.wood - resourceMap.wood,
+      gold: this.gold - resourceMap.gold,
+      stone: this.stone - resourceMap.stone,
+      food: this.food - resourceMap.food,
+    });
   }
 }

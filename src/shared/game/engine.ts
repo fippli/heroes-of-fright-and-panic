@@ -1,12 +1,12 @@
-import type { Game } from "./types";
-import type { Tile } from "../map/tile";
-import type { TilePosition, PlayerType, ActionResult } from "../actions";
-import { GameMap } from "../map/map";
-import { Piece, PieceType } from "../piece";
-import { Building, BuildingType } from "../building";
-import { Player } from "../player";
-import { ResourceMap } from "../player/resource-map";
-import { LandscapeType, Landscape } from "../map/landscape";
+import type { Game } from "./types.ts";
+import type { Tile } from "../map/tile.ts";
+import type { TilePosition, PlayerType, ActionResult } from "../actions/index.ts";
+import { GameMap } from "../map/map.ts";
+import { Piece, PieceType } from "../piece/index.ts";
+import { Building, BuildingType } from "../building/index.ts";
+import { Player } from "../player/index.ts";
+import { ResourceMap } from "../player/resource-map.ts";
+import { LandscapeType, Landscape } from "../map/landscape.ts";
 
 /**
  * GameEngine handles all game logic on the server side.
