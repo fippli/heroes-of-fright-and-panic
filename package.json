@@ -9,27 +9,19 @@
   },
   "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "dev:client:watch": "vite build --watch --mode development",
-    "dev:client:docker": "vite --host 0.0.0.0 --port 5173",
-    "dev:server": "tsx watch src/server/index.ts",
-    "dev:container": "concurrently -k -n client,server -c cyan,magenta \"pnpm:dev:client:docker\" \"pnpm:dev:server\"",
-    "dev": "concurrently -k -n client,server -c cyan,magenta \"pnpm:dev:client:watch\" \"pnpm:dev:server\"",
-    "build:client": "vite build",
-    "build:server": "tsc -p tsconfig.server.json && tsc-esm-fix dist/server --tsconfig tsconfig.server.json",
-    "build": "pnpm build:client && pnpm build:server && pnpm copy:static",
-    "copy:static": "node -e \"import fs from 'fs'; if (fs.existsSync('static')) fs.cpSync('static', 'dist/static', { recursive: true });\"",
-    "start": "node dist/server/index.js",
+    "dev": "vite",
+    "dev:functions": "supabase functions serve --import-map supabase/functions/import_map.json",
+    "build": "vite build",
     "lint": "oxlint .",
     "format": "prettier --write .",
     "test": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.client.json && tsc --noEmit -p tsconfig.server.json",
+    "typecheck": "tsc --noEmit -p tsconfig.client.json",
     "knip": "knip"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.0",
-    "@types/nodemailer": "^7.0.4",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
@@ -37,7 +29,6 @@
     "knip": "^5.66.2",
     "oxlint": "^1.22.0",
     "prettier": "^3.6.2",
-    "tsc-alias": "^1.8.16",
     "tsc-esm-fix": "^3.1.2",
     "tsx": "^4.16.0",
     "typescript": "~5.9.3",
@@ -45,16 +36,11 @@
     "vitest": "^4.0.15"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.30.0",
-    "@emotion/react": "^11.14.0",
+    "@supabase/supabase-js": "^2.49.2",
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
-    "mongodb": "^6.20.0",
-    "next-themes": "^0.4.6",
-    "nodemailer": "^7.0.11",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "react-icons": "^5.5.0",
     "react-router-dom": "^7.10.1"
   }
 }
