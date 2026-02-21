@@ -1,4 +1,4 @@
-import type { Game } from "@shared/game/types";
+import type { Game } from "./types";
 import type {
   GameAction,
   ActionResult,
@@ -7,7 +7,7 @@ import type {
   CreatePeasantAction,
   UpgradeAction,
   AttackAction,
-} from "@shared/actions";
+} from "../actions";
 import { GameEngine } from "./engine";
 
 /**
