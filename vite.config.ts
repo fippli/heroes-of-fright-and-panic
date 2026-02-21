@@ -15,16 +15,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@static": path.resolve(__dirname, "src/server/static"),
       "@shared": path.resolve(__dirname, "src/shared"),
-    },
-  },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
     },
   },
 });
