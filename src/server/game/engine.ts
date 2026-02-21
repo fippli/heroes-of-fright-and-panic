@@ -1,4 +1,4 @@
-import type { Game } from "../database";
+import type { Game } from "@shared/game/types";
 import type { Tile } from "@shared/map/tile";
 import type { TilePosition, PlayerType, ActionResult } from "@shared/actions";
 import { GameMap } from "@shared/map/map";
@@ -7,16 +7,15 @@ import { Building, BuildingType } from "@shared/building";
 import { Player } from "@shared/player";
 import { ResourceMap } from "@shared/player/resource-map";
 import { LandscapeType, Landscape } from "@shared/map/landscape";
-import type { WithId } from "mongodb";
 
 /**
  * GameEngine handles all game logic on the server side.
  * The client should only render state and send user inputs.
  */
 export class GameEngine {
-  private game: WithId<Game>;
+  private readonly game: Game;
 
-  constructor(game: WithId<Game>) {
+  constructor(game: Game) {
     this.game = game;
   }
 
@@ -59,18 +58,16 @@ export class GameEngine {
   private onDawn(): void {
     // Day player produces resources at dawn
     const production = this.produceResources(this.game.dayPlayer);
-    this.game.dayPlayer.resources = this.addResources(
-      this.game.dayPlayer.resources,
-      production,
+    this.game.dayPlayer = this.game.dayPlayer.withResources(
+      this.addResources(this.game.dayPlayer.resources, production),
     );
   }
 
   private onDusk(): void {
     // Night player produces resources at dusk
     const production = this.produceResources(this.game.nightPlayer);
-    this.game.nightPlayer.resources = this.addResources(
-      this.game.nightPlayer.resources,
-      production,
+    this.game.nightPlayer = this.game.nightPlayer.withResources(
+      this.addResources(this.game.nightPlayer.resources, production),
     );
   }
 
@@ -168,27 +165,30 @@ export class GameEngine {
   }
 
   private getTilesInRange(center: TilePosition, range: number): TilePosition[] {
-    const result: TilePosition[] = [center];
-    let currentLayer = [center];
-
-    for (let i = 0; i < range; i++) {
-      const nextLayer: TilePosition[] = [];
-      for (const pos of currentLayer) {
-        const neighbors = this.getNeighbors(pos);
-        for (const neighbor of neighbors) {
-          const alreadyIncluded = result.some(
-            (r) => r.row === neighbor.row && r.column === neighbor.column,
-          );
-          if (!alreadyIncluded) {
-            result.push({ row: neighbor.row, column: neighbor.column });
-            nextLayer.push({ row: neighbor.row, column: neighbor.column });
-          }
-        }
-      }
-      currentLayer = nextLayer;
-    }
-
-    return result;
+    return Array.from({ length: range }, (_, index) => index).reduce<{
+      result: TilePosition[];
+      currentLayer: TilePosition[];
+    }>(
+      (acc, _) => {
+        const nextLayer = acc.currentLayer.flatMap((pos) =>
+          this.getNeighbors(pos)
+            .filter(
+              (neighbor) =>
+                !acc.result.some(
+                  (existing) =>
+                    existing.row === neighbor.row &&
+                    existing.column === neighbor.column,
+                ),
+            )
+            .map((neighbor) => ({ row: neighbor.row, column: neighbor.column })),
+        );
+        return {
+          result: [...acc.result, ...nextLayer],
+          currentLayer: nextLayer,
+        };
+      },
+      { result: [center], currentLayer: [center] },
+    ).result;
   }
 
   // ============================================
@@ -275,8 +275,10 @@ export class GameEngine {
     const lootDrop = toTile.landscape.lootDrop;
 
     // Add resources to player
-    player.resources = this.addResources(player.resources, lootDrop);
-    this.updatePlayer(playerType, player);
+    const updatedLootPlayer = player.withResources(
+      this.addResources(player.resources, lootDrop),
+    );
+    this.updatePlayer(playerType, updatedLootPlayer);
 
     // Transform the landscape (tree → grass, mountain → grass)
     const newLandscape = this.transformLandscape(toTile.landscape);
@@ -383,11 +385,13 @@ export class GameEngine {
     }
 
     // Deduct cost
-    player.resources = this.subtractResources(player.resources, cost);
-    this.updatePlayer(playerType, player);
+    const updatedBuildPlayer = player.withResources(
+      this.subtractResources(player.resources, cost),
+    );
+    this.updatePlayer(playerType, updatedBuildPlayer);
 
     // Create building
-    const building = this.createBuilding(buildingType, player);
+    const building = this.createBuilding(buildingType, updatedBuildPlayer);
     const updatedTile: Tile = {
       ...tile,
       building,
@@ -443,10 +447,12 @@ export class GameEngine {
       return { success: false, error: "Cannot afford farm" };
     }
 
-    player.resources = this.subtractResources(player.resources, cost);
-    this.updatePlayer(playerType, player);
+    const updatedFarmPlayer = player.withResources(
+      this.subtractResources(player.resources, cost),
+    );
+    this.updatePlayer(playerType, updatedFarmPlayer);
 
-    const building = this.createBuilding(BuildingType.farm, player);
+    const building = this.createBuilding(BuildingType.farm, updatedFarmPlayer);
     const updatedTile: Tile = {
       ...tile,
       building,
@@ -527,10 +533,12 @@ export class GameEngine {
       return { success: false, error: "Cannot afford peasant" };
     }
 
-    player.resources = this.subtractResources(player.resources, cost);
-    this.updatePlayer(playerType, player);
+    const updatedPeasantPlayer = player.withResources(
+      this.subtractResources(player.resources, cost),
+    );
+    this.updatePlayer(playerType, updatedPeasantPlayer);
 
-    const peasant = Piece.peasant(player);
+    const peasant = Piece.peasant(updatedPeasantPlayer);
     const updatedTile: Tile = {
       ...tile,
       piece: peasant,
@@ -571,10 +579,12 @@ export class GameEngine {
         return { success: false, error: "Cannot afford archer upgrade" };
       }
 
-      player.resources = this.subtractResources(player.resources, cost);
-      this.updatePlayer(playerType, player);
+      const updatedArcherPlayer = player.withResources(
+        this.subtractResources(player.resources, cost),
+      );
+      this.updatePlayer(playerType, updatedArcherPlayer);
 
-      const archer = Piece.archer(player);
+      const archer = Piece.archer(updatedArcherPlayer);
       const updatedTile: Tile = {
         ...tile,
         piece: archer,
@@ -585,16 +595,19 @@ export class GameEngine {
     }
 
     // Regular upgrade path: peasant → soldier → knight
-    let nextType: PieceType | null = null;
-    switch (tile.piece.type) {
-      case PieceType.peasant:
-        nextType = PieceType.soldier;
-        break;
-      case PieceType.soldier:
-        nextType = PieceType.knight;
-        break;
-      default:
-        return { success: false, error: "Unit cannot be upgraded further" };
+    const nextType = ((): PieceType | null => {
+      switch (tile.piece.type) {
+        case PieceType.peasant:
+          return PieceType.soldier;
+        case PieceType.soldier:
+          return PieceType.knight;
+        default:
+          return null;
+      }
+    })();
+
+    if (nextType === null) {
+      return { success: false, error: "Unit cannot be upgraded further" };
     }
 
     const cost = Piece.costOfUpgrade(nextType);
@@ -602,19 +615,24 @@ export class GameEngine {
       return { success: false, error: `Cannot afford ${nextType} upgrade` };
     }
 
-    player.resources = this.subtractResources(player.resources, cost);
-    this.updatePlayer(playerType, player);
+    const updatedUpgradePlayer = player.withResources(
+      this.subtractResources(player.resources, cost),
+    );
+    this.updatePlayer(playerType, updatedUpgradePlayer);
 
-    let upgradedPiece: Piece;
-    switch (nextType) {
-      case PieceType.soldier:
-        upgradedPiece = Piece.soldier(player);
-        break;
-      case PieceType.knight:
-        upgradedPiece = Piece.knight(player);
-        break;
-      default:
-        return { success: false, error: "Invalid upgrade target" };
+    const upgradedPiece = ((): Piece | null => {
+      switch (nextType) {
+        case PieceType.soldier:
+          return Piece.soldier(updatedUpgradePlayer);
+        case PieceType.knight:
+          return Piece.knight(updatedUpgradePlayer);
+        default:
+          return null;
+      }
+    })();
+
+    if (upgradedPiece === null) {
+      return { success: false, error: "Invalid upgrade target" };
     }
 
     const updatedTile: Tile = {
@@ -657,8 +675,8 @@ export class GameEngine {
       return { success: false, error: "Cannot attack your own units" };
     }
 
-    // Check range
-    const attackerRange = selectedTile.piece.viewRange ?? 1;
+    // Check range using attackRange (not viewRange)
+    const attackerRange = selectedTile.piece.attackRange ?? 1;
     const tilesInRange = this.getTilesInRange(selectedPosition, attackerRange);
     const inRange = tilesInRange.some(
       (t) => t.row === targetPosition.row && t.column === targetPosition.column,
@@ -676,14 +694,61 @@ export class GameEngine {
     this.replaceTile(updatedTargetTile);
 
     this.tick();
+
+    // Check for win condition after destroying a unit
+    this.checkWinCondition();
+
     return { success: true, message: "Attack successful" };
+  }
+
+  // ============================================
+  // WIN CONDITION
+  // ============================================
+
+  /**
+   * Check if the game has been won.
+   * Victory condition: opponent has no pieces AND no houses.
+   */
+  checkWinCondition(): void {
+    // Don't check if game is already over
+    if (this.game.gameOver) return;
+
+    const dayHasPieces = this.game.tiles.some(
+      (tile) => tile.piece?.owner?.type === "day",
+    );
+    const dayHasHouses = this.game.tiles.some(
+      (tile) =>
+        tile.building?.type === BuildingType.house &&
+        tile.building?.owner?.type === "day",
+    );
+    const dayIsAlive = dayHasPieces || dayHasHouses;
+
+    const nightHasPieces = this.game.tiles.some(
+      (tile) => tile.piece?.owner?.type === "night",
+    );
+    const nightHasHouses = this.game.tiles.some(
+      (tile) =>
+        tile.building?.type === BuildingType.house &&
+        tile.building?.owner?.type === "night",
+    );
+    const nightIsAlive = nightHasPieces || nightHasHouses;
+
+    if (!dayIsAlive) {
+      this.game.gameOver = true;
+      this.game.winner = "night";
+      console.log("Game over! Night player wins!");
+    } else if (!nightIsAlive) {
+      this.game.gameOver = true;
+      this.game.winner = "day";
+      console.log("Game over! Day player wins!");
+    }
   }
 
   // ============================================
   // GETTERS
   // ============================================
 
-  getGameState(): WithId<Game> {
+  getGameState(): Game {
     return this.game;
   }
 
@@ -692,7 +757,7 @@ export class GameEngine {
    * Only tiles that are visible to the player are fully revealed.
    * Other tiles are shown as "unexplored" with no piece/building info.
    */
-  getFilteredGameState(forPlayer: PlayerType): WithId<Game> {
+  getFilteredGameState(forPlayer: PlayerType): Game {
     const visibleTilePositions = this.getVisibleTilesForPlayer(forPlayer);
 
     const filteredTiles = this.game.tiles.map((tile) => {
@@ -717,8 +782,6 @@ export class GameEngine {
 
     // Return the game state with filtered tiles
     // Only return the player's own resources
-    const player = this.getPlayer(forPlayer);
-
     return {
       ...this.game,
       tiles: filteredTiles,
@@ -741,50 +804,46 @@ export class GameEngine {
    * - Where they have a building
    */
   private getVisibleTilesForPlayer(playerType: PlayerType): TilePosition[] {
-    const visiblePositions: TilePosition[] = [];
+    const visiblePositions = this.game.tiles.flatMap((tile) => {
+      const positions: TilePosition[] = [];
 
-    for (const tile of this.game.tiles) {
       // Check if tile has a piece owned by this player
       if (tile.piece?.owner?.type === playerType) {
-        // Add this tile
-        visiblePositions.push({ row: tile.row, column: tile.column });
+        positions.push({ row: tile.row, column: tile.column });
 
-        // Add tiles in view range
         const viewRange = tile.piece.viewRange ?? 1;
         const tilesInRange = this.getTilesInRange(
           { row: tile.row, column: tile.column },
           viewRange,
         );
-        visiblePositions.push(...tilesInRange);
+        positions.push(...tilesInRange);
       }
 
       // Check if tile has a building owned by this player
       if (tile.building?.owner?.type === playerType) {
-        // Add this tile
-        visiblePositions.push({ row: tile.row, column: tile.column });
+        positions.push({ row: tile.row, column: tile.column });
 
-        // Buildings also have view range
         const viewRange = tile.building.viewRange ?? 1;
         const tilesInRange = this.getTilesInRange(
           { row: tile.row, column: tile.column },
           viewRange,
         );
-        visiblePositions.push(...tilesInRange);
+        positions.push(...tilesInRange);
       }
-    }
+
+      return positions;
+    });
 
     // Deduplicate
-    const uniquePositions: TilePosition[] = [];
-    for (const pos of visiblePositions) {
-      const exists = uniquePositions.some(
-        (p) => p.row === pos.row && p.column === pos.column,
+    return visiblePositions.reduce<TilePosition[]>((unique, pos) => {
+      const exists = unique.some(
+        (existing) => existing.row === pos.row && existing.column === pos.column,
       );
       if (!exists) {
-        uniquePositions.push(pos);
+        unique.push(pos);
       }
-    }
-
-    return uniquePositions;
+      return unique;
+    }, []);
   }
 
   getClockDisplay(): string {
