@@ -1,5 +1,4 @@
-import type { WithId } from "mongodb";
-import type { Game } from "../database";
+import type { Game } from "@shared/game/types";
 import type {
   GameAction,
   ActionResult,
@@ -18,32 +17,27 @@ export const processAction = ({
   game,
   action,
 }: {
-  game: WithId<Game>;
+  game: Game;
   action: GameAction;
-}): { result: ActionResult; updatedGame: WithId<Game> } => {
+}): { result: ActionResult; updatedGame: Game } => {
   const engine = new GameEngine(game);
 
-  let result: ActionResult;
-
-  switch (action.type) {
-    case "click":
-      result = handleClickAction({ engine, action });
-      break;
-    case "build":
-      result = handleBuildAction({ engine, action });
-      break;
-    case "createPeasant":
-      result = handleCreatePeasantAction({ engine, action });
-      break;
-    case "upgrade":
-      result = handleUpgradeAction({ engine, action });
-      break;
-    case "attack":
-      result = handleAttackAction({ engine, action });
-      break;
-    default:
-      result = { success: false, error: "Unknown action type" };
-  }
+  const result = ((): ActionResult => {
+    switch (action.type) {
+      case "click":
+        return handleClickAction({ engine, action });
+      case "build":
+        return handleBuildAction({ engine, action });
+      case "createPeasant":
+        return handleCreatePeasantAction({ engine, action });
+      case "upgrade":
+        return handleUpgradeAction({ engine, action });
+      case "attack":
+        return handleAttackAction({ engine, action });
+      default:
+        return { success: false, error: "Unknown action type" };
+    }
+  })();
 
   return {
     result,
