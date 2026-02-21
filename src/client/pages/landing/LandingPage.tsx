@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authApi } from "../../shared/api";
+import { supabase } from "../../shared/supabase";
 
 export const LandingPage = () => {
   const [isChecking, setIsChecking] = useState(true);
@@ -11,10 +11,14 @@ export const LandingPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    authApi
-      .getCurrentUser()
-      .then(() => {
-        navigate("/games");
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (data.user !== null) {
+          navigate("/games");
+        } else {
+          setIsChecking(false);
+        }
       })
       .catch(() => {
         setIsChecking(false);
@@ -33,7 +37,18 @@ export const LandingPage = () => {
 
     setIsSubmitting(true);
     try {
-      await authApi.requestMagicLink(trimmedEmail);
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: trimmedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (otpError !== null) {
+        setError(otpError.message);
+        return;
+      }
+
       setLinkSentTo(trimmedEmail);
     } catch (err) {
       const message =
