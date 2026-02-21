@@ -1,0 +1,183 @@
+import { type FormEvent, useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { gamesApi } from "../../lib/api";
+import { supabase } from "../../lib/supabase";
+
+type CreateFormState = {
+  name: string;
+  size: number;
+  alliance: "day" | "night";
+  inviteEmail: string;
+};
+
+export const NewGamePage = () => {
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formState, setFormState] = useState<CreateFormState>({
+    name: "",
+    size: 40,
+    alliance: "day",
+    inviteEmail: "",
+  });
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    (async () => {
+      const { data, error: authError } = await supabase.auth.getUser();
+      if (controller.signal.aborted) return;
+
+      if (
+        authError !== null ||
+        data.user === null ||
+        data.user.email === undefined
+      ) {
+        navigate("/signin");
+        return;
+      }
+
+      setIsCheckingAuth(false);
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }, [navigate]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    const trimmedName = formState.name.trim();
+    if (trimmedName === "") {
+      setError("Please enter a game name");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const game = await gamesApi.create({
+        name: trimmedName,
+        size: formState.size,
+        alliance: formState.alliance,
+        inviteEmail:
+          formState.inviteEmail.trim() !== ""
+            ? formState.inviteEmail.trim()
+            : null,
+      });
+      const newGameId = game.id ?? game._id;
+      if (newGameId !== undefined) {
+        navigate(`/game/${newGameId}?player=${formState.alliance}`);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create game";
+      setError(message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  if (isCheckingAuth) {
+    return null;
+  }
+
+  return (
+    <div className="page">
+      <header>
+        <h2>Create New Game</h2>
+      </header>
+
+      <main>
+        {error !== null && (
+          <div className="message message--error">{error}</div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="name">Name:</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formState.name}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
+              }
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="size">Size:</label>
+            <select
+              id="size"
+              name="size"
+              value={String(formState.size)}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  size: Number(event.target.value),
+                }))
+              }
+            >
+              <option value="25">Small (25x25)</option>
+              <option value="40">Medium (40x40)</option>
+              <option value="55">Large (55x55)</option>
+              <option value="70">Huge (70x70)</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="alliance">Alliance:</label>
+            <select
+              id="alliance"
+              name="alliance"
+              value={formState.alliance}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  alliance: event.target.value as "day" | "night",
+                }))
+              }
+            >
+              <option value="day">Day</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="invite">Invite:</label>
+            <input
+              type="email"
+              id="invite"
+              name="invite"
+              placeholder="email@example.com"
+              value={formState.inviteEmail}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  inviteEmail: event.target.value,
+                }))
+              }
+            />
+          </div>
+
+          <div className="row">
+            <Link to="/games" className="btn btn--secondary">
+              Cancel
+            </Link>
+            <button type="submit" disabled={isCreating}>
+              {isCreating ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
+  );
+};
