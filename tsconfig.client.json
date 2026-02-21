@@ -9,5 +9,5 @@
     "verbatimModuleSyntax": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/client", "src/shared"]
+  "include": ["src"]
 }

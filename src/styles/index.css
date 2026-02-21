@@ -1,0 +1,14 @@
+/* ===========================================
+   Main Stylesheet - Import all styles
+   =========================================== */
+
+@font-face {
+  font-family: "Alagard";
+  src: url("/fonts/alagard.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import "./base.css";
+@import "./components.css";
