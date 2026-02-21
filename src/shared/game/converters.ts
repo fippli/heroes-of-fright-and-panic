@@ -1,6 +1,6 @@
-import { Player } from "../player";
-import { ResourceMap } from "../player/resource-map";
-import type { Game, GameRow } from "./types";
+import { Player } from "../player/index.ts";
+import { ResourceMap } from "../player/resource-map.ts";
+import type { Game, GameRow } from "./types.ts";
 
 // Convert database row to application type
 export const rowToGame = (row: GameRow): Game => {

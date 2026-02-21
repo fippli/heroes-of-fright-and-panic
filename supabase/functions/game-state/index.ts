@@ -3,10 +3,10 @@ import {
   createAdminClient,
   getUserFromRequest,
 } from "../_shared/supabase-client.ts";
-import { rowToGame } from "@shared/game/converters";
-import type { GameRow } from "@shared/game/types";
-import type { PlayerType } from "@shared/actions";
-import { GameEngine } from "@shared/game/engine";
+import { rowToGame } from "@shared/game/converters.ts";
+import type { GameRow } from "@shared/game/types.ts";
+import type { PlayerType } from "@shared/actions/index.ts";
+import { GameEngine } from "@shared/game/engine.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);

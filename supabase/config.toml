@@ -1,5 +1,13 @@
-[project]
-id = ""
+project_id = "fcdzhsqssfqqjlirvlkg"
 
-[functions]
+[functions.game-create]
+verify_jwt = true
+
+[functions.game-join]
+verify_jwt = true
+
+[functions.game-action]
+verify_jwt = true
+
+[functions.game-state]
 verify_jwt = true

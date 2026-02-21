@@ -1,6 +1,6 @@
-import { LandscapeType } from "@shared/map/landscape";
-import type { Player } from "@shared/player";
-import { ResourceMap } from "@shared/player/resource-map";
+import { LandscapeType } from "@shared/map/landscape.ts";
+import type { Player } from "@shared/player/index.ts";
+import { ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum PieceType {
   peasant = "peasant",
@@ -11,17 +11,19 @@ export enum PieceType {
 }
 
 export class Piece {
-  owner: Player;
-  type: PieceType;
-  boat: boolean = false;
-  viewRange: number = 1;
-  upgradeCost: ResourceMap;
+  readonly owner: Player;
+  readonly type: PieceType;
+  readonly boat: boolean = false;
+  readonly viewRange: number = 1;
+  readonly attackRange: number = 1;
+  readonly upgradeCost: ResourceMap;
   readonly walkableLandscape: LandscapeType[];
   readonly lootableLandscape: LandscapeType[];
 
   constructor({
     type,
     viewRange,
+    attackRange,
     owner,
     upgradeCost,
     walkableLandscape,
@@ -29,6 +31,7 @@ export class Piece {
   }: {
     type: PieceType;
     viewRange?: number;
+    attackRange?: number;
     owner: Player;
     upgradeCost: ResourceMap;
     walkableLandscape: LandscapeType[];
@@ -36,6 +39,7 @@ export class Piece {
   }) {
     this.type = type;
     this.viewRange = viewRange ?? 1;
+    this.attackRange = attackRange ?? 1;
     this.owner = owner;
     this.upgradeCost = upgradeCost;
     this.walkableLandscape = walkableLandscape;
@@ -46,6 +50,7 @@ export class Piece {
     return new Piece({
       type: PieceType.peasant,
       viewRange: 1,
+      attackRange: 1,
       owner,
       upgradeCost: new ResourceMap({ wood: 1 }),
       walkableLandscape: [LandscapeType.grass, LandscapeType.sand],
@@ -58,6 +63,7 @@ export class Piece {
       type: PieceType.soldier,
       owner,
       viewRange: 1,
+      attackRange: 1,
       upgradeCost: new ResourceMap({ wood: 0 }),
       walkableLandscape: [LandscapeType.grass, LandscapeType.sand],
     });
@@ -68,6 +74,7 @@ export class Piece {
       type: PieceType.knight,
       owner,
       viewRange: 2,
+      attackRange: 1, // Knights see far but attack adjacent only
       upgradeCost: new ResourceMap({ wood: 0 }),
       walkableLandscape: [LandscapeType.grass, LandscapeType.sand],
     });
@@ -77,6 +84,7 @@ export class Piece {
     return new Piece({
       type: PieceType.archer,
       viewRange: 2,
+      attackRange: 2, // Archers can attack at range
       owner,
       upgradeCost: new ResourceMap({ wood: 3 }),
       walkableLandscape: [

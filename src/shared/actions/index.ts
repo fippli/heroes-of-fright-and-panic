@@ -1,5 +1,5 @@
-import { BuildingType } from "@shared/building";
-import { PieceType } from "@shared/piece";
+import { BuildingType } from "@shared/building/index.ts";
+import { PieceType } from "@shared/piece/index.ts";
 
 export type TilePosition = {
   row: number;
@@ -8,45 +8,45 @@ export type TilePosition = {
 
 export type PlayerType = "day" | "night";
 
-// Base action interface
-interface BaseAction {
+// Base action type
+type BaseAction = {
   player: PlayerType;
-}
+};
 
 // Click action - for selecting tiles and moving pieces
-export interface ClickAction extends BaseAction {
+export type ClickAction = BaseAction & {
   type: "click";
   position: TilePosition;
   selectedPosition?: TilePosition; // Current selected tile (if any)
-}
+};
 
 // Build action - for constructing buildings
-export interface BuildAction extends BaseAction {
+export type BuildAction = BaseAction & {
   type: "build";
   buildingType: BuildingType;
   position: TilePosition;
   selectedPosition?: TilePosition;
-}
+};
 
 // Create peasant action
-export interface CreatePeasantAction extends BaseAction {
+export type CreatePeasantAction = BaseAction & {
   type: "createPeasant";
   position: TilePosition;
-}
+};
 
 // Upgrade action - for upgrading pieces
-export interface UpgradeAction extends BaseAction {
+export type UpgradeAction = BaseAction & {
   type: "upgrade";
   position: TilePosition;
   targetType?: PieceType; // Optional: specific upgrade target (e.g., archer)
-}
+};
 
 // Attack action
-export interface AttackAction extends BaseAction {
+export type AttackAction = BaseAction & {
   type: "attack";
   position: TilePosition; // Target position
   selectedPosition: TilePosition; // Attacker position
-}
+};
 
 // Union type of all actions
 export type GameAction =
@@ -57,8 +57,8 @@ export type GameAction =
   | AttackAction;
 
 // Action result
-export interface ActionResult {
+export type ActionResult = {
   success: boolean;
   error?: string;
   message?: string;
-}
+};

@@ -1,9 +1,9 @@
-import { compose } from "../utils/compose";
-import { PieceType } from "@shared/piece";
-import { BuildingType } from "@shared/building";
-import { ResourceMap } from "@shared/player/resource-map";
-import type { Tile } from "@shared/map/tile";
-import { GameMap } from "@shared/map/map";
+import { compose } from "../utils/compose.ts";
+import { PieceType } from "@shared/piece/index.ts";
+import { BuildingType } from "@shared/building/index.ts";
+import { ResourceMap } from "@shared/player/resource-map.ts";
+import type { Tile } from "@shared/map/tile.ts";
+import { GameMap } from "@shared/map/map.ts";
 
 export class Player {
   readonly type: "day" | "night";

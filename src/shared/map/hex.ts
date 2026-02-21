@@ -1,4 +1,4 @@
-import type { TilePosition } from "./tile";
+import type { TilePosition } from "./tile.ts";
 
 /**
  * Hex neighbor utilities for odd-r offset hex grids.

@@ -1,6 +1,6 @@
-import { Piece } from "@shared/piece";
-import type { Player } from "@shared/player";
-import { ResourceMap } from "@shared/player/resource-map";
+import { Piece } from "@shared/piece/index.ts";
+import type { Player } from "@shared/player/index.ts";
+import { ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum BuildingType {
   house = "house",
@@ -15,9 +15,9 @@ export class Building {
   readonly cost: ResourceMap;
   readonly production: ResourceMap;
   readonly owner: Player;
-  populated: boolean = false;
-  walkable: boolean = false;
-  viewRange: number;
+  readonly populated: boolean = false;
+  readonly walkable: boolean = false;
+  readonly viewRange: number;
 
   constructor({
     type,

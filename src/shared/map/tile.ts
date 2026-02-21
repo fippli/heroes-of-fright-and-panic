@@ -1,6 +1,6 @@
-import { Piece } from "@shared/piece";
-import { Landscape } from "./landscape";
-import { Building } from "@shared/building";
+import { Piece } from "@shared/piece/index.ts";
+import { Landscape } from "./landscape.ts";
+import { Building } from "@shared/building/index.ts";
 
 export type Tile = {
   column: number;

@@ -5,17 +5,25 @@ export const weightedRandom = (xs: any[], weights: number[]) => {
     return undefined;
   }
 
-  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
   const rnd = Math.random() * totalWeight;
 
-  let cumulative = 0;
-  for (let i = 0; i < max; i++) {
-    cumulative += weights[i];
-    if (rnd < cumulative) {
-      return xs[i];
-    }
-  }
+  const selectedIndex = weights.reduce<{
+    cumulative: number;
+    found: number | null;
+  }>(
+    (acc, weight, index) => {
+      if (acc.found !== null) return acc;
+      const newCumulative = acc.cumulative + weight;
+      if (rnd < newCumulative) {
+        return { cumulative: newCumulative, found: index };
+      }
+      return { cumulative: newCumulative, found: null };
+    },
+    { cumulative: 0, found: null },
+  );
 
-  // Fallback (should never reach here if weights are valid)
-  return xs[max - 1];
+  return selectedIndex.found !== null
+    ? xs.at(selectedIndex.found)
+    : xs.at(-1);
 };
