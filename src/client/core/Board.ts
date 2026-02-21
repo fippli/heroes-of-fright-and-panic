@@ -1,4 +1,5 @@
 import type { Canvas } from "../canvas";
+import { supabase } from "../shared/supabase";
 import type { Coordinate } from "../types/coordinate";
 import { BuildingType } from "./Building";
 import { Clock } from "./Clock";
@@ -154,16 +155,15 @@ export class Game {
       if (this.isProcessingAction) return;
 
       try {
-        const playerParam =
-          this.myPlayerType !== null ? `?player=${this.myPlayerType}` : "";
-        const response = await fetch(`/api/game/${this.id}${playerParam}`);
-        if (response.ok) {
-          const gameData = await response.json();
-          // Only update if something changed (compare timestamps or state)
-          this.parseQuiet(gameData);
+        const { data, error } = await supabase.functions.invoke(
+          "game-state",
+          { body: { gameId: this.id } },
+        );
+        if (error === null && data !== null) {
+          this.parseQuiet(data);
         }
-      } catch (error) {
-        console.warn("Polling error:", error);
+      } catch (pollError) {
+        console.warn("Polling error:", pollError);
       }
     }, this.POLL_INTERVAL_MS);
   }
@@ -387,34 +387,33 @@ export class Game {
     this.isProcessingAction = true;
 
     try {
-      const response = await fetch(`/api/game/${this.id}/action`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(action),
+      const { data, error } = await supabase.functions.invoke("game-action", {
+        body: { gameId: this.id, action },
       });
 
-      const data: ActionResponse = await response.json();
+      if (error !== null) {
+        console.error("Error sending action:", error);
+        return false;
+      }
 
-      if (data.result.success) {
-        // Update local state with server response (quiet parse since we just made the action)
-        this.parseQuiet(data.game);
+      const response = data as ActionResponse;
 
-        if (data.result.message !== undefined) {
-          console.log("Action result:", data.result.message);
+      if (response.result.success) {
+        this.parseQuiet(response.game);
+
+        if (response.result.message !== undefined) {
+          console.log("Action result:", response.result.message);
         }
       } else {
-        console.warn("Action failed:", data.result.error);
-        // Still update state in case server made partial changes
-        if (data.game !== undefined) {
-          this.parseQuiet(data.game);
+        console.warn("Action failed:", response.result.error);
+        if (response.game !== undefined) {
+          this.parseQuiet(response.game);
         }
       }
 
-      return data.result.success;
-    } catch (error) {
-      console.error("Error sending action:", error);
+      return response.result.success;
+    } catch (actionError) {
+      console.error("Error sending action:", actionError);
       return false;
     } finally {
       this.isProcessingAction = false;
