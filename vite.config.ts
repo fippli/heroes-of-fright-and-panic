@@ -4,14 +4,10 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
-  root: "src/client",
-  publicDir: path.resolve(__dirname, "static"),
+  publicDir: "static",
   build: {
-    outDir: path.resolve(__dirname, "dist/client"),
+    outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: {
-      input: path.resolve(__dirname, "src/client/index.html"),
-    },
   },
   resolve: {
     alias: {
