@@ -1,0 +1,73 @@
+-- Supabase PostgreSQL Schema for Heroes of Fright and Panic
+-- Run this in your Supabase SQL Editor to set up the database
+
+-- Games table
+CREATE TABLE public.games (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  name TEXT,
+  size INTEGER NOT NULL DEFAULT 15,
+  tiles JSONB NOT NULL DEFAULT '[]',
+  day_player JSONB NOT NULL,
+  night_player JSONB NOT NULL,
+  current_player TEXT NOT NULL DEFAULT 'day',
+  clock JSONB NOT NULL DEFAULT '{"time": 6, "hasDawned": true, "hasDusked": false}',
+  creator_email TEXT NOT NULL,
+  day_player_email TEXT,
+  night_player_email TEXT,
+  day_player_last_move TIMESTAMPTZ,
+  night_player_last_move TIMESTAMPTZ,
+  invited_email TEXT,
+  game_over BOOLEAN DEFAULT FALSE,
+  winner TEXT
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_games_creator ON public.games(creator_email);
+CREATE INDEX idx_games_day_player ON public.games(day_player_email);
+CREATE INDEX idx_games_night_player ON public.games(night_player_email);
+CREATE INDEX idx_games_invited ON public.games(invited_email);
+CREATE INDEX idx_games_updated ON public.games(updated_at DESC);
+
+-- Row Level Security
+ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can view games they're involved in
+CREATE POLICY "Users can view their games" ON public.games FOR SELECT
+  USING (
+    creator_email = auth.email()
+    OR day_player_email = auth.email()
+    OR night_player_email = auth.email()
+    OR invited_email = auth.email()
+  );
+
+-- Policy: Authenticated users can create games
+CREATE POLICY "Authenticated users can create games" ON public.games FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Policy: Players can update games they're part of
+CREATE POLICY "Players can update their games" ON public.games FOR UPDATE
+  USING (
+    day_player_email = auth.email()
+    OR night_player_email = auth.email()
+  );
+
+-- Policy: Only creators can delete games
+CREATE POLICY "Creators can delete games" ON public.games FOR DELETE
+  USING (creator_email = auth.email());
+
+-- Updated at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to auto-update updated_at
+CREATE TRIGGER games_updated_at
+  BEFORE UPDATE ON public.games
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
