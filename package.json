@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "knip": "knip"
+    "knip": "knip",
+    "cli": "npx tsx --tsconfig tsconfig.base.json src/cli/main.ts"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { gamesApi, type Game } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
 import { formatDate } from "../../lib/dom";
+import { SplitLayout } from "../../components/SplitLayout";
 
 type AuthUser = {
   id: string;
@@ -104,21 +105,15 @@ export const LoadGamesPage = () => {
   }
 
   return (
-    <div className="page">
-      <header>
-        <h2>My Games</h2>
-      </header>
-
-      <main>
-        {pageError !== null && (
-          <div className="message message--error">{pageError}</div>
-        )}
-        <div id="games-list">{renderGames}</div>
-        <Link to="/games" className="back-link">
-          Back to menu
-        </Link>
-      </main>
-    </div>
+    <SplitLayout pageTitle="My Games">
+      {pageError !== null && (
+        <div className="message message--error">{pageError}</div>
+      )}
+      <div id="games-list">{renderGames}</div>
+      <Link to="/games" className="back-link">
+        Back to menu
+      </Link>
+    </SplitLayout>
   );
 };
 

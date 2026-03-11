@@ -63,7 +63,7 @@ export const gamesApi = {
     });
 
     if (error !== null) {
-      throw new Error(getEdgeFunctionError(error));
+      throw new Error(await getEdgeFunctionError(error));
     }
 
     return data as Game;
@@ -83,7 +83,7 @@ export const gamesApi = {
     });
 
     if (error !== null) {
-      throw new Error(getEdgeFunctionError(error));
+      throw new Error(await getEdgeFunctionError(error));
     }
   },
 };

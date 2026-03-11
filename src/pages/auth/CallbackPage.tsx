@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { SplitLayout } from "../../components/SplitLayout";
 
 export const CallbackPage = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -12,7 +13,6 @@ export const CallbackPage = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check for errors in both hash (implicit flow) and query params (PKCE flow)
         const hash = window.location.hash.substring(1);
         const hashParams = new URLSearchParams(hash);
         const queryParams = new URLSearchParams(window.location.search);
@@ -31,7 +31,6 @@ export const CallbackPage = () => {
           return;
         }
 
-        // Supabase client auto-detects tokens from the URL hash
         const { error } = await supabase.auth.getSession();
 
         if (error !== null) {
@@ -42,7 +41,6 @@ export const CallbackPage = () => {
 
         setStatus("success");
 
-        // Redirect to games page after short delay
         setTimeout(() => {
           navigate("/games");
         }, 1000);
@@ -58,50 +56,19 @@ export const CallbackPage = () => {
   }, [navigate]);
 
   return (
-    <div className="container">
-      <div className="card" style={{ textAlign: "center", maxWidth: "400px" }}>
-        {status === "loading" && (
-          <>
-            <h2>Signing you in...</h2>
-            <p style={{ color: "var(--text-muted)" }}>Please wait a moment.</p>
-            <div
-              style={{
-                margin: "20px auto",
-                width: "40px",
-                height: "40px",
-                border: "3px solid var(--border-color)",
-                borderTopColor: "var(--accent-color)",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite",
-              }}
-            />
-            <style>{`
-              @keyframes spin {
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
-          </>
-        )}
+    <SplitLayout pageTitle="Signing In">
+      {status === "loading" && <p>Please wait a moment...</p>}
 
-        {status === "success" && (
-          <>
-            <h2>Welcome back!</h2>
-            <p style={{ color: "var(--text-muted)" }}>
-              Redirecting you to your games...
-            </p>
-          </>
-        )}
+      {status === "success" && <p>Welcome back! Redirecting to your games...</p>}
 
-        {status === "error" && (
-          <>
-            <h2>Authentication Failed</h2>
-            <p style={{ color: "var(--error-color)" }}>{errorMessage}</p>
-            <Link to="/signin" className="btn btn-primary">
-              Try Again
-            </Link>
-          </>
-        )}
-      </div>
-    </div>
+      {status === "error" && (
+        <>
+          <div className="message message--error">{errorMessage}</div>
+          <Link to="/signin" className="btn">
+            Try Again
+          </Link>
+        </>
+      )}
+    </SplitLayout>
   );
-}
+};

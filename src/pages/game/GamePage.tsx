@@ -57,9 +57,9 @@ export const GamePage = () => {
     // Fetch initial game state
     supabase.functions
       .invoke("game-state", { body: { gameId } })
-      .then(({ data, error: invokeError }) => {
+      .then(async ({ data, error: invokeError }) => {
         if (invokeError !== null) {
-          throw new Error(getEdgeFunctionError(invokeError));
+          throw new Error(await getEdgeFunctionError(invokeError));
         }
         game.parse(data);
         console.log("Game loaded:", game.id, "Playing as:", myPlayerType);

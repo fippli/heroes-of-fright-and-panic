@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { gamesApi } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
+import { SplitLayout } from "../../components/SplitLayout";
 
 type CreateFormState = {
   name: string;
@@ -85,99 +86,93 @@ export const NewGamePage = () => {
   }
 
   return (
-    <div className="page">
-      <header>
-        <h2>Create New Game</h2>
-      </header>
+    <SplitLayout pageTitle="New Game">
+      {error !== null && (
+        <div className="message message--error">{error}</div>
+      )}
 
-      <main>
-        {error !== null && (
-          <div className="message message--error">{error}</div>
-        )}
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="name">Name:</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formState.name}
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                name: event.target.value,
+              }))
+            }
+            required
+          />
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="name">Name:</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formState.name}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-              required
-            />
-          </div>
+        <div className="form-group">
+          <label htmlFor="size">Size:</label>
+          <select
+            id="size"
+            name="size"
+            value={String(formState.size)}
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                size: Number(event.target.value),
+              }))
+            }
+          >
+            <option value="25">Small (25x25)</option>
+            <option value="40">Medium (40x40)</option>
+            <option value="55">Large (55x55)</option>
+            <option value="70">Huge (70x70)</option>
+          </select>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="size">Size:</label>
-            <select
-              id="size"
-              name="size"
-              value={String(formState.size)}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  size: Number(event.target.value),
-                }))
-              }
-            >
-              <option value="25">Small (25x25)</option>
-              <option value="40">Medium (40x40)</option>
-              <option value="55">Large (55x55)</option>
-              <option value="70">Huge (70x70)</option>
-            </select>
-          </div>
+        <div className="form-group">
+          <label htmlFor="alliance">Alliance:</label>
+          <select
+            id="alliance"
+            name="alliance"
+            value={formState.alliance}
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                alliance: event.target.value as "day" | "night",
+              }))
+            }
+          >
+            <option value="day">Day</option>
+            <option value="night">Night</option>
+          </select>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="alliance">Alliance:</label>
-            <select
-              id="alliance"
-              name="alliance"
-              value={formState.alliance}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  alliance: event.target.value as "day" | "night",
-                }))
-              }
-            >
-              <option value="day">Day</option>
-              <option value="night">Night</option>
-            </select>
-          </div>
+        <div className="form-group">
+          <label htmlFor="invite">Invite:</label>
+          <input
+            type="email"
+            id="invite"
+            name="invite"
+            placeholder="email@example.com"
+            value={formState.inviteEmail}
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                inviteEmail: event.target.value,
+              }))
+            }
+          />
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="invite">Invite:</label>
-            <input
-              type="email"
-              id="invite"
-              name="invite"
-              placeholder="email@example.com"
-              value={formState.inviteEmail}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  inviteEmail: event.target.value,
-                }))
-              }
-            />
-          </div>
-
-          <div className="row">
-            <Link to="/games" className="btn btn--secondary">
-              Cancel
-            </Link>
-            <button type="submit" disabled={isCreating}>
-              {isCreating ? "Creating..." : "Create"}
-            </button>
-          </div>
-        </form>
-      </main>
-    </div>
+        <div className="row">
+          <Link to="/games" className="btn btn--secondary">
+            Cancel
+          </Link>
+          <button type="submit" disabled={isCreating}>
+            {isCreating ? "Creating..." : "Create"}
+          </button>
+        </div>
+      </form>
+    </SplitLayout>
   );
 };

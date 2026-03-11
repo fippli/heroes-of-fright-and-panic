@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
 
-export const SigninPage = () => {
+export const SignupPage = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,11 +43,10 @@ export const SigninPage = () => {
 
     setIsSubmitting(true);
     try {
-      const { error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
+      const { error: authError } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+      });
 
       if (authError !== null) {
         setError(authError.message);
@@ -69,12 +68,12 @@ export const SigninPage = () => {
   }
 
   return (
-    <SplitLayout pageTitle="Sign In">
+    <SplitLayout pageTitle="Sign Up">
       {error !== null && (
         <div className="message message--error">{error}</div>
       )}
 
-      <form id="signin-form" onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="email">Email address</label>
           <input
@@ -95,24 +94,21 @@ export const SigninPage = () => {
             type="password"
             id="password"
             name="password"
-            placeholder="Your password"
-            autoComplete="current-password"
+            placeholder="Choose a password"
+            autoComplete="new-password"
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             disabled={isSubmitting}
           />
         </div>
-        <button type="submit" id="submit-btn" disabled={isSubmitting}>
-          {isSubmitting ? "Loading..." : "Sign In"}
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Loading..." : "Sign Up"}
         </button>
       </form>
 
-      <Link to="/forgot-password" className="back-link">
-        Forgot password?
-      </Link>
-      <Link to="/signup" className="back-link">
-        Sign up
+      <Link to="/signin" className="back-link">
+        Sign in
       </Link>
     </SplitLayout>
   );

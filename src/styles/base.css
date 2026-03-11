@@ -57,15 +57,6 @@ body {
   padding: var(--spacing-2xl);
 }
 
-/* Pages with hero background image */
-body.page-with-hero {
-  background-image: url("/img/hero-image.png");
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
-
 /* Typography */
 h1,
 h2,
@@ -128,16 +119,6 @@ main {
   max-width: 600px;
 }
 
-/* Content box for pages with background images */
-.page-with-hero main {
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  backdrop-filter: blur(8px);
-  min-height: auto;
-  margin-top: var(--spacing-lg);
-}
-
 form {
   display: flex;
   flex-direction: column;
@@ -153,30 +134,149 @@ p {
   font-size: 2.4rem;
 }
 
-/* Landing page */
-.landing {
+/* Split layout */
+.split-layout {
+  display: flex;
+  min-height: 100vh;
+  margin: calc(-1 * var(--spacing-2xl));
+}
+
+.split-layout__left {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px;
+  background-color: var(--colors-black);
+}
+
+.split-layout__left h1 {
+  font-size: 6rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.split-layout__left h2 {
+  margin-top: var(--spacing-md);
+}
+
+.split-layout__right {
+  width: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background-color: var(--colors-black);
-  margin: calc(-1 * var(--spacing-2xl));
   padding: var(--spacing-2xl);
+  background-color: var(--colors-primary);
+  overflow-y: auto;
+  color: var(--colors-black);
 }
 
-.landing h1 {
-  text-align: center;
-  margin-bottom: var(--spacing-xl);
-}
-
-.landing form {
+.split-layout__content {
   width: 100%;
-  max-width: 360px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
-.landing .message {
-  width: 100%;
-  max-width: 360px;
-  margin-bottom: var(--spacing-md);
+.split-layout__right h2 {
+  color: var(--colors-black);
+  font-size: 2.2rem;
+  margin-bottom: var(--spacing-lg);
+}
+
+.split-layout__right h3 {
+  color: var(--colors-black);
+}
+
+.split-layout__right p {
+  color: var(--colors-black);
+}
+
+.split-layout__right label,
+.split-layout__right .form-group label {
+  color: var(--colors-black);
+}
+
+.split-layout__right button,
+.split-layout__right .btn {
+  background-color: var(--colors-black);
+  color: var(--colors-primary);
+}
+
+.split-layout__right button:hover,
+.split-layout__right .btn:hover {
+  background-color: var(--colors-black-light);
+}
+
+.split-layout__right .btn--secondary {
+  background-color: transparent;
+  color: var(--colors-black);
+  border: 2px solid var(--colors-black);
+}
+
+.split-layout__right .btn--secondary:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.split-layout__right .btn--delete {
+  background-color: rgba(220, 53, 69, 0.8);
+  color: var(--colors-white);
+}
+
+.split-layout__right .btn--delete:hover {
+  background-color: rgba(220, 53, 69, 1);
+}
+
+.split-layout__right form {
+  background-color: transparent;
+  color: var(--colors-black);
+}
+
+.split-layout__right .message--error {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: #8b0000;
+  border-color: #dc3545;
+}
+
+.split-layout__right .message--success {
+  background-color: rgba(40, 167, 69, 0.2);
+  color: #006400;
+  border-color: #28a745;
+}
+
+.split-layout__right .back-link {
+  color: var(--colors-black);
+}
+
+.split-layout__right .back-link:hover {
+  color: var(--colors-black-light);
+}
+
+.split-layout__right .main-menu__user {
+  color: var(--colors-black);
+}
+
+.split-layout__right .game-card {
+  border-color: var(--colors-black);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.split-layout__right .game-card__header span,
+.split-layout__right .game-card__player-label,
+.split-layout__right .game-card__player-email,
+.split-layout__right .game-card__player-move {
+  color: var(--colors-black);
+}
+
+.split-layout__right .game-card__id {
+  color: var(--colors-black-light);
+}
+
+.split-layout__right .empty-state p {
+  color: var(--colors-black);
+}
+
+.split-layout__right .tagline {
+  color: var(--colors-black);
 }
