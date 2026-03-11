@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { SplitLayout } from "../../components/SplitLayout";
 
 type AuthUser = {
   id: string;
@@ -51,12 +52,7 @@ export const GamesPage = () => {
   }
 
   return (
-    <div className="main-menu">
-      <header className="main-menu__header">
-        <h1>Heroes of Fright and Panic</h1>
-        <span className="main-menu__user">{user?.email ?? ""}</span>
-      </header>
-
+    <SplitLayout pageTitle="Games">
       <nav className="main-menu__nav">
         <Link to="/games/new" className="btn btn--large">
           New Game
@@ -75,6 +71,6 @@ export const GamesPage = () => {
           Sign Out
         </button>
       </nav>
-    </div>
+    </SplitLayout>
   );
 };

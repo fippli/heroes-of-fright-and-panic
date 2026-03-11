@@ -392,7 +392,10 @@ export class Game {
       });
 
       if (error !== null) {
-        console.error("Error sending action:", getEdgeFunctionError(error));
+        console.error(
+          "Error sending action:",
+          await getEdgeFunctionError(error),
+        );
         return false;
       }
 
