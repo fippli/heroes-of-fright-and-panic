@@ -1,5 +1,5 @@
 import { BuildingType } from "@shared/building";
-import { ImageAssets } from "../images";
+import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
@@ -43,7 +43,11 @@ export class Building {
     this.owner = owner;
   }
 
-  render(ctx: CanvasRenderingContext2D, position: TilePosition): void {
+  render(
+    ctx: CanvasRenderingContext2D,
+    position: TilePosition,
+    imageAssets: ImageAssets,
+  ): void {
     ctx.save();
 
     const x = Hexagon.x(position.row, position.column);
@@ -51,7 +55,7 @@ export class Building {
 
     ctx.clip(Hexagon.path(x, y));
 
-    ImageAssets.buildingImage(this.type).render(
+    imageAssets.buildingImage(this.type).render(
       ctx,
       x - Hexagon.width / 2,
       y - Hexagon.height / 2,
