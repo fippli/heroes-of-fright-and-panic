@@ -10,6 +10,8 @@ import { NewGamePage } from "./pages/games/NewGamePage";
 import { LoadGamesPage } from "./pages/games/LoadGamesPage";
 import { AboutPage } from "./pages/about/AboutPage";
 import { GamePage } from "./pages/game/GamePage";
+import { AdminPage } from "./pages/admin/AdminPage";
+import { ThemeEditorPage } from "./pages/admin/ThemeEditorPage";
 
 export const App = () => {
   return (
@@ -25,6 +27,8 @@ export const App = () => {
       <Route path="/games/list" element={<LoadGamesPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/game/:id" element={<GamePage />} />
+      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin/theme/:themeId" element={<ThemeEditorPage />} />
     </Routes>
   );
 };
