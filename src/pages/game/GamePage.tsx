@@ -3,6 +3,8 @@ import { useParams, useSearchParams, Link } from "react-router-dom";
 import { Canvas } from "../../canvas";
 import { Game } from "../../core/Board";
 import { BuildingType } from "../../core/Building";
+import { ImageAssets, defaultImageAssets } from "../../images";
+import { ThemeImageAssets } from "../../images/theme-image-assets";
 import { supabase, getEdgeFunctionError } from "../../lib/supabase";
 import type { Coordinate } from "../../types/coordinate";
 import "./game.css";
@@ -30,15 +32,12 @@ export const GamePage = () => {
     const canvasElement = canvasRef.current;
     const wrapperElement = wrapperRef.current;
 
-    // Create canvas and game instances
+    // Create canvas instance
     const canvas = new Canvas(canvasElement, wrapperElement);
     canvasInstanceRef.current = canvas;
 
-    const game = new Game(canvas, myPlayerType);
-    gameRef.current = game;
-
     // Render loop
-    const startRenderLoop = () => {
+    const startRenderLoop = (game: Game) => {
       const loop = () => {
         if (canvas.ctx === null) {
           return;
@@ -54,39 +53,50 @@ export const GamePage = () => {
       loop();
     };
 
-    // Fetch initial game state
+    // Fetch initial game state, load theme if present, then start
     supabase.functions
       .invoke("game-state", { body: { gameId } })
       .then(async ({ data, error: invokeError }) => {
         if (invokeError !== null) {
           throw new Error(await getEdgeFunctionError(invokeError));
         }
+
+        // Load theme assets if the game has a theme
+        const themeId = data.themeId ?? data.theme_id ?? null;
+        const imageAssets =
+          themeId !== null
+            ? new ImageAssets(await ThemeImageAssets.fromThemeId(themeId))
+            : defaultImageAssets;
+
+        const game = new Game(canvas, myPlayerType, imageAssets);
+        gameRef.current = game;
+
         game.parse(data);
         console.log("Game loaded:", game.id, "Playing as:", myPlayerType);
-        startRenderLoop();
+        startRenderLoop(game);
+
+        // Input handlers
+        canvas.click((position: Coordinate) => game.click(position));
+
+        canvas.keydown({
+          // Build actions
+          h: (position) => game.build(BuildingType.house, position),
+          t: (position) => game.build(BuildingType.tower, position),
+          c: (position) => game.build(BuildingType.castle, position),
+          b: (position) => game.build(BuildingType.boat, position),
+          f: (position) => game.buildFarm(position),
+
+          // Unit actions
+          p: (position) => game.createPeasant(position),
+          u: (position) => game.upgrade(position),
+          a: (position) => game.upgradeArcher(position),
+          x: (position) => game.attack(position),
+        });
       })
       .catch((err) => {
         console.error("Error loading game:", err);
         setError(err instanceof Error ? err.message : "Failed to load game");
       });
-
-    // Input handlers
-    canvas.click((position: Coordinate) => game.click(position));
-
-    canvas.keydown({
-      // Build actions
-      h: (position) => game.build(BuildingType.house, position),
-      t: (position) => game.build(BuildingType.tower, position),
-      c: (position) => game.build(BuildingType.castle, position),
-      b: (position) => game.build(BuildingType.boat, position),
-      f: (position) => game.buildFarm(position),
-
-      // Unit actions
-      p: (position) => game.createPeasant(position),
-      u: (position) => game.upgrade(position),
-      a: (position) => game.upgradeArcher(position),
-      x: (position) => game.attack(position),
-    });
 
     // Log controls
     console.log(`
