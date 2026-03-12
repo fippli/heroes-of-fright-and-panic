@@ -1,4 +1,5 @@
 import type { Canvas } from "../canvas";
+import { type ImageAssets, defaultImageAssets } from "../images";
 import { supabase, getEdgeFunctionError } from "../lib/supabase";
 import type { Coordinate } from "../types/coordinate";
 import { BuildingType } from "./Building";
@@ -61,12 +62,20 @@ export class Game {
   gameOver: boolean = false;
   winner: PlayerType | null = null;
 
-  constructor(canvas: Canvas, myPlayerType: PlayerType | null = null) {
+  // Image assets (with optional theme override)
+  imageAssets: ImageAssets;
+
+  constructor(
+    canvas: Canvas,
+    myPlayerType: PlayerType | null = null,
+    imageAssets: ImageAssets = defaultImageAssets,
+  ) {
     this.canvas = canvas;
     this.myPlayerType = myPlayerType;
     this.dayPlayer = new Player({ type: "day" });
     this.nightPlayer = new Player({ type: "night" });
     this.dialog = new Dialog();
+    this.imageAssets = imageAssets;
   }
 
   /**
@@ -257,7 +266,7 @@ export class Game {
 
     // Render all tiles
     this.tiles.forEach((tile: Tile) => {
-      tile.render(canvas.ctx);
+      tile.render(canvas.ctx, this.imageAssets);
     });
 
     // Render selected tile highlight and valid moves/attacks

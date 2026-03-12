@@ -1,5 +1,5 @@
 import { PieceType } from "@shared/piece";
-import { ImageAssets } from "../images";
+import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import { LandscapeType } from "./Landscape";
 import type { Player } from "./Player";
@@ -48,11 +48,15 @@ export class Piece {
     this.lootableLandscape = lootableLandscape ?? [];
   }
 
-  render(ctx: CanvasRenderingContext2D, position: TilePosition): void {
+  render(
+    ctx: CanvasRenderingContext2D,
+    position: TilePosition,
+    imageAssets: ImageAssets,
+  ): void {
     ctx.save();
     const x = Hexagon.x(position.row, position.column) - Hexagon.width / 2;
     const y = Hexagon.y(position.row) - Hexagon.height / 2;
-    ImageAssets.pieceImage(this.owner, this.type).render(ctx, x, y);
+    imageAssets.pieceImage(this.owner, this.type).render(ctx, x, y);
     ctx.restore();
   }
 

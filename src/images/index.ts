@@ -4,6 +4,7 @@ import { Hexagon } from "../core/Hexagon";
 import { LandscapeType } from "../core/Landscape";
 import { PieceType } from "../core/Piece";
 import type { Player } from "../core/Player";
+import type { ThemeImageAssets } from "./theme-image-assets";
 
 //
 // Pieces
@@ -28,7 +29,7 @@ const knightImage = new GameImage({
 });
 
 const soldierImage = new GameImage({
-  src: "/img/soldier.png",
+  src: "/img/soldier.svg",
   width: Hexagon.width,
   height: Hexagon.height,
 });
@@ -115,78 +116,102 @@ const mountainImage = new GameImage({
   height: Hexagon.height,
 });
 
+const staticPieceImage = (player: Player, type: PieceType): GameImage => {
+  switch (type) {
+    case PieceType.peasant: {
+      return player.type === "day" ? peasantImage : skeletonImage;
+    }
+    case PieceType.knight: {
+      return player.type === "day" ? knightImage : skeletonImage;
+    }
+    case PieceType.soldier: {
+      return player.type === "day" ? soldierImage : skeletonImage;
+    }
+    case PieceType.archer: {
+      return player.type === "day" ? archerImage : skeletonImage;
+    }
+    case PieceType.boat: {
+      return boatPieceImage;
+    }
+    default: {
+      throw new Error(`Invalid piece type: ${type}`);
+    }
+  }
+};
+
+const staticBuildingImage = (type: BuildingType): GameImage => {
+  switch (type) {
+    case BuildingType.house: {
+      return houseImage;
+    }
+    case BuildingType.castle: {
+      return castleImage;
+    }
+    case BuildingType.tower: {
+      return towerImage;
+    }
+    case BuildingType.boat: {
+      return boatImage;
+    }
+    case BuildingType.farm: {
+      return farmImage;
+    }
+    default: {
+      throw new Error(`Invalid building type: ${type}`);
+    }
+  }
+};
+
+const staticLandscapeImage = (type: LandscapeType): GameImage => {
+  switch (type) {
+    case LandscapeType.unexplored: {
+      return unexploredImage;
+    }
+    case LandscapeType.grass: {
+      return grassImage;
+    }
+    case LandscapeType.tree: {
+      return treeImage;
+    }
+    case LandscapeType.sand: {
+      return sandImage;
+    }
+    case LandscapeType.water: {
+      return waterImage;
+    }
+    case LandscapeType.mountain: {
+      return mountainImage;
+    }
+    default: {
+      throw new Error(`Invalid landscape type: ${type}`);
+    }
+  }
+};
+
 export class ImageAssets {
-  static pieceImage(player: Player, type: PieceType) {
-    switch (type) {
-      case PieceType.peasant: {
-        return player.type === "day" ? peasantImage : skeletonImage;
-      }
-      case PieceType.knight: {
-        return player.type === "day" ? knightImage : skeletonImage;
-      }
-      case PieceType.soldier: {
-        return player.type === "day" ? soldierImage : skeletonImage;
-      }
-      case PieceType.archer: {
-        return player.type === "day" ? archerImage : skeletonImage;
-      }
-      case PieceType.boat: {
-        return boatPieceImage;
-      }
-      default: {
-        throw new Error(`Invalid piece type: ${type}`);
-      }
-    }
+  readonly theme: ThemeImageAssets | undefined;
+
+  constructor(theme?: ThemeImageAssets) {
+    this.theme = theme;
   }
 
-  static buildingImage(type: BuildingType) {
-    switch (type) {
-      case BuildingType.house: {
-        return houseImage;
-      }
-
-      case BuildingType.castle: {
-        return castleImage;
-      }
-      case BuildingType.tower: {
-        return towerImage;
-      }
-      case BuildingType.boat: {
-        return boatImage;
-      }
-      case BuildingType.farm: {
-        return farmImage;
-      }
-      default: {
-        throw new Error(`Invalid building type: ${type}`);
-      }
-    }
+  pieceImage(player: Player, type: PieceType): GameImage {
+    const themeImage = this.theme?.pieceImage(player, type);
+    if (themeImage !== undefined) return themeImage;
+    return staticPieceImage(player, type);
   }
 
-  static landscapeImage(type: LandscapeType) {
-    switch (type) {
-      case LandscapeType.unexplored: {
-        return unexploredImage;
-      }
+  buildingImage(type: BuildingType): GameImage {
+    const themeImage = this.theme?.buildingImage(type);
+    if (themeImage !== undefined) return themeImage;
+    return staticBuildingImage(type);
+  }
 
-      case LandscapeType.grass: {
-        return grassImage;
-      }
-      case LandscapeType.tree: {
-        return treeImage;
-      }
-      case LandscapeType.sand: {
-        return sandImage;
-      }
-      case LandscapeType.water: {
-        return waterImage;
-      }
-      case LandscapeType.mountain: {
-        return mountainImage;
-      }
-      default: {
-        throw new Error(`Invalid landscape type: ${type}`);
-      }
-    }
+  landscapeImage(type: LandscapeType): GameImage {
+    const themeImage = this.theme?.landscapeImage(type);
+    if (themeImage !== undefined) return themeImage;
+    return staticLandscapeImage(type);
   }
 }
+
+export const defaultImageAssets = new ImageAssets();
