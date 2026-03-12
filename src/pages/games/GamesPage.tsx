@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAdmin } from "../../lib/use-admin";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
 
@@ -11,6 +12,7 @@ type AuthUser = {
 export const GamesPage = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,6 +65,11 @@ export const GamesPage = () => {
         <Link to="/about" className="btn btn--large">
           About
         </Link>
+        {isAdmin && (
+          <Link to="/admin" className="btn btn--large">
+            Admin
+          </Link>
+        )}
         <button
           type="button"
           className="btn btn--large btn--secondary"
