@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { gamesApi } from "../../lib/api";
+import { themesApi, type Theme } from "../../lib/theme-api";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
 
@@ -9,17 +10,20 @@ type CreateFormState = {
   size: number;
   alliance: "day" | "night";
   inviteEmail: string;
+  themeId: string;
 };
 
 export const NewGamePage = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [themes, setThemes] = useState<readonly Theme[]>([]);
   const [formState, setFormState] = useState<CreateFormState>({
     name: "",
     size: 40,
     alliance: "day",
     inviteEmail: "",
+    themeId: "",
   });
   const navigate = useNavigate();
 
@@ -40,6 +44,9 @@ export const NewGamePage = () => {
       }
 
       setIsCheckingAuth(false);
+
+      // Load available themes
+      themesApi.getAll().then(setThemes).catch(console.error);
     })();
 
     return () => {
@@ -67,6 +74,7 @@ export const NewGamePage = () => {
           formState.inviteEmail.trim() !== ""
             ? formState.inviteEmail.trim()
             : null,
+        themeId: formState.themeId !== "" ? formState.themeId : null,
       });
       const newGameId = game.id ?? game._id;
       if (newGameId !== undefined) {
@@ -146,6 +154,30 @@ export const NewGamePage = () => {
             <option value="night">Night</option>
           </select>
         </div>
+
+        {themes.length !== 0 && (
+          <div className="form-group">
+            <label htmlFor="theme">Theme:</label>
+            <select
+              id="theme"
+              name="theme"
+              value={formState.themeId}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  themeId: event.target.value,
+                }))
+              }
+            >
+              <option value="">Default</option>
+              {themes.map((theme) => (
+                <option key={theme.id} value={theme.id}>
+                  {theme.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
           <label htmlFor="invite">Invite:</label>

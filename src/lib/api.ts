@@ -57,6 +57,7 @@ export const gamesApi = {
     size: number;
     alliance: "day" | "night";
     inviteEmail?: string | null;
+    themeId?: string | null;
   }): Promise<Game> {
     const { data, error } = await supabase.functions.invoke("game-create", {
       body: params,
