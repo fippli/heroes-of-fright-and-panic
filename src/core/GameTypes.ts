@@ -59,6 +59,7 @@ export type ServerGameState = {
   dayPlayer: ServerPlayer;
   nightPlayer: ServerPlayer;
   tiles: ServerTile[];
+  themeId?: string | null;
 };
 
 export type ActionResponse = {
