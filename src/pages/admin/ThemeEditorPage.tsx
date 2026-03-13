@@ -106,9 +106,9 @@ export const ThemeEditorPage = () => {
     return (
       <SplitLayout pageTitle="Theme Editor">
         <p className="message message--error">No theme ID provided.</p>
-        <Link to="/admin" className="btn btn--secondary">
+        <Link to="/admin/themes" className="btn btn--secondary">
           Back to Themes
-        </Link>
+          </Link>
       </SplitLayout>
     );
   }
@@ -169,9 +169,9 @@ export const ThemeEditorPage = () => {
       ))}
 
       <div className="row" style={{ marginTop: "2rem" }}>
-        <Link to="/admin" className="btn btn--secondary">
+        <Link to="/admin/themes" className="btn btn--secondary">
           Back to Themes
-        </Link>
+          </Link>
       </div>
     </SplitLayout>
   );

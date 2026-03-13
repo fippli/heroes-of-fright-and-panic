@@ -83,9 +83,21 @@ CREATE TABLE public.admin_users (
 
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
 
--- Users can only read their own row
+-- Users can read their own row
 CREATE POLICY "Users can read own admin status" ON public.admin_users FOR SELECT
   USING (email = auth.email());
+
+-- Admins can read all admin users
+CREATE POLICY "Admins can read all admin users" ON public.admin_users FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.admin_users WHERE email = auth.email()));
+
+-- Admins can add new admin users
+CREATE POLICY "Admins can insert admin users" ON public.admin_users FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users WHERE email = auth.email()));
+
+-- Admins can remove admin users
+CREATE POLICY "Admins can delete admin users" ON public.admin_users FOR DELETE
+  USING (EXISTS (SELECT 1 FROM public.admin_users WHERE email = auth.email()));
 
 -- ============================================
 -- Themes
