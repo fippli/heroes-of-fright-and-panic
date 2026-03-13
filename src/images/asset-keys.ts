@@ -44,3 +44,28 @@ export const getSlotsByCategory = (
   category: AssetCategory,
 ): readonly AssetSlot[] =>
   ASSET_SLOTS.filter((slot) => slot.category === category);
+
+export const getNightPieceSlots = (): readonly AssetSlot[] =>
+  ASSET_SLOTS.filter(
+    (slot) => slot.category === "piece" && slot.key.endsWith("_night"),
+  );
+
+export const getDayPieceSlots = (): readonly AssetSlot[] =>
+  ASSET_SLOTS.filter(
+    (slot) => slot.category === "piece" && slot.key.endsWith("_day"),
+  );
+
+export const getSharedPieceSlots = (): readonly AssetSlot[] =>
+  ASSET_SLOTS.filter(
+    (slot) =>
+      slot.category === "piece" &&
+      !slot.key.endsWith("_day") &&
+      !slot.key.endsWith("_night"),
+  );
+
+export const getShortLabel = (slot: AssetSlot): string =>
+  slot.label
+    .replace(" (Day)", "")
+    .replace(" (Night)", "")
+    .replace(" (Piece)", "")
+    .replace(" (Building)", "");
