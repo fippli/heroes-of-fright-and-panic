@@ -20,7 +20,8 @@ CREATE TABLE public.games (
   night_player_last_move TIMESTAMPTZ,
   invited_email TEXT,
   game_over BOOLEAN DEFAULT FALSE,
-  winner TEXT
+  winner TEXT,
+  theme_id UUID
 );
 
 -- Indexes for common queries
@@ -154,8 +155,6 @@ CREATE POLICY "Admins can update theme assets" ON public.theme_assets FOR UPDATE
 CREATE POLICY "Admins can delete theme assets" ON public.theme_assets FOR DELETE
   USING (EXISTS (SELECT 1 FROM public.admin_users WHERE email = auth.email()));
 
--- ============================================
--- Add theme_id to games table
--- ============================================
-
-ALTER TABLE public.games ADD COLUMN theme_id UUID REFERENCES public.themes ON DELETE SET NULL;
+-- Add foreign key for theme_id on games (themes table must exist first)
+ALTER TABLE public.games
+  ADD CONSTRAINT games_theme_id_fkey FOREIGN KEY (theme_id) REFERENCES public.themes ON DELETE SET NULL;
