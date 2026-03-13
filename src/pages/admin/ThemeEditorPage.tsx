@@ -1,9 +1,36 @@
 import { type DragEvent, useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { SplitLayout } from "../../components/SplitLayout";
 import { useAdmin } from "../../lib/use-admin";
 import { themesApi, type ThemeAsset } from "../../lib/theme-api";
 import { ASSET_SLOTS } from "../../images/asset-keys";
+
+type Tab = "day" | "night" | "buildings" | "landscape";
+
+const TAB_LABELS: readonly { readonly tab: Tab; readonly label: string }[] = [
+  { tab: "day", label: "Day" },
+  { tab: "night", label: "Night" },
+  { tab: "buildings", label: "Buildings" },
+  { tab: "landscape", label: "Landscape" },
+];
+
+const getSlotsForTab = (tab: Tab) =>
+  ASSET_SLOTS.filter((slot) => {
+    switch (tab) {
+      case "day":
+        return slot.category === "piece" && slot.key.endsWith("_day");
+      case "night":
+        return slot.category === "piece" && slot.key.endsWith("_night");
+      case "buildings":
+        return (
+          slot.category === "building" ||
+          (slot.category === "piece" &&
+            !slot.key.endsWith("_day") &&
+            !slot.key.endsWith("_night"))
+        );
+      case "landscape":
+        return slot.category === "landscape";
+    }
+  });
 
 export const ThemeEditorPage = () => {
   const { themeId } = useParams();
@@ -13,6 +40,7 @@ export const ThemeEditorPage = () => {
   const [uploading, setUploading] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("day");
 
   useEffect(() => {
     if (!isLoading && user === null) {
@@ -100,132 +128,165 @@ export const ThemeEditorPage = () => {
     return null;
   }
 
-  if (!isAdmin) {
+  if (!isAdmin || themeId === undefined) {
     return (
-      <SplitLayout pageTitle="Theme Editor">
+      <div style={{ padding: "2rem" }}>
         <p className="message message--error">
-          You do not have admin access.
+          {themeId === undefined ? "No theme ID provided." : "No admin access."}
         </p>
-        <Link to="/games" className="btn btn--secondary">
-          Back to Games
+        <Link to="/admin/themes" className="btn btn--secondary">
+          Back
         </Link>
-      </SplitLayout>
+      </div>
     );
   }
 
-  if (themeId === undefined) {
-    return (
-      <SplitLayout pageTitle="Theme Editor">
-        <p className="message message--error">No theme ID provided.</p>
-        <Link to="/admin/themes" className="btn btn--secondary">
-          Back to Themes
-        </Link>
-      </SplitLayout>
-    );
-  }
+  const activeSlots = getSlotsForTab(activeTab);
 
   return (
-    <SplitLayout pageTitle="Theme Editor">
-      {error !== null && (
-        <div className="message message--error">{error}</div>
-      )}
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        margin: "calc(-1 * var(--spacing-2xl))",
+      }}
+    >
+      <nav
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--spacing-sm)",
+          padding: "var(--spacing-lg)",
+          minWidth: "160px",
+        }}
+      >
+        {TAB_LABELS.map(({ tab, label }) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            style={{
+              textAlign: "left",
+              fontWeight: activeTab === tab ? "900" : "normal",
+              opacity: activeTab === tab ? 1 : 0.6,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+        <Link
+          to="/admin/themes"
+          className="btn btn--secondary"
+          style={{ marginTop: "auto" }}
+        >
+          Back
+        </Link>
+      </nav>
 
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-          gap: "8px",
+          flex: 1,
+          padding: "var(--spacing-lg)",
+          overflowY: "auto",
         }}
       >
-        {ASSET_SLOTS.map((slot) => {
-          const existingAsset = findAsset(slot.category, slot.key);
-          const slotKey = `${slot.category}/${slot.key}`;
-          const isUploading = uploading === slotKey;
-          const isDraggedOver = dragOver === slotKey;
+        {error !== null && (
+          <div className="message message--error">{error}</div>
+        )}
 
-          return (
-            <div key={slotKey}>
-              {existingAsset !== undefined ? (
-                <div
-                  style={{
-                    width: "100%",
-                    aspectRatio: "1",
-                    position: "relative",
-                  }}
-                >
-                  <img
-                    src={themesApi.getPublicUrl(existingAsset.storagePath)}
-                    alt={slot.label}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+            gap: "var(--spacing-sm)",
+          }}
+        >
+          {activeSlots.map((slot) => {
+            const existingAsset = findAsset(slot.category, slot.key);
+            const slotKey = `${slot.category}/${slot.key}`;
+            const isUploading = uploading === slotKey;
+            const isDraggedOver = dragOver === slotKey;
+
+            return (
+              <div key={slotKey}>
+                {existingAsset !== undefined ? (
+                  <div
                     style={{
                       width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteAsset(existingAsset.id)}
-                    style={{
-                      position: "absolute",
-                      top: "2px",
-                      right: "2px",
-                      padding: "0 4px",
-                      fontSize: "0.7rem",
+                      aspectRatio: "1",
+                      position: "relative",
                     }}
                   >
-                    x
-                  </button>
-                </div>
-              ) : (
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "100%",
-                    aspectRatio: "1",
-                    border: isDraggedOver
-                      ? "2px solid currentColor"
-                      : "2px dashed currentColor",
-                    cursor: "pointer",
-                    fontSize: "1.5rem",
-                    opacity: isUploading ? 0.5 : 1,
-                  }}
-                  onDrop={(event) => handleDrop(slot.category, slot.key, event)}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    setDragOver(slotKey);
-                  }}
-                  onDragLeave={() => setDragOver(null)}
-                >
-                  {isUploading ? "..." : "+"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const file = event.target.files?.item(0);
-                      if (file !== undefined && file !== null) {
-                        uploadFile(slot.category, slot.key, file);
-                      }
+                    <img
+                      src={themesApi.getPublicUrl(existingAsset.storagePath)}
+                      alt={slot.label}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAsset(existingAsset.id)}
+                      style={{
+                        position: "absolute",
+                        top: "2px",
+                        right: "2px",
+                        padding: "0 4px",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      x
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "100%",
+                      aspectRatio: "1",
+                      border: isDraggedOver
+                        ? "2px solid currentColor"
+                        : "2px dashed currentColor",
+                      cursor: "pointer",
+                      fontSize: "1.5rem",
+                      opacity: isUploading ? 0.5 : 1,
                     }}
-                    disabled={isUploading}
-                  />
-                </label>
-              )}
-              <div style={{ fontSize: "0.75rem", textAlign: "center" }}>
-                {slot.label}
+                    onDrop={(event) =>
+                      handleDrop(slot.category, slot.key, event)
+                    }
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      setDragOver(slotKey);
+                    }}
+                    onDragLeave={() => setDragOver(null)}
+                  >
+                    {isUploading ? "..." : "+"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.item(0);
+                        if (file !== undefined && file !== null) {
+                          uploadFile(slot.category, slot.key, file);
+                        }
+                      }}
+                      disabled={isUploading}
+                    />
+                  </label>
+                )}
+                <div style={{ fontSize: "0.75rem", textAlign: "center" }}>
+                  {slot.label}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-
-      <div className="row" style={{ marginTop: "1rem" }}>
-        <Link to="/admin/themes" className="btn btn--secondary">
-          Back to Themes
-        </Link>
-      </div>
-    </SplitLayout>
+    </div>
   );
 };
