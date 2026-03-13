@@ -1,21 +1,12 @@
-import { type DragEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { SplitLayout } from "../../components/SplitLayout";
 import { useAdmin } from "../../lib/use-admin";
 import { themesApi, type ThemeAsset } from "../../lib/theme-api";
 import {
-  getDayPieceSlots,
-  getNightPieceSlots,
-  getSharedPieceSlots,
+  ASSET_CATEGORIES,
   getSlotsByCategory,
-  getShortLabel,
 } from "../../images/asset-keys";
-import "./theme-editor.css";
-
-type AssetSlot = {
-  readonly category: string;
-  readonly key: string;
-  readonly label: string;
-};
 
 export const ThemeEditorPage = () => {
   const { themeId } = useParams();
@@ -23,7 +14,6 @@ export const ThemeEditorPage = () => {
   const navigate = useNavigate();
   const [assets, setAssets] = useState<readonly ThemeAsset[]>([]);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,12 +36,14 @@ export const ThemeEditorPage = () => {
       (asset) => asset.category === category && asset.assetKey === assetKey,
     );
 
-  const uploadFile = async (
+  const handleUpload = async (
     category: string,
     assetKey: string,
-    file: File,
+    event: ChangeEvent<HTMLInputElement>,
   ) => {
     if (themeId === undefined) return;
+    const file = event.target.files?.item(0);
+    if (file === undefined || file === null) return;
 
     const slotKey = `${category}/${assetKey}`;
     setUploading(slotKey);
@@ -81,45 +73,6 @@ export const ThemeEditorPage = () => {
     }
   };
 
-  const handleDrop = (
-    category: string,
-    assetKey: string,
-    event: DragEvent<HTMLDivElement>,
-  ) => {
-    event.preventDefault();
-    setDragOver(null);
-
-    const file = event.dataTransfer.files.item(0);
-    if (file === null) return;
-    if (!file.type.startsWith("image/")) return;
-
-    uploadFile(category, assetKey, file);
-  };
-
-  const handleDragOver = (
-    slotKey: string,
-    event: DragEvent<HTMLDivElement>,
-  ) => {
-    event.preventDefault();
-    setDragOver(slotKey);
-  };
-
-  const handleDragLeave = () => {
-    setDragOver(null);
-  };
-
-  const handleFileSelect = (
-    category: string,
-    assetKey: string,
-    fileList: FileList | null,
-  ) => {
-    if (fileList === null) return;
-    const file = fileList.item(0);
-    if (file === null) return;
-
-    uploadFile(category, assetKey, file);
-  };
-
   const handleDeleteAsset = async (assetId: string) => {
     setError(null);
     try {
@@ -132,111 +85,94 @@ export const ThemeEditorPage = () => {
     }
   };
 
-  const renderSlot = (slot: AssetSlot) => {
-    const existingAsset = findAsset(slot.category, slot.key);
-    const slotKey = `${slot.category}/${slot.key}`;
-    const isUploading = uploading === slotKey;
-    const isDraggedOver = dragOver === slotKey;
-
-    return (
-      <div
-        key={slotKey}
-        className={[
-          "te-slot",
-          isDraggedOver ? "te-slot--drag-over" : "",
-          isUploading ? "te-slot--uploading" : "",
-        ].join(" ")}
-        onDrop={(event) => handleDrop(slot.category, slot.key, event)}
-        onDragOver={(event) => handleDragOver(slotKey, event)}
-        onDragLeave={handleDragLeave}
-      >
-        {existingAsset !== undefined ? (
-          <div className="te-slot__preview">
-            <img
-              src={themesApi.getPublicUrl(existingAsset.storagePath)}
-              alt={slot.label}
-              className="te-slot__image"
-            />
-            <button
-              type="button"
-              className="te-slot__remove"
-              onClick={() => handleDeleteAsset(existingAsset.id)}
-              title="Remove"
-            >
-              x
-            </button>
-          </div>
-        ) : (
-          <label className="te-slot__dropzone">
-            {isUploading ? "..." : "+"}
-            <input
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={(event) =>
-                handleFileSelect(slot.category, slot.key, event.target.files)
-              }
-              disabled={isUploading}
-            />
-          </label>
-        )}
-        <div className="te-slot__label">{getShortLabel(slot)}</div>
-      </div>
-    );
-  };
-
-  const renderSection = (title: string, slots: readonly AssetSlot[]) => (
-    <div className="te-section">
-      <h3 className="te-section__title">{title}</h3>
-      <div className="te-section__grid">
-        {slots.map(renderSlot)}
-      </div>
-    </div>
-  );
-
   if (isLoading) {
     return null;
   }
 
-  if (!isAdmin || themeId === undefined) {
+  if (!isAdmin) {
     return (
-      <div className="te-page">
+      <SplitLayout pageTitle="Theme Editor">
         <p className="message message--error">
-          {themeId === undefined ? "No theme ID provided." : "No admin access."}
+          You do not have admin access.
         </p>
-        <Link to="/admin/themes" className="btn btn--secondary">
-          Back
+        <Link to="/games" className="btn btn--secondary">
+          Back to Games
         </Link>
-      </div>
+      </SplitLayout>
+    );
+  }
+
+  if (themeId === undefined) {
+    return (
+      <SplitLayout pageTitle="Theme Editor">
+        <p className="message message--error">No theme ID provided.</p>
+        <Link to="/admin/themes" className="btn btn--secondary">
+          Back to Themes
+          </Link>
+      </SplitLayout>
     );
   }
 
   return (
-    <div className="te-page">
+    <SplitLayout pageTitle="Theme Editor">
       {error !== null && (
         <div className="message message--error">{error}</div>
       )}
 
-      <div className="te-columns">
-        <div className="te-column te-column--night">
-          <h2 className="te-column__title">Night</h2>
-          {renderSection("Pieces", getNightPieceSlots())}
-        </div>
+      {ASSET_CATEGORIES.map((category) => (
+        <section key={category} className="theme-editor__category">
+          <h3 className="theme-editor__category-title">
+            {category.at(0)?.toUpperCase()}{category.slice(1)}
+          </h3>
+          <div className="theme-editor__grid">
+            {getSlotsByCategory(category).map((slot) => {
+              const existingAsset = findAsset(slot.category, slot.key);
+              const slotKey = `${slot.category}/${slot.key}`;
+              const isUploading = uploading === slotKey;
 
-        <div className="te-column te-column--shared">
-          {renderSection("Shared", getSharedPieceSlots())}
-          {renderSection("Buildings", getSlotsByCategory("building"))}
-          {renderSection("Landscape", getSlotsByCategory("landscape"))}
-          <Link to="/admin/themes" className="btn btn--secondary te-back">
-            Back to Themes
+              return (
+                <div key={slot.key} className="theme-editor__slot">
+                  <div className="theme-editor__slot-label">{slot.label}</div>
+                  {existingAsset !== undefined && (
+                    <div className="theme-editor__slot-preview">
+                      <img
+                        src={themesApi.getPublicUrl(existingAsset.storagePath)}
+                        alt={slot.label}
+                        className="theme-editor__thumbnail"
+                      />
+                      <button
+                        type="button"
+                        className="btn btn--small btn--secondary"
+                        onClick={() => handleDeleteAsset(existingAsset.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                  <label className="btn btn--small theme-editor__upload-btn">
+                    {isUploading ? "Uploading..." : "Upload"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(event) =>
+                        handleUpload(slot.category, slot.key, event)
+                      }
+                      disabled={isUploading}
+                    />
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
+      <div className="row" style={{ marginTop: "2rem" }}>
+        <Link to="/admin/themes" className="btn btn--secondary">
+          Back to Themes
           </Link>
-        </div>
-
-        <div className="te-column te-column--day">
-          <h2 className="te-column__title">Day</h2>
-          {renderSection("Pieces", getDayPieceSlots())}
-        </div>
       </div>
-    </div>
+    </SplitLayout>
   );
 };
