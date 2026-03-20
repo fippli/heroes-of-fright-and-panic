@@ -14,7 +14,7 @@ import type {
 } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
 import { Notifications } from "./Notifications";
-import { PieceType } from "./Piece";
+import { PieceKind } from "./Piece";
 import { Player } from "./Player";
 import { renderResources } from "./ResourceMap";
 import { Tile } from "./Tile";
@@ -534,6 +534,8 @@ export class Game {
 
   /**
    * Build a farm at the given position
+   * Note: Farms are now auto-created when houses are built (adjacent grass → farm).
+   * This method builds a house instead.
    */
   async buildFarm({ x, y }: Coordinate): Promise<void> {
     if (this.myPlayerType === null) return;
@@ -544,7 +546,7 @@ export class Game {
     await this.sendAction({
       type: "build",
       player: this.myPlayerType,
-      buildingType: BuildingType.farm,
+      buildingType: BuildingType.house,
       position: tilePosition,
       selectedPosition: this.getSelectedPosition(),
     });
@@ -595,7 +597,7 @@ export class Game {
       type: "upgrade",
       player: this.myPlayerType,
       position: tilePosition,
-      targetType: PieceType.archer,
+      targetKind: PieceKind.peasant,
     });
   }
 

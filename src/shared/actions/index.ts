@@ -1,64 +1,98 @@
-import { BuildingType } from "@shared/building/index.ts";
-import { PieceType } from "@shared/piece/index.ts";
+import type { BuildingType } from "@shared/building/index.ts";
+import type { EquipmentType } from "@shared/equipment/index.ts";
+import type { ResearchType } from "@shared/research/index.ts";
+import type { SteedType } from "@shared/steed/index.ts";
 
 export type TilePosition = {
-  row: number;
-  column: number;
+  readonly row: number;
+  readonly column: number;
 };
 
 export type PlayerType = "day" | "night";
 
-// Base action type
 type BaseAction = {
-  player: PlayerType;
+  readonly player: PlayerType;
 };
 
-// Click action - for selecting tiles and moving pieces
-export type ClickAction = BaseAction & {
-  type: "click";
-  position: TilePosition;
-  selectedPosition?: TilePosition; // Current selected tile (if any)
+export type MoveAction = BaseAction & {
+  readonly type: "move";
+  readonly from: TilePosition;
+  readonly to: TilePosition;
 };
 
-// Build action - for constructing buildings
 export type BuildAction = BaseAction & {
-  type: "build";
-  buildingType: BuildingType;
-  position: TilePosition;
-  selectedPosition?: TilePosition;
+  readonly type: "build";
+  readonly buildingType: BuildingType;
+  readonly position: TilePosition;
 };
 
-// Create peasant action
-export type CreatePeasantAction = BaseAction & {
-  type: "createPeasant";
-  position: TilePosition;
+export type SpawnPeasantAction = BaseAction & {
+  readonly type: "spawnPeasant";
+  readonly position: TilePosition;
 };
 
-// Upgrade action - for upgrading pieces
-export type UpgradeAction = BaseAction & {
-  type: "upgrade";
-  position: TilePosition;
-  targetType?: PieceType; // Optional: specific upgrade target (e.g., archer)
+export type CraftEquipmentAction = BaseAction & {
+  readonly type: "craftEquipment";
+  readonly equipmentType: EquipmentType;
+  readonly piecePosition: TilePosition;
 };
 
-// Attack action
+export type BuySteedAction = BaseAction & {
+  readonly type: "buySteed";
+  readonly steedType: SteedType;
+  readonly housePosition: TilePosition;
+  readonly targetPosition: TilePosition;
+};
+
+export type TrainPriestAction = BaseAction & {
+  readonly type: "trainPriest";
+  readonly churchPosition: TilePosition;
+};
+
+export type HealAction = BaseAction & {
+  readonly type: "heal";
+  readonly priestPosition: TilePosition;
+  readonly targetPosition: TilePosition;
+};
+
+export type ResearchAction = BaseAction & {
+  readonly type: "research";
+  readonly researchType: ResearchType;
+  readonly castlePosition: TilePosition;
+};
+
+export type EnterTowerAction = BaseAction & {
+  readonly type: "enterTower";
+  readonly kingPosition: TilePosition;
+  readonly towerPosition: TilePosition;
+};
+
+export type SummonArchAngelAction = BaseAction & {
+  readonly type: "summonArchAngel";
+  readonly churchPosition: TilePosition;
+};
+
 export type AttackAction = BaseAction & {
-  type: "attack";
-  position: TilePosition; // Target position
-  selectedPosition: TilePosition; // Attacker position
+  readonly type: "attack";
+  readonly attackerPosition: TilePosition;
+  readonly targetPosition: TilePosition;
 };
 
-// Union type of all actions
 export type GameAction =
-  | ClickAction
+  | MoveAction
   | BuildAction
-  | CreatePeasantAction
-  | UpgradeAction
+  | SpawnPeasantAction
+  | CraftEquipmentAction
+  | BuySteedAction
+  | TrainPriestAction
+  | HealAction
+  | ResearchAction
+  | EnterTowerAction
+  | SummonArchAngelAction
   | AttackAction;
 
-// Action result
 export type ActionResult = {
-  success: boolean;
-  error?: string;
-  message?: string;
+  readonly success: boolean;
+  readonly error?: string;
+  readonly message?: string;
 };

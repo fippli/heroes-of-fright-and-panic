@@ -1,4 +1,10 @@
-export const weightedRandom = (xs: any[], weights: number[]) => {
+import type { RandomFunction } from "./random.ts";
+
+export const weightedRandom = (
+  xs: any[],
+  weights: number[],
+  random: RandomFunction = Math.random,
+) => {
   const max = xs.length;
 
   if (max === 0) {
@@ -6,7 +12,7 @@ export const weightedRandom = (xs: any[], weights: number[]) => {
   }
 
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-  const rnd = Math.random() * totalWeight;
+  const rnd = random() * totalWeight;
 
   const selectedIndex = weights.reduce<{
     cumulative: number;

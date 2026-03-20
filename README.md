@@ -1,45 +1,19 @@
-# Tower Game
+# Pieces
 
-Defend your house in the woods
+Pawn - Farm -> Horse (steed)
+Soldier + horse -> knight
+Knight -
+Bishop - church -> faith
+Queen - castle ->
+King - Castle -> knight
+Archer - Tower
 
-## PM
+# Buildings
 
-- Make critters walk towards the center
+Tower
+Castle
+Wall
+House/Farm
 
-## Docker
-
-### Build and Run with Docker
-
-Build the Docker image:
-
-```bash
-docker build -t forest-game .
-```
-
-Run the container:
-
-```bash
-docker run -p 3000:3000 forest-game
-```
-
-### Build and Run with Docker Compose
-
-Build and start the service:
-
-```bash
-docker-compose up --build
-```
-
-Or run in detached mode:
-
-```bash
-docker-compose up -d --build
-```
-
-Stop the service:
-
-```bash
-docker-compose down
-```
-
-The application will be available at `http://localhost:3000`
+| Piece | Building | Extra |
+| Peasent | Farm | Horse |

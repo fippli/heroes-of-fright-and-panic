@@ -14,6 +14,7 @@ import { AdminPage } from "./pages/admin/AdminPage";
 import { ThemesPage } from "./pages/admin/ThemesPage";
 import { ThemeEditorPage } from "./pages/admin/ThemeEditorPage";
 import { SettingsPage } from "./pages/admin/SettingsPage";
+import { DevPage } from "./pages/dev/DevPage";
 
 export const App = () => {
   return (
@@ -32,7 +33,9 @@ export const App = () => {
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/admin/themes" element={<ThemesPage />} />
       <Route path="/admin/themes/:themeId" element={<ThemeEditorPage />} />
+      <Route path="/admin/themes/:themeId/factions/:factionId" element={<ThemeEditorPage />} />
       <Route path="/admin/settings" element={<SettingsPage />} />
+      <Route path="/dev" element={<DevPage />} />
     </Routes>
   );
 };

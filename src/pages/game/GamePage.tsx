@@ -83,8 +83,8 @@ export const GamePage = () => {
           h: (position) => game.build(BuildingType.house, position),
           t: (position) => game.build(BuildingType.tower, position),
           c: (position) => game.build(BuildingType.castle, position),
-          b: (position) => game.build(BuildingType.boat, position),
-          f: (position) => game.buildFarm(position),
+          w: (position) => game.build(BuildingType.wall, position),
+          r: (position) => game.build(BuildingType.church, position),
 
           // Unit actions
           p: (position) => game.createPeasant(position),

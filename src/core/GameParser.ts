@@ -20,30 +20,25 @@ const parseTile = (tile: ServerTile): Tile =>
   new Tile({
     row: tile.row,
     column: tile.column,
-    landscape: tile.landscape !== null ? new Landscape(tile.landscape) : undefined,
+    landscape: tile.landscape != null ? new Landscape(tile.landscape) : undefined,
     building:
-      tile.building !== null
+      tile.building != null
         ? new Building({
             type: tile.building.type,
-            production: new ResourceMap(tile.building.production ?? {}),
-            cost: new ResourceMap(tile.building.cost ?? {}),
-            walkable: tile.building.walkable ?? true,
             viewRange: tile.building.viewRange ?? 1,
             owner: new Player({
-              type: tile.building.owner?.type ?? "day",
+              type: tile.building.owner ?? "day",
             }),
           })
         : undefined,
     piece:
-      tile.piece !== null
+      tile.piece != null
         ? new Piece({
-            type: tile.piece.type,
+            kind: tile.piece.kind,
             viewRange: tile.piece.viewRange ?? 1,
             attackRange: tile.piece.attackRange ?? tile.piece.viewRange ?? 1,
-            owner: new Player({ type: tile.piece.owner?.type ?? "day" }),
-            upgradeCost: new ResourceMap(tile.piece.upgradeCost ?? {}),
+            owner: new Player({ type: tile.piece.owner ?? "day" }),
             walkableLandscape: tile.piece.walkableLandscape ?? [],
-            lootableLandscape: tile.piece.lootableLandscape ?? [],
           })
         : undefined,
   });

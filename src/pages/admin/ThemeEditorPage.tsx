@@ -2,45 +2,26 @@ import { type DragEvent, useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAdmin } from "../../lib/use-admin";
 import { themesApi, type ThemeAsset } from "../../lib/theme-api";
-import { ASSET_SLOTS } from "../../images/asset-keys";
+import {
+  type Faction,
+  FACTIONS,
+  getSlotsForFaction,
+} from "../../images/asset-keys";
 
-type Tab = "day" | "night" | "buildings" | "landscape";
-
-const TAB_LABELS: readonly { readonly tab: Tab; readonly label: string }[] = [
-  { tab: "day", label: "Day" },
-  { tab: "night", label: "Night" },
-  { tab: "buildings", label: "Buildings" },
-  { tab: "landscape", label: "Landscape" },
-];
-
-const getSlotsForTab = (tab: Tab) =>
-  ASSET_SLOTS.filter((slot) => {
-    switch (tab) {
-      case "day":
-        return slot.category === "piece" && slot.key.endsWith("_day");
-      case "night":
-        return slot.category === "piece" && slot.key.endsWith("_night");
-      case "buildings":
-        return (
-          slot.category === "building" ||
-          (slot.category === "piece" &&
-            !slot.key.endsWith("_day") &&
-            !slot.key.endsWith("_night"))
-        );
-      case "landscape":
-        return slot.category === "landscape";
-    }
-  });
+const isFaction = (value: string): value is Faction =>
+  FACTIONS.some((faction) => faction.id === value);
 
 export const ThemeEditorPage = () => {
-  const { themeId } = useParams();
+  const { themeId, factionId } = useParams();
   const { isAdmin, isLoading, user } = useAdmin();
   const navigate = useNavigate();
   const [assets, setAssets] = useState<readonly ThemeAsset[]>([]);
   const [uploading, setUploading] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("day");
+
+  const faction: Faction | undefined =
+    factionId !== undefined && isFaction(factionId) ? factionId : undefined;
 
   useEffect(() => {
     if (!isLoading && user === null) {
@@ -141,151 +122,181 @@ export const ThemeEditorPage = () => {
     );
   }
 
-  const activeSlots = getSlotsForTab(activeTab);
+  const pieceSlots =
+    faction !== undefined ? getSlotsForFaction(faction, "piece") : [];
+  const buildingSlots =
+    faction !== undefined ? getSlotsForFaction(faction, "building") : [];
+  const landscapeSlots =
+    faction === "landscape" ? getSlotsForFaction("landscape", "landscape") : [];
 
-  return (
+  const renderGrid = (
+    slots: readonly {
+      readonly category: string;
+      readonly key: string;
+      readonly label: string;
+    }[],
+  ) => (
     <div
       style={{
-        display: "flex",
-        minHeight: "100vh",
-        margin: "calc(-1 * var(--spacing-2xl))",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+        gap: "var(--spacing-sm)",
+        width: "100%",
       }}
     >
-      <nav
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--spacing-sm)",
-          padding: "var(--spacing-lg)",
-          minWidth: "160px",
-        }}
+      {slots.map((slot) => {
+        const existingAsset = findAsset(slot.category, slot.key);
+        const slotKey = `${slot.category}/${slot.key}`;
+        const isUploading = uploading === slotKey;
+        const isDraggedOver = dragOver === slotKey;
+
+        return (
+          <div key={slotKey}>
+            {existingAsset !== undefined ? (
+              <div
+                style={{
+                  width: "100%",
+                  aspectRatio: "1",
+                  position: "relative",
+                }}
+              >
+                <img
+                  src={themesApi.getPublicUrl(existingAsset.storagePath)}
+                  alt={slot.label}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAsset(existingAsset.id)}
+                  style={{
+                    position: "absolute",
+                    top: "2px",
+                    right: "2px",
+                    padding: "0 4px",
+                    fontSize: "0.7rem",
+                  }}
+                >
+                  x
+                </button>
+              </div>
+            ) : (
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "100%",
+                  aspectRatio: "1",
+                  border: isDraggedOver
+                    ? "2px solid currentColor"
+                    : "2px dashed currentColor",
+                  cursor: "pointer",
+                  fontSize: "1.5rem",
+                  opacity: isUploading ? 0.5 : 1,
+                }}
+                onDrop={(event) => handleDrop(slot.category, slot.key, event)}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setDragOver(slotKey);
+                }}
+                onDragLeave={() => setDragOver(null)}
+              >
+                {isUploading ? "..." : "+"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(event) => {
+                    const file = event.target.files?.item(0);
+                    if (file !== undefined && file !== null) {
+                      uploadFile(slot.category, slot.key, file);
+                    }
+                  }}
+                  disabled={isUploading}
+                />
+              </label>
+            )}
+            <div style={{ fontSize: "0.75rem", textAlign: "center" }}>
+              {slot.label}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="split-layout">
+      <div
+        className="split-layout__left"
+        style={{ justifyContent: "flex-start", padding: "var(--spacing-2xl)" }}
       >
-        {TAB_LABELS.map(({ tab, label }) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            style={{
-              textAlign: "left",
-              fontWeight: activeTab === tab ? "900" : "normal",
-              opacity: activeTab === tab ? 1 : 0.6,
-            }}
-          >
-            {label}
-          </button>
-        ))}
-        <Link
-          to="/admin/themes"
-          className="btn btn--secondary"
-          style={{ marginTop: "auto" }}
+        <nav
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--spacing-sm)",
+            flex: 1,
+          }}
         >
-          Back
-        </Link>
-      </nav>
+          {FACTIONS.map(({ id, label }) => (
+            <Link
+              key={id}
+              to={`/admin/themes/${themeId}/factions/${id}`}
+              style={{
+                textAlign: "left",
+                fontWeight: faction === id ? "900" : "normal",
+                opacity: faction === id ? 1 : 0.6,
+              }}
+            >
+              {label}
+            </Link>
+          ))}
+          <Link
+            to="/admin/themes"
+            className="btn btn--secondary"
+            style={{ marginTop: "auto" }}
+          >
+            Back
+          </Link>
+        </nav>
+      </div>
 
       <div
+        className="split-layout__right"
         style={{
-          flex: 1,
-          padding: "var(--spacing-lg)",
-          overflowY: "auto",
+          alignItems: "stretch",
+          justifyContent: "flex-start",
+          gap: "var(--spacing-lg)",
         }}
       >
         {error !== null && (
           <div className="message message--error">{error}</div>
         )}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-            gap: "var(--spacing-sm)",
-          }}
-        >
-          {activeSlots.map((slot) => {
-            const existingAsset = findAsset(slot.category, slot.key);
-            const slotKey = `${slot.category}/${slot.key}`;
-            const isUploading = uploading === slotKey;
-            const isDraggedOver = dragOver === slotKey;
+        {faction === undefined && (
+          <p>Select a faction to edit assets.</p>
+        )}
 
-            return (
-              <div key={slotKey}>
-                {existingAsset !== undefined ? (
-                  <div
-                    style={{
-                      width: "100%",
-                      aspectRatio: "1",
-                      position: "relative",
-                    }}
-                  >
-                    <img
-                      src={themesApi.getPublicUrl(existingAsset.storagePath)}
-                      alt={slot.label}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteAsset(existingAsset.id)}
-                      style={{
-                        position: "absolute",
-                        top: "2px",
-                        right: "2px",
-                        padding: "0 4px",
-                        fontSize: "0.7rem",
-                      }}
-                    >
-                      x
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "100%",
-                      aspectRatio: "1",
-                      border: isDraggedOver
-                        ? "2px solid currentColor"
-                        : "2px dashed currentColor",
-                      cursor: "pointer",
-                      fontSize: "1.5rem",
-                      opacity: isUploading ? 0.5 : 1,
-                    }}
-                    onDrop={(event) =>
-                      handleDrop(slot.category, slot.key, event)
-                    }
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      setDragOver(slotKey);
-                    }}
-                    onDragLeave={() => setDragOver(null)}
-                  >
-                    {isUploading ? "..." : "+"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(event) => {
-                        const file = event.target.files?.item(0);
-                        if (file !== undefined && file !== null) {
-                          uploadFile(slot.category, slot.key, file);
-                        }
-                      }}
-                      disabled={isUploading}
-                    />
-                  </label>
-                )}
-                <div style={{ fontSize: "0.75rem", textAlign: "center" }}>
-                  {slot.label}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {faction !== undefined && faction !== "landscape" && (
+          <>
+            <h3>Pieces</h3>
+            {renderGrid(pieceSlots)}
+            <h3>Buildings</h3>
+            {renderGrid(buildingSlots)}
+          </>
+        )}
+
+        {faction === "landscape" && (
+          <>
+            <h3>Landscape</h3>
+            {renderGrid(landscapeSlots)}
+          </>
+        )}
       </div>
     </div>
   );

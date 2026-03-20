@@ -3,7 +3,7 @@ a {
   font-family: inherit;
   font-weight: bold;
   background-color: var(--colors-primary);
-  color: var(--colors-white);
+  color: var(--colors-black);
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;

@@ -1,5 +1,6 @@
 import * as readline from "node:readline";
-import { GameEngine } from "@shared/game/engine.ts";
+import { handleAction } from "@shared/game/engine.ts";
+import type { Game } from "@shared/game/types.ts";
 import type { TilePosition } from "@shared/actions/index.ts";
 import { createLocalGame } from "./create-game.ts";
 import { parseCommand } from "./parse-command.ts";
@@ -11,18 +12,17 @@ Commands:
   move <row>,<col>       Move selected unit (m)
   loot <row>,<col>       Loot adjacent resource (l)
   attack <row>,<col>     Attack target with selected unit (a)
-  build <type> <row>,<col>  Build: house, farm, tower, castle (b)
+  build <type> <row>,<col>  Build: house, tower, wall, church (b)
   spawn <row>,<col>      Create peasant in your house
-  upgrade <row>,<col> [archer]  Upgrade unit (u)
   inspect <row>,<col>    Show tile details (i)
   status                 Show resources and clock (st)
   help                   Show this help (h)
   quit                   Exit (q)
 
 Legend:
-  Terrain:  . grass  ♣ tree  ~ water  : sand  ▲ mountain  ? fog
-  Units:    p peasant  s soldier  k knight  a archer
-  Buildings: H house  F farm  T tower  C castle
+  Terrain:  . grass  T tree  W water  S sand  M mountain  # fog
+  Units:    p peasant  K king  r priest  A arch angel
+  Buildings: H house  T tower  C castle  W wall  X church
   Colors:   yellow = day  magenta = night
 `;
 
@@ -37,8 +37,13 @@ const size = (() => {
   return 15;
 })();
 
-const game = createLocalGame(size);
-const engine = new GameEngine(game);
+const seed = (() => {
+  const seedIndex = process.argv.indexOf("--seed");
+  if (seedIndex === -1) return undefined;
+  return process.argv.at(seedIndex + 1);
+})();
+
+const gameState: { value: Game } = { value: createLocalGame(size, seed) as Game };
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -48,7 +53,7 @@ const rl = readline.createInterface({
 const selectedPosition: { value: TilePosition | undefined } = { value: undefined };
 
 const prompt = () => {
-  const state = engine.getGameState();
+  const state = gameState.value;
   const marker = state.currentPlayer === "day" ? "\x1b[33m☀\x1b[0m" : "\x1b[35m☾\x1b[0m";
   const selLabel =
     selectedPosition.value !== undefined
@@ -60,7 +65,7 @@ const prompt = () => {
 };
 
 const handleInput = (input: string) => {
-  const state = engine.getGameState();
+  const state = gameState.value;
   const parsed = parseCommand(input, state.currentPlayer, selectedPosition.value);
 
   switch (parsed.type) {
@@ -107,53 +112,18 @@ const handleInput = (input: string) => {
     }
 
     case "action": {
-      const result = (() => {
-        switch (parsed.action.type) {
-          case "click":
-            return engine.handleClick(
-              parsed.action.player,
-              parsed.action.position,
-              parsed.action.selectedPosition,
-            );
-          case "build":
-            return engine.handleBuild(
-              parsed.action.player,
-              parsed.action.buildingType,
-              parsed.action.position,
-              parsed.action.selectedPosition,
-            );
-          case "createPeasant":
-            return engine.handleCreatePeasant(
-              parsed.action.player,
-              parsed.action.position,
-            );
-          case "upgrade":
-            return engine.handleUpgrade(
-              parsed.action.player,
-              parsed.action.position,
-              parsed.action.targetType,
-            );
-          case "attack":
-            return engine.handleAttack(
-              parsed.action.player,
-              parsed.action.position,
-              parsed.action.selectedPosition,
-            );
-          default:
-            return { success: false, error: "Unknown action" };
-        }
-      })();
+      const { game: updatedGame, result } = handleAction(state, parsed.action as any);
 
       if (result.success) {
         console.log(result.message ?? "OK");
         selectedPosition.value = undefined;
+        gameState.value = updatedGame;
       } else {
         console.log(`Error: ${result.error}`);
       }
 
-      const updatedState = engine.getGameState();
-      console.log("\n" + renderBoard(updatedState, selectedPosition.value));
-      console.log(renderStatus(updatedState));
+      console.log("\n" + renderBoard(gameState.value, selectedPosition.value));
+      console.log(renderStatus(gameState.value));
       break;
     }
 
@@ -167,9 +137,9 @@ const handleInput = (input: string) => {
 };
 
 console.log("Heroes of Fright and Panic — CLI");
-console.log(`Map size: ${size}x${size}`);
+console.log(`Map size: ${size}x${size} | Seed: ${seed ?? "random"}`);
 console.log('Type "help" for commands.\n');
-console.log(renderBoard(engine.getGameState(), selectedPosition.value));
-console.log(renderStatus(engine.getGameState()));
+console.log(renderBoard(gameState.value, selectedPosition.value));
+console.log(renderStatus(gameState.value));
 console.log("");
 prompt();

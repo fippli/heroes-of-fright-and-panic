@@ -1,4 +1,4 @@
-import { PieceType } from "@shared/piece";
+import { PieceKind } from "@shared/piece";
 import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import { LandscapeType } from "./Landscape";
@@ -6,7 +6,7 @@ import type { Player } from "./Player";
 import { ResourceMap } from "./ResourceMap";
 import type { TilePosition } from "./Tile";
 
-export { PieceType };
+export { PieceKind };
 
 /**
  * Piece - Client-side piece/unit representation
@@ -14,38 +14,29 @@ export { PieceType };
  */
 export class Piece {
   readonly owner: Player;
-  readonly type: PieceType;
-  readonly boat: boolean = false;
+  readonly kind: PieceKind;
   readonly viewRange: number = 1;
   readonly attackRange: number = 1;
-  readonly upgradeCost: ResourceMap;
   readonly walkableLandscape: LandscapeType[];
-  readonly lootableLandscape: LandscapeType[];
 
   constructor({
-    type,
+    kind,
     viewRange,
     attackRange,
     owner,
-    upgradeCost,
     walkableLandscape,
-    lootableLandscape,
   }: {
-    type: PieceType;
+    kind: PieceKind;
     viewRange?: number;
     attackRange?: number;
     owner: Player;
-    upgradeCost?: ResourceMap;
     walkableLandscape?: LandscapeType[];
-    lootableLandscape?: LandscapeType[];
   }) {
-    this.type = type;
+    this.kind = kind;
     this.viewRange = viewRange ?? 1;
     this.attackRange = attackRange ?? 1;
     this.owner = owner;
-    this.upgradeCost = upgradeCost ?? new ResourceMap({});
     this.walkableLandscape = walkableLandscape ?? [];
-    this.lootableLandscape = lootableLandscape ?? [];
   }
 
   render(
@@ -56,7 +47,7 @@ export class Piece {
     ctx.save();
     const x = Hexagon.x(position.row, position.column) - Hexagon.width / 2;
     const y = Hexagon.y(position.row) - Hexagon.height / 2;
-    imageAssets.pieceImage(this.owner, this.type).render(ctx, x, y);
+    imageAssets.pieceImage(this.owner, this.kind).render(ctx, x, y);
     ctx.restore();
   }
 
