@@ -2,40 +2,39 @@ import { BuildingType } from "../core/Building";
 import { GameImage } from "../core/GameImage";
 import { Hexagon } from "../core/Hexagon";
 import { LandscapeType } from "../core/Landscape";
-import { PieceType } from "../core/Piece";
+import { PieceKind } from "../core/Piece";
 import type { Player } from "../core/Player";
 import { themesApi, type ThemeAsset } from "../lib/theme-api";
 
-const pieceAssetKey = (player: Player, type: PieceType): string => {
+const pieceAssetKey = (player: Player, kind: PieceKind): string => {
   const playerSuffix = player.type === "day" ? "day" : "night";
-  switch (type) {
-    case PieceType.peasant:
+  switch (kind) {
+    case PieceKind.peasant:
       return `peasant_${playerSuffix}`;
-    case PieceType.knight:
-      return `knight_${playerSuffix}`;
-    case PieceType.soldier:
-      return `soldier_${playerSuffix}`;
-    case PieceType.archer:
-      return `archer_${playerSuffix}`;
-    case PieceType.boat:
-      return "boat";
+    case PieceKind.king:
+      return `king_${playerSuffix}`;
+    case PieceKind.priest:
+      return `priest_${playerSuffix}`;
+    case PieceKind.archAngel:
+      return `archAngel_${playerSuffix}`;
     default:
       return "";
   }
 };
 
-const buildingAssetKey = (type: BuildingType): string => {
+const buildingAssetKey = (player: Player, type: BuildingType): string => {
+  const playerSuffix = player.type === "day" ? "day" : "night";
   switch (type) {
     case BuildingType.house:
-      return "house";
+      return `house_${playerSuffix}`;
     case BuildingType.castle:
-      return "castle";
+      return `castle_${playerSuffix}`;
     case BuildingType.tower:
-      return "tower";
-    case BuildingType.boat:
-      return "boat";
-    case BuildingType.farm:
-      return "farm";
+      return `tower_${playerSuffix}`;
+    case BuildingType.wall:
+      return `wall_${playerSuffix}`;
+    case BuildingType.church:
+      return `church_${playerSuffix}`;
     default:
       return "";
   }
@@ -47,6 +46,8 @@ const landscapeAssetKey = (type: LandscapeType): string => {
       return "unexplored";
     case LandscapeType.grass:
       return "grass";
+    case LandscapeType.farm:
+      return "farm";
     case LandscapeType.tree:
       return "tree";
     case LandscapeType.sand:
@@ -86,13 +87,13 @@ export class ThemeImageAssets {
     return new ThemeImageAssets(assets);
   }
 
-  pieceImage(player: Player, type: PieceType): GameImage | undefined {
-    const key = `piece/${pieceAssetKey(player, type)}`;
+  pieceImage(player: Player, kind: PieceKind): GameImage | undefined {
+    const key = `piece/${pieceAssetKey(player, kind)}`;
     return this.imageCache.get(key);
   }
 
-  buildingImage(type: BuildingType): GameImage | undefined {
-    const key = `building/${buildingAssetKey(type)}`;
+  buildingImage(player: Player, type: BuildingType): GameImage | undefined {
+    const key = `building/${buildingAssetKey(player, type)}`;
     return this.imageCache.get(key);
   }
 

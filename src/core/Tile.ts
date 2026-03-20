@@ -200,11 +200,7 @@ export class Tile {
     );
   }
 
-  canLoot(tile: Tile): boolean {
-    if (tile.landscape === null) return false;
-    if (tile.landscape.lootDrop === undefined) return false;
-    return (
-      this.piece?.lootableLandscape.includes(tile.landscape.type) ?? false
-    );
+  canLoot(_tile: Tile): boolean {
+    return false;
   }
 }

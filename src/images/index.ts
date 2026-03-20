@@ -2,7 +2,7 @@ import { BuildingType } from "../core/Building";
 import { GameImage } from "../core/GameImage";
 import { Hexagon } from "../core/Hexagon";
 import { LandscapeType } from "../core/Landscape";
-import { PieceType } from "../core/Piece";
+import { PieceKind } from "../core/Piece";
 import type { Player } from "../core/Player";
 import type { ThemeImageAssets } from "./theme-image-assets";
 
@@ -40,15 +40,27 @@ const archerImage = new GameImage({
   height: Hexagon.height,
 });
 
-//
-// Buildings
-//
-
-const boatPieceImage = new GameImage({
-  src: "/img/boat-piece.png",
+const kingImage = new GameImage({
+  src: "/img/knight.png",
   width: Hexagon.width,
   height: Hexagon.height,
 });
+
+const priestImage = new GameImage({
+  src: "/img/peasant.png",
+  width: Hexagon.width,
+  height: Hexagon.height,
+});
+
+const archAngelImage = new GameImage({
+  src: "/img/knight.png",
+  width: Hexagon.width,
+  height: Hexagon.height,
+});
+
+//
+// Buildings
+//
 
 const houseImage = new GameImage({
   src: "/img/house.png",
@@ -67,14 +79,14 @@ const towerImage = new GameImage({
   height: Hexagon.height,
 });
 
-const boatImage = new GameImage({
-  src: "/img/boat.png",
+const wallImage = new GameImage({
+  src: "/img/tower.png",
   width: Hexagon.width,
   height: Hexagon.height,
 });
 
-const farmImage = new GameImage({
-  src: "/img/farm.png",
+const churchImage = new GameImage({
+  src: "/img/castle.png",
   width: Hexagon.width,
   height: Hexagon.height,
 });
@@ -116,25 +128,28 @@ const mountainImage = new GameImage({
   height: Hexagon.height,
 });
 
-const staticPieceImage = (player: Player, type: PieceType): GameImage => {
-  switch (type) {
-    case PieceType.peasant: {
+const farmImage = new GameImage({
+  src: "/img/grass.svg",
+  width: Hexagon.width,
+  height: Hexagon.height,
+});
+
+const staticPieceImage = (player: Player, kind: PieceKind): GameImage => {
+  switch (kind) {
+    case PieceKind.peasant: {
       return player.type === "day" ? peasantImage : skeletonImage;
     }
-    case PieceType.knight: {
-      return player.type === "day" ? knightImage : skeletonImage;
+    case PieceKind.king: {
+      return player.type === "day" ? kingImage : skeletonImage;
     }
-    case PieceType.soldier: {
-      return player.type === "day" ? soldierImage : skeletonImage;
+    case PieceKind.priest: {
+      return player.type === "day" ? priestImage : skeletonImage;
     }
-    case PieceType.archer: {
-      return player.type === "day" ? archerImage : skeletonImage;
-    }
-    case PieceType.boat: {
-      return boatPieceImage;
+    case PieceKind.archAngel: {
+      return player.type === "day" ? archAngelImage : skeletonImage;
     }
     default: {
-      throw new Error(`Invalid piece type: ${type}`);
+      return peasantImage;
     }
   }
 };
@@ -150,14 +165,14 @@ const staticBuildingImage = (type: BuildingType): GameImage => {
     case BuildingType.tower: {
       return towerImage;
     }
-    case BuildingType.boat: {
-      return boatImage;
+    case BuildingType.wall: {
+      return wallImage;
     }
-    case BuildingType.farm: {
-      return farmImage;
+    case BuildingType.church: {
+      return churchImage;
     }
     default: {
-      throw new Error(`Invalid building type: ${type}`);
+      return houseImage;
     }
   }
 };
@@ -169,6 +184,9 @@ const staticLandscapeImage = (type: LandscapeType): GameImage => {
     }
     case LandscapeType.grass: {
       return grassImage;
+    }
+    case LandscapeType.farm: {
+      return farmImage;
     }
     case LandscapeType.tree: {
       return treeImage;
@@ -183,7 +201,7 @@ const staticLandscapeImage = (type: LandscapeType): GameImage => {
       return mountainImage;
     }
     default: {
-      throw new Error(`Invalid landscape type: ${type}`);
+      return grassImage;
     }
   }
 };
@@ -195,14 +213,14 @@ export class ImageAssets {
     this.theme = theme;
   }
 
-  pieceImage(player: Player, type: PieceType): GameImage {
-    const themeImage = this.theme?.pieceImage(player, type);
+  pieceImage(player: Player, kind: PieceKind): GameImage {
+    const themeImage = this.theme?.pieceImage(player, kind);
     if (themeImage !== undefined) return themeImage;
-    return staticPieceImage(player, type);
+    return staticPieceImage(player, kind);
   }
 
-  buildingImage(type: BuildingType): GameImage {
-    const themeImage = this.theme?.buildingImage(type);
+  buildingImage(player: Player, type: BuildingType): GameImage {
+    const themeImage = this.theme?.buildingImage(player, type);
     if (themeImage !== undefined) return themeImage;
     return staticBuildingImage(type);
   }

@@ -1,162 +1,121 @@
-import { Piece } from "@shared/piece/index.ts";
-import type { Player } from "@shared/player/index.ts";
+import type { PlayerType } from "@shared/piece/index.ts";
 import { ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum BuildingType {
   house = "house",
-  castle = "castle",
   tower = "tower",
-  boat = "boat",
-  farm = "farm",
+  castle = "castle",
+  wall = "wall",
+  church = "church",
 }
 
 export class Building {
   readonly type: BuildingType;
+  readonly owner: PlayerType;
   readonly cost: ResourceMap;
-  readonly production: ResourceMap;
-  readonly owner: Player;
-  readonly populated: boolean = false;
-  readonly walkable: boolean = false;
   readonly viewRange: number;
+  readonly defense: number;
+  readonly walkableByOwner: boolean;
+  readonly walkableByEnemy: boolean;
 
   constructor({
     type,
-    production,
-    cost,
-    walkable,
-    viewRange,
     owner,
+    cost,
+    viewRange = 1,
+    defense = 1,
+    walkableByOwner = true,
+    walkableByEnemy = true,
   }: {
     type: BuildingType;
-    walkable: boolean;
-    production: ResourceMap;
+    owner: PlayerType;
     cost: ResourceMap;
     viewRange?: number;
-    owner: Player;
+    defense?: number;
+    walkableByOwner?: boolean;
+    walkableByEnemy?: boolean;
   }) {
-    this.walkable = walkable;
-    this.viewRange = viewRange ?? 1;
     this.type = type;
-    this.cost = cost;
-    this.production = production;
     this.owner = owner;
+    this.cost = cost;
+    this.viewRange = viewRange;
+    this.defense = defense;
+    this.walkableByOwner = walkableByOwner;
+    this.walkableByEnemy = walkableByEnemy;
   }
 
-  static house(owner: Player) {
+  static house(owner: PlayerType): Building {
     return new Building({
       type: BuildingType.house,
-      production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 2 }),
-      walkable: true,
       owner,
+      cost: Building.costOf(BuildingType.house),
+      viewRange: 1,
     });
   }
 
-  static castle(owner: Player) {
-    return new Building({
-      type: BuildingType.castle,
-      production: new ResourceMap({ food: 0 }),
-      cost: new ResourceMap({ wood: 10, stone: 10 }),
-      walkable: true,
-      viewRange: 3,
-      owner,
-    });
-  }
-
-  static farm(owner: Player) {
-    return new Building({
-      type: BuildingType.farm,
-      production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 1 }),
-      walkable: true,
-      owner,
-    });
-  }
-
-  static tower(owner: Player) {
+  static tower(owner: PlayerType): Building {
     return new Building({
       type: BuildingType.tower,
-      production: new ResourceMap({ food: 0 }),
-      cost: new ResourceMap({ wood: 1, stone: 3 }),
-      walkable: true,
+      owner,
+      cost: Building.costOf(BuildingType.tower),
       viewRange: 4,
-      owner,
     });
   }
 
-  static boat(owner: Player) {
+  static castle(owner: PlayerType): Building {
     return new Building({
-      type: BuildingType.boat,
-      production: new ResourceMap({ food: 1 }),
-      cost: new ResourceMap({ wood: 0, stone: 0, gold: 0 }),
-      walkable: true,
+      type: BuildingType.castle,
       owner,
+      cost: new ResourceMap({}),
+      viewRange: 3,
     });
   }
 
-  static price(buildingType: BuildingType): ResourceMap {
+  static wall(owner: PlayerType): Building {
+    return new Building({
+      type: BuildingType.wall,
+      owner,
+      cost: Building.costOf(BuildingType.wall),
+      viewRange: 0,
+      walkableByOwner: true,
+      walkableByEnemy: false,
+    });
+  }
+
+  static church(owner: PlayerType): Building {
+    return new Building({
+      type: BuildingType.church,
+      owner,
+      cost: Building.costOf(BuildingType.church),
+      viewRange: 1,
+    });
+  }
+
+  static costOf(buildingType: BuildingType): ResourceMap {
     switch (buildingType) {
-      case BuildingType.house: {
+      case BuildingType.house:
+        return new ResourceMap({ wood: 1 });
+      case BuildingType.tower:
+        return new ResourceMap({ stone: 10 });
+      case BuildingType.wall:
+        return new ResourceMap({ stone: 1 });
+      case BuildingType.church:
+        return new ResourceMap({ wood: 3, stone: 3 });
+      case BuildingType.castle:
         return new ResourceMap({});
-      }
-      case BuildingType.tower: {
+      default:
         return new ResourceMap({});
-      }
-      case BuildingType.castle: {
-        return new ResourceMap({});
-      }
-      case BuildingType.boat: {
-        return new ResourceMap({});
-      }
-      default: {
-        return new ResourceMap({});
-      }
     }
   }
 
-  static build(buildingType: BuildingType, owner: Player) {
-    if (!owner.canAfford(Building.price(buildingType))) {
-      return undefined;
+  isWalkableBy(playerType: PlayerType): boolean {
+    if (playerType === this.owner) {
+      return this.walkableByOwner;
     }
-
-    owner.pay(Building.price(buildingType));
-
-    switch (buildingType) {
-      case BuildingType.house: {
-        return Building.house(owner);
-      }
-      case BuildingType.tower: {
-        return Building.tower(owner);
-      }
-
-      case BuildingType.castle: {
-        return Building.castle(owner);
-      }
-      case BuildingType.boat: {
-        return Building.boat(owner);
-      }
-      case BuildingType.farm: {
-        return Building.farm(owner);
-      }
-      default: {
-        throw new Error(`Invalid building type: ${buildingType}`);
-      }
-    }
+    return this.walkableByEnemy;
   }
 
-  spawn(owner: Player) {
-    switch (this.type) {
-      case BuildingType.house: {
-        return Piece.peasant(owner);
-      }
-
-      default: {
-        throw new Error(`Invalid building type: ${this.type}`);
-      }
-    }
-  }
-
-  isOwnedBy(player: Player) {
-    return this.owner === player;
+  isOwnedBy(playerType: PlayerType): boolean {
+    return this.owner === playerType;
   }
 }

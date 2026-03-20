@@ -2,10 +2,12 @@
 import type { Tile } from "./tile.ts";
 import { GameMap } from "./map.ts";
 import { weightedRandom } from "@shared/utils/weightedRandom.ts";
+import type { RandomFunction } from "@shared/utils/random.ts";
 import { ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum LandscapeType {
   grass = "grass",
+  farm = "farm",
   tree = "tree",
   sand = "sand",
   water = "water",
@@ -31,6 +33,12 @@ export class Landscape {
   static grass() {
     return {
       type: LandscapeType.grass,
+    };
+  }
+
+  static farm() {
+    return {
+      type: LandscapeType.farm,
     };
   }
 
@@ -60,7 +68,7 @@ export class Landscape {
     };
   }
 
-  static generate(neighbors: Tile[]): Landscape {
+  static generate(neighbors: Tile[], random: RandomFunction = Math.random): Landscape {
     const waterSeed = 0.2;
     const grassSeed = 0.8;
 
@@ -87,6 +95,7 @@ export class Landscape {
       return weightedRandom(
         [Landscape.grass(), Landscape.water()],
         [0.95, 0.01],
+        random,
       );
     }
 
@@ -94,11 +103,13 @@ export class Landscape {
       return weightedRandom(
         [Landscape.water(), Landscape.grass()],
         [grassSeed, waterSeed],
+        random,
       );
     } else {
       return weightedRandom(
         [Landscape.water(), Landscape.grass()],
         [waterSeed, grassSeed],
+        random,
       );
     }
   }
@@ -170,7 +181,7 @@ export class Landscape {
     });
   }
 
-  static placeTrees(tiles: Tile[]) {
+  static placeTrees(tiles: Tile[], random: RandomFunction = Math.random) {
     return tiles.map((tile) => {
       if (tile.landscape?.type === LandscapeType.grass) {
         return weightedRandom(
@@ -179,6 +190,7 @@ export class Landscape {
             { ...tile, landscape: Landscape.grass() },
           ],
           [0.7, 0.3],
+          random,
         );
       } else {
         return tile;
@@ -186,7 +198,7 @@ export class Landscape {
     });
   }
 
-  static placeMountains(tiles: Tile[]) {
+  static placeMountains(tiles: Tile[], random: RandomFunction = Math.random) {
     return tiles.map((tile) => {
       if (tile.landscape?.type === LandscapeType.grass) {
         return weightedRandom(
@@ -195,6 +207,7 @@ export class Landscape {
             { ...tile, landscape: Landscape.grass() },
           ],
           [0.2, 0.8],
+          random,
         );
       } else {
         return tile;

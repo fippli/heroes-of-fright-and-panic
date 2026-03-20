@@ -1,71 +1,51 @@
-import { compose } from "../utils/compose.ts";
-import { PieceType } from "@shared/piece/index.ts";
-import { BuildingType } from "@shared/building/index.ts";
 import { ResourceMap } from "@shared/player/resource-map.ts";
-import type { Tile } from "@shared/map/tile.ts";
-import { GameMap } from "@shared/map/map.ts";
+import { Research } from "@shared/research/index.ts";
+import type { PlayerType } from "@shared/piece/index.ts";
 
 export class Player {
-  readonly type: "day" | "night";
+  readonly type: PlayerType;
   readonly resources: ResourceMap;
+  readonly research: Research;
 
   constructor({
     type,
     resources,
+    research,
   }: {
-    type: "day" | "night";
+    type: PlayerType;
     resources?: ResourceMap;
+    research?: Research;
   }) {
     this.type = type;
     this.resources = resources ?? new ResourceMap({});
+    this.research = research ?? new Research({});
   }
 
   withResources(resources: ResourceMap): Player {
-    return new Player({ type: this.type, resources });
+    return new Player({
+      type: this.type,
+      resources,
+      research: this.research,
+    });
+  }
+
+  withResearch(research: Research): Player {
+    return new Player({
+      type: this.type,
+      resources: this.resources,
+      research,
+    });
   }
 
   collect(loot: ResourceMap): Player {
     return this.withResources(this.resources.add(loot));
   }
 
-  canAfford(cost: ResourceMap) {
-    const canAfford = Object.keys(cost).every(
-      (key) =>
-        this.resources[key as keyof ResourceMap] >=
-        cost[key as keyof ResourceMap],
-    );
-
-    if (!canAfford) {
-      console.log("Cannot afford", cost);
-    }
-
-    return canAfford;
+  canAfford(cost: ResourceMap): boolean {
+    return this.resources.canAfford(cost);
   }
 
   pay(cost: ResourceMap): Player {
     return this.withResources(this.resources.subtract(cost));
-  }
-
-  produce(tiles: Tile[]): ResourceMap {
-    const activeFarms = compose<Tile[]>(
-      (xs) => xs.filter((tile) => tile.piece?.type === PieceType.peasant),
-      (xs) => xs.filter((tile) => tile.piece?.owner === this),
-      (xs) => xs.filter((tile) => tile.building?.type === BuildingType.house),
-      (xs) => xs.map((tile) => GameMap.findNeighbors(tile, tiles)).flat(),
-      (xs) => xs.filter((tile) => tile.building?.type === BuildingType.farm),
-    )(tiles);
-
-    console.log(activeFarms);
-
-    const result = new ResourceMap({
-      food: activeFarms.reduce(
-        (acc, farm) => acc + farm.building!.production.food,
-        0,
-      ),
-    });
-
-    console.log(result);
-
-    return result;
   }
 }

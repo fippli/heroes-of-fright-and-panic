@@ -45,8 +45,22 @@ export const NewGamePage = () => {
 
       setIsCheckingAuth(false);
 
-      // Load available themes
-      themesApi.getAll().then(setThemes).catch(console.error);
+      // Load available themes and default to "Default" theme
+      themesApi
+        .getAll()
+        .then((loadedThemes) => {
+          setThemes(loadedThemes);
+          const defaultTheme = loadedThemes.find(
+            (theme) => theme.name === "Default",
+          );
+          if (defaultTheme !== undefined) {
+            setFormState((current) => ({
+              ...current,
+              themeId: defaultTheme.id,
+            }));
+          }
+        })
+        .catch(console.error);
     })();
 
     return () => {
@@ -155,29 +169,27 @@ export const NewGamePage = () => {
           </select>
         </div>
 
-        {themes.length !== 0 && (
-          <div className="form-group">
-            <label htmlFor="theme">Theme:</label>
-            <select
-              id="theme"
-              name="theme"
-              value={formState.themeId}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  themeId: event.target.value,
-                }))
-              }
-            >
-              <option value="">Default</option>
-              {themes.map((theme) => (
-                <option key={theme.id} value={theme.id}>
-                  {theme.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className="form-group">
+          <label htmlFor="theme">Theme:</label>
+          <select
+            id="theme"
+            name="theme"
+            value={formState.themeId}
+            onChange={(event) =>
+              setFormState((current) => ({
+                ...current,
+                themeId: event.target.value,
+              }))
+            }
+          >
+            <option value="">None</option>
+            {themes.map((theme) => (
+              <option key={theme.id} value={theme.id}>
+                {theme.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="form-group">
           <label htmlFor="invite">Invite:</label>

@@ -1,6 +1,6 @@
 import type { BuildingType } from "./Building";
 import type { LandscapeType } from "./Landscape";
-import type { PieceType } from "./Piece";
+import type { PieceKind } from "./Piece";
 import type { ResourceMap } from "./ResourceMap";
 
 export type PlayerType = "day" | "night";
@@ -11,7 +11,7 @@ export type GameAction = {
   position?: { row: number; column: number };
   selectedPosition?: { row: number; column: number };
   buildingType?: BuildingType;
-  targetType?: PieceType;
+  targetKind?: PieceKind;
 };
 
 type GameClock = {
@@ -22,7 +22,7 @@ type GameClock = {
 
 export type ServerPlayer = {
   type: PlayerType;
-  resources: { wood: number; gold: number; stone: number; food: number };
+  resources: { wood: number; gold: number; stone: number; food: number; iron?: number; faith?: number };
 };
 
 export type ServerTile = {
@@ -31,20 +31,25 @@ export type ServerTile = {
   landscape: { type: LandscapeType; lootDrop?: ResourceMap } | null;
   building: {
     type: BuildingType;
-    production?: ResourceMap;
     cost?: ResourceMap;
-    walkable?: boolean;
+    walkableByOwner?: boolean;
+    walkableByEnemy?: boolean;
     viewRange?: number;
-    owner?: { type: PlayerType };
+    defense?: number;
+    owner?: PlayerType;
   } | null;
   piece: {
-    type: PieceType;
+    kind: PieceKind;
     viewRange?: number;
     attackRange?: number;
-    owner?: { type: PlayerType };
-    upgradeCost?: ResourceMap;
+    owner?: PlayerType;
+    hearts?: number;
+    maxHearts?: number;
+    baseAttack?: number;
+    baseDefense?: number;
+    equipment?: unknown[];
+    steed?: unknown;
     walkableLandscape?: LandscapeType[];
-    lootableLandscape?: LandscapeType[];
   } | null;
 };
 
