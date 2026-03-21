@@ -1,6 +1,6 @@
 import { LandscapeType } from "@shared/map/landscape";
 import { Hexagon } from "./Hexagon";
-import { ResourceMap } from "./ResourceMap";
+import { ResourceMap } from "@shared/player/resource-map";
 import type { TilePosition } from "./Tile";
 import { ImageAssets } from "../images";
 

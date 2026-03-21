@@ -1,10 +1,7 @@
 import { BuildingType } from "@shared/building/index.ts";
 import { PieceType } from "@shared/piece/index.ts";
 
-export type TilePosition = {
-  row: number;
-  column: number;
-};
+export type { TilePosition } from "@shared/map/tile.ts";
 
 export type PlayerType = "day" | "night";
 

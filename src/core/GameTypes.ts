@@ -1,9 +1,9 @@
 import type { BuildingType } from "./Building";
 import type { LandscapeType } from "./Landscape";
 import type { PieceType } from "./Piece";
-import type { ResourceMap } from "./ResourceMap";
+import type { ResourceMap } from "@shared/player/resource-map";
 
-export type PlayerType = "day" | "night";
+export type { PlayerType } from "@shared/actions/index";
 
 export type GameAction = {
   type: string;

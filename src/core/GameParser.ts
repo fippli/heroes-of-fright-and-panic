@@ -2,8 +2,8 @@ import { Building } from "./Building";
 import { Clock } from "./Clock";
 import { Landscape } from "./Landscape";
 import { Piece } from "./Piece";
-import { Player } from "./Player";
-import { ResourceMap } from "./ResourceMap";
+import { Player } from "@shared/player";
+import { ResourceMap } from "@shared/player/resource-map";
 import { Tile } from "./Tile";
 import type { ServerGameState, ServerTile, ServerPlayer } from "./GameTypes";
 

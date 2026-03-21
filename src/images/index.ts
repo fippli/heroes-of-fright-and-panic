@@ -3,7 +3,7 @@ import { GameImage } from "../core/GameImage";
 import { Hexagon } from "../core/Hexagon";
 import { LandscapeType } from "../core/Landscape";
 import { PieceType } from "../core/Piece";
-import type { Player } from "../core/Player";
+import type { Player } from "@shared/player";
 
 //
 // Pieces
