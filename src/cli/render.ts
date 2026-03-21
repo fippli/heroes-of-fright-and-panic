@@ -30,21 +30,19 @@ const landscapeChar = (tile: Tile): string => {
 const pieceChar = (tile: Tile): string | null => {
   if (tile.piece == null) return null;
 
-  const isDay = tile.piece.owner?.type === "day";
+  const isDay = tile.piece.owner === "day";
   const color = isDay ? "\x1b[1;33m" : "\x1b[1;35m";
   const reset = "\x1b[0m";
 
-  switch (tile.piece.type) {
+  switch (tile.piece.kind) {
     case "peasant":
       return `${color}p${reset}`;
-    case "soldier":
-      return `${color}s${reset}`;
-    case "knight":
-      return `${color}k${reset}`;
-    case "archer":
-      return `${color}a${reset}`;
-    case "boat":
-      return `${color}b${reset}`;
+    case "king":
+      return `${color}K${reset}`;
+    case "priest":
+      return `${color}r${reset}`;
+    case "archAngel":
+      return `${color}A${reset}`;
     default:
       return `${color}?${reset}`;
   }
@@ -53,7 +51,7 @@ const pieceChar = (tile: Tile): string | null => {
 const buildingChar = (tile: Tile): string | null => {
   if (tile.building == null) return null;
 
-  const isDay = tile.building.owner?.type === "day";
+  const isDay = tile.building.owner === "day";
   const color = isDay ? "\x1b[1;33m" : "\x1b[1;35m";
   const reset = "\x1b[0m";
 
@@ -64,10 +62,10 @@ const buildingChar = (tile: Tile): string | null => {
       return `${color}C${reset}`;
     case "tower":
       return `${color}T${reset}`;
-    case "farm":
-      return `${color}F${reset}`;
-    case "boat":
-      return `${color}B${reset}`;
+    case "wall":
+      return `${color}W${reset}`;
+    case "church":
+      return `${color}X${reset}`;
     default:
       return `${color}?${reset}`;
   }
@@ -223,11 +221,11 @@ export const renderTileInfo = (tile: Tile): string => {
   }
 
   if (tile.building != null) {
-    parts.push(`building: ${tile.building.type} [${tile.building.owner?.type}]`);
+    parts.push(`building: ${tile.building.type} [${tile.building.owner}]`);
   }
 
   if (tile.piece != null) {
-    parts.push(`unit: ${tile.piece.type} [${tile.piece.owner?.type}]`);
+    parts.push(`unit: ${tile.piece.kind} [${tile.piece.owner}]`);
   }
 
   return parts.join(" | ");

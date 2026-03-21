@@ -1,855 +1,1041 @@
-import type { Game } from "./types.ts";
-import type { Tile } from "../map/tile.ts";
-import type { TilePosition, PlayerType, ActionResult } from "../actions/index.ts";
-import { GameMap } from "../map/map.ts";
-import { Piece, PieceType } from "../piece/index.ts";
+import type {
+  TilePosition,
+  ActionResult,
+  MoveAction,
+  BuildAction,
+  SpawnPeasantAction,
+  CraftEquipmentAction,
+  BuySteedAction,
+  TrainPriestAction,
+  HealAction,
+  ResearchAction,
+  EnterTowerAction,
+  SummonArchAngelAction,
+  AttackAction,
+  GameAction,
+} from "../actions/index.ts";
 import { Building, BuildingType } from "../building/index.ts";
+import { resolveCombat } from "../combat/index.ts";
+import { Equipment, EquipmentType } from "../equipment/index.ts";
+import * as hex from "../map/hex.ts";
+import { LandscapeType, Landscape } from "../map/landscape.ts";
+import type { Tile } from "../map/tile.ts";
+import type { PlayerType } from "../piece/index.ts";
+import { Piece, PieceKind } from "../piece/index.ts";
 import { Player } from "../player/index.ts";
 import { ResourceMap } from "../player/resource-map.ts";
-import { LandscapeType, Landscape } from "../map/landscape.ts";
+import { calculateProduction, countPrayingPriests } from "../production/index.ts";
+import { Research, ResearchType, SPEED_LEVELS } from "../research/index.ts";
+import { Steed, SteedType } from "../steed/index.ts";
+import type { Game, GameClock } from "./types.ts";
+
+const ARCH_ANGEL_PRIEST_REQUIREMENT = 10;
+const PHASE_DURATION_HOURS = 12;
 
 /**
- * GameEngine handles all game logic on the server side.
- * The client should only render state and send user inputs.
+ * Pure game engine. Every method returns a new Game state.
+ * No mutation of the input game object.
  */
-export class GameEngine {
-  private readonly game: Game;
 
-  constructor(game: Game) {
-    this.game = game;
+// ============================================
+// CLOCK / TIME MANAGEMENT
+// ============================================
+
+const isDay = (time: number): boolean => time >= 6 && time < 18;
+
+const activePlayer = (time: number): PlayerType =>
+  isDay(time) ? "day" : "night";
+
+const minutesPerAction = (game: Game, playerType: PlayerType): number => {
+  const player = getPlayer(game, playerType);
+  const level = SPEED_LEVELS.find(
+    (entry) => entry.level === player.research.speedLevel,
+  );
+  return level !== undefined ? level.minutesPerAction : 60;
+};
+
+const advanceClock = (game: Game, playerType: PlayerType): Game => {
+  const minutes = minutesPerAction(game, playerType);
+  const hoursToAdvance = minutes / 60;
+  const newTime = (game.clock.time * 60 + minutes) / 60;
+  const wrappedTime = newTime % 24;
+
+  const oldIsDay = isDay(game.clock.time);
+  const newIsDay = isDay(wrappedTime);
+
+  // Check for phase transitions
+  const crossedDawn = !oldIsDay && newIsDay;
+  const crossedDusk = oldIsDay && !newIsDay;
+
+  const newClock: GameClock = {
+    time: wrappedTime,
+    hasDawned: crossedDawn ? true : game.clock.hasDawned,
+    hasDusked: crossedDusk ? true : game.clock.hasDusked,
+  };
+
+  const afterClock: Game = {
+    ...game,
+    clock: newClock,
+    currentPlayer: activePlayer(wrappedTime),
+  };
+
+  // Trigger production on phase transition
+  if (crossedDawn) {
+    return triggerProduction(afterClock, "day");
+  }
+  if (crossedDusk) {
+    return triggerProduction(afterClock, "night");
   }
 
-  // ============================================
-  // CLOCK / TIME MANAGEMENT
-  // ============================================
+  return afterClock;
+};
 
-  private tick(): void {
-    this.game.clock.time = (this.game.clock.time + 1) % 24;
-    this.checkTimeTransitions();
-  }
+const triggerProduction = (game: Game, playerType: PlayerType): Game => {
+  const player = getPlayer(game, playerType);
+  const production = calculateProduction(playerType, game.tiles, player.research);
+  const updatedPlayer = player.collect(production);
+  return updatePlayer(game, playerType, updatedPlayer);
+};
 
-  private isDay(): boolean {
-    return this.game.clock.time >= 6 && this.game.clock.time < 18;
-  }
+// ============================================
+// PLAYER UTILITIES
+// ============================================
 
-  private isNight(): boolean {
-    return !this.isDay();
-  }
+const getPlayer = (game: Game, playerType: PlayerType): Player =>
+  playerType === "day" ? game.dayPlayer : game.nightPlayer;
 
-  private checkTimeTransitions(): void {
-    // Check for dawn (transition to day)
-    if (this.isDay() && !this.game.clock.hasDawned) {
-      this.onDawn();
-      this.game.clock.hasDawned = true;
-      this.game.clock.hasDusked = false;
-    }
+const updatePlayer = (
+  game: Game,
+  playerType: PlayerType,
+  player: Player,
+): Game =>
+  playerType === "day"
+    ? { ...game, dayPlayer: player }
+    : { ...game, nightPlayer: player };
 
-    // Check for dusk (transition to night)
-    if (this.isNight() && !this.game.clock.hasDusked) {
-      this.onDusk();
-      this.game.clock.hasDusked = true;
-      this.game.clock.hasDawned = false;
-    }
+// ============================================
+// TILE UTILITIES
+// ============================================
 
-    // Update current player based on time
-    this.game.currentPlayer = this.isDay() ? "day" : "night";
-  }
+const findTile = (
+  tiles: ReadonlyArray<Tile>,
+  position: TilePosition,
+): Tile | undefined =>
+  tiles.find(
+    (tile) => tile.row === position.row && tile.column === position.column,
+  );
 
-  private onDawn(): void {
-    // Day player produces resources at dawn
-    const production = this.produceResources(this.game.dayPlayer);
-    this.game.dayPlayer = this.game.dayPlayer.withResources(
-      this.addResources(this.game.dayPlayer.resources, production),
-    );
-  }
+const replaceTile = (
+  tiles: ReadonlyArray<Tile>,
+  newTile: Tile,
+): ReadonlyArray<Tile> =>
+  tiles.map((tile) =>
+    tile.row === newTile.row && tile.column === newTile.column ? newTile : tile,
+  );
 
-  private onDusk(): void {
-    // Night player produces resources at dusk
-    const production = this.produceResources(this.game.nightPlayer);
-    this.game.nightPlayer = this.game.nightPlayer.withResources(
-      this.addResources(this.game.nightPlayer.resources, production),
-    );
-  }
+const getNeighborTiles = (
+  tiles: ReadonlyArray<Tile>,
+  position: TilePosition,
+): Tile[] => hex.findNeighbors(position, tiles as Tile[]);
 
-  // ============================================
-  // RESOURCE MANAGEMENT
-  // ============================================
-
-  private produceResources(player: Player): ResourceMap {
-    // Find active farms: farms adjacent to houses that have a peasant owned by this player
-    const housesWithPeasants = this.game.tiles.filter(
-      (tile) =>
-        tile.building?.type === BuildingType.house &&
-        tile.piece?.type === PieceType.peasant &&
-        tile.piece?.owner?.type === player.type,
-    );
-
-    const activeFarms = housesWithPeasants.flatMap((houseTile) => {
-      const neighbors = this.getNeighbors(houseTile);
-      return neighbors.filter(
-        (tile) =>
-          tile.building?.type === BuildingType.farm &&
-          tile.building?.owner?.type === player.type,
+const getTilesInRange = (
+  tiles: ReadonlyArray<Tile>,
+  center: TilePosition,
+  range: number,
+): ReadonlyArray<TilePosition> =>
+  Array.from({ length: range }, (_, index) => index).reduce<{
+    result: TilePosition[];
+    currentLayer: TilePosition[];
+  }>(
+    (acc, _) => {
+      const nextLayer = acc.currentLayer.flatMap((pos) =>
+        getNeighborTiles(tiles, pos)
+          .filter(
+            (neighbor) =>
+              !acc.result.some(
+                (existing) =>
+                  existing.row === neighbor.row &&
+                  existing.column === neighbor.column,
+              ),
+          )
+          .map((neighbor) => ({ row: neighbor.row, column: neighbor.column })),
       );
-    });
-
-    const foodProduction = activeFarms.reduce((acc, farm) => {
-      return acc + (farm.building?.production?.food ?? 0);
-    }, 0);
-
-    return new ResourceMap({ food: foodProduction });
-  }
-
-  private addResources(current: ResourceMap, toAdd: ResourceMap): ResourceMap {
-    return new ResourceMap({
-      wood: (current.wood ?? 0) + (toAdd.wood ?? 0),
-      stone: (current.stone ?? 0) + (toAdd.stone ?? 0),
-      gold: (current.gold ?? 0) + (toAdd.gold ?? 0),
-      food: (current.food ?? 0) + (toAdd.food ?? 0),
-    });
-  }
-
-  private subtractResources(
-    current: ResourceMap,
-    toSubtract: ResourceMap,
-  ): ResourceMap {
-    return new ResourceMap({
-      wood: (current.wood ?? 0) - (toSubtract.wood ?? 0),
-      stone: (current.stone ?? 0) - (toSubtract.stone ?? 0),
-      gold: (current.gold ?? 0) - (toSubtract.gold ?? 0),
-      food: (current.food ?? 0) - (toSubtract.food ?? 0),
-    });
-  }
-
-  private canAfford(player: Player, cost: ResourceMap): boolean {
-    return (
-      (player.resources.wood ?? 0) >= (cost.wood ?? 0) &&
-      (player.resources.stone ?? 0) >= (cost.stone ?? 0) &&
-      (player.resources.gold ?? 0) >= (cost.gold ?? 0) &&
-      (player.resources.food ?? 0) >= (cost.food ?? 0)
-    );
-  }
-
-  private getPlayer(playerType: PlayerType): Player {
-    return playerType === "day" ? this.game.dayPlayer : this.game.nightPlayer;
-  }
-
-  private updatePlayer(playerType: PlayerType, player: Player): void {
-    if (playerType === "day") {
-      this.game.dayPlayer = player;
-    } else {
-      this.game.nightPlayer = player;
-    }
-  }
-
-  // ============================================
-  // TILE UTILITIES
-  // ============================================
-
-  private findTile(position: TilePosition): Tile | undefined {
-    return this.game.tiles.find(
-      (tile) => tile.row === position.row && tile.column === position.column,
-    );
-  }
-
-  private getNeighbors(tile: Tile | TilePosition): Tile[] {
-    return this.game.tiles.filter((t) =>
-      GameMap.isNeighborTo(t, { row: tile.row, column: tile.column }),
-    );
-  }
-
-  private replaceTile(newTile: Tile): void {
-    this.game.tiles = this.game.tiles.map((t) =>
-      t.row === newTile.row && t.column === newTile.column ? newTile : t,
-    );
-  }
-
-  private getTilesInRange(center: TilePosition, range: number): TilePosition[] {
-    return Array.from({ length: range }, (_, index) => index).reduce<{
-      result: TilePosition[];
-      currentLayer: TilePosition[];
-    }>(
-      (acc, _) => {
-        const nextLayer = acc.currentLayer.flatMap((pos) =>
-          this.getNeighbors(pos)
-            .filter(
-              (neighbor) =>
-                !acc.result.some(
-                  (existing) =>
-                    existing.row === neighbor.row &&
-                    existing.column === neighbor.column,
-                ),
-            )
-            .map((neighbor) => ({ row: neighbor.row, column: neighbor.column })),
-        );
-        return {
-          result: [...acc.result, ...nextLayer],
-          currentLayer: nextLayer,
-        };
-      },
-      { result: [center], currentLayer: [center] },
-    ).result;
-  }
-
-  // ============================================
-  // ACTION HANDLERS
-  // ============================================
-
-  /**
-   * Handle a click action - selecting tiles, moving pieces, looting
-   */
-  handleClick(
-    playerType: PlayerType,
-    position: TilePosition,
-    selectedPosition?: TilePosition,
-  ): ActionResult {
-    // Validate it's this player's turn
-    if (this.game.currentPlayer !== playerType) {
-      return { success: false, error: "Not your turn" };
-    }
-
-    const clickedTile = this.findTile(position);
-    if (!clickedTile) {
-      return { success: false, error: "Invalid tile position" };
-    }
-
-    const selectedTile = selectedPosition
-      ? this.findTile(selectedPosition)
-      : undefined;
-
-    // If clicking on a tile with our piece, just select it (client handles this)
-    if (clickedTile.piece?.owner?.type === playerType) {
-      return { success: true, message: "Tile selected" };
-    }
-
-    // If we have a selected tile with a piece, try to move or loot
-    if (selectedTile?.piece?.owner?.type === playerType) {
-      const isNeighbor = GameMap.isNeighborTo(clickedTile, selectedTile);
-
-      if (!isNeighbor) {
-        return { success: false, error: "Target tile is not adjacent" };
-      }
-
-      // Try to loot
-      if (this.canLoot(selectedTile, clickedTile)) {
-        return this.performLoot(playerType, selectedTile, clickedTile);
-      }
-
-      // Try to move
-      if (this.canWalkOn(selectedTile, clickedTile)) {
-        return this.performMove(selectedTile, clickedTile);
-      }
-
-      return { success: false, error: "Cannot move to or loot this tile" };
-    }
-
-    return { success: true, message: "Click processed" };
-  }
-
-  private canLoot(fromTile: Tile, toTile: Tile): boolean {
-    if (!fromTile.piece || !toTile.landscape) return false;
-    if (!toTile.landscape.lootDrop) return false;
-
-    const lootableLandscapes = fromTile.piece.lootableLandscape ?? [];
-    return lootableLandscapes.includes(toTile.landscape.type);
-  }
-
-  private canWalkOn(fromTile: Tile, toTile: Tile): boolean {
-    if (!fromTile.piece || !toTile.landscape) return false;
-    if (toTile.piece) return false; // Can't walk on occupied tile
-
-    const walkableLandscapes = fromTile.piece.walkableLandscape ?? [];
-    return walkableLandscapes.includes(toTile.landscape.type);
-  }
-
-  private performLoot(
-    playerType: PlayerType,
-    fromTile: Tile,
-    toTile: Tile,
-  ): ActionResult {
-    if (!toTile.landscape?.lootDrop) {
-      return { success: false, error: "Nothing to loot" };
-    }
-
-    const player = this.getPlayer(playerType);
-    const lootDrop = toTile.landscape.lootDrop;
-
-    // Add resources to player
-    const updatedLootPlayer = player.withResources(
-      this.addResources(player.resources, lootDrop),
-    );
-    this.updatePlayer(playerType, updatedLootPlayer);
-
-    // Transform the landscape (tree → grass, mountain → grass)
-    const newLandscape = this.transformLandscape(toTile.landscape);
-    const updatedTile: Tile = {
-      ...toTile,
-      landscape: newLandscape,
-    };
-    this.replaceTile(updatedTile);
-
-    this.tick();
-    return {
-      success: true,
-      message: `Looted ${lootDrop.wood ?? 0} wood, ${lootDrop.stone ?? 0} stone`,
-    };
-  }
-
-  private transformLandscape(landscape: Tile["landscape"]): Tile["landscape"] {
-    if (!landscape) return null;
-
-    if (
-      landscape.type === LandscapeType.tree ||
-      landscape.type === LandscapeType.mountain
-    ) {
-      return Landscape.grass();
-    }
-    return landscape;
-  }
-
-  private performMove(fromTile: Tile, toTile: Tile): ActionResult {
-    if (!fromTile.piece) {
-      return { success: false, error: "No piece to move" };
-    }
-
-    // Move the piece
-    const updatedToTile: Tile = {
-      ...toTile,
-      piece: fromTile.piece,
-    };
-    const updatedFromTile: Tile = {
-      ...fromTile,
-      piece: null,
-    };
-
-    this.replaceTile(updatedToTile);
-    this.replaceTile(updatedFromTile);
-
-    this.tick();
-    return { success: true, message: "Piece moved" };
-  }
-
-  /**
-   * Handle building construction
-   */
-  handleBuild(
-    playerType: PlayerType,
-    buildingType: BuildingType,
-    position: TilePosition,
-    selectedPosition?: TilePosition,
-  ): ActionResult {
-    if (this.game.currentPlayer !== playerType) {
-      return { success: false, error: "Not your turn" };
-    }
-
-    const tile = this.findTile(position);
-    if (!tile) {
-      return { success: false, error: "Invalid tile position" };
-    }
-
-    // Can only build on grass
-    if (tile.landscape?.type !== LandscapeType.grass) {
-      return { success: false, error: "Can only build on grass" };
-    }
-
-    // Can't build if there's already a building
-    if (tile.building) {
-      return { success: false, error: "Tile already has a building" };
-    }
-
-    const player = this.getPlayer(playerType);
-
-    // Check if there's a neighboring piece owned by this player
-    const neighbors = this.getNeighbors(tile);
-    const hasNeighborPiece = neighbors.some(
-      (n) => n.piece?.owner?.type === playerType,
-    );
-
-    if (!hasNeighborPiece) {
       return {
-        success: false,
-        error: "Must build adjacent to one of your pieces",
+        result: [...acc.result, ...nextLayer],
+        currentLayer: nextLayer,
       };
-    }
+    },
+    { result: [center], currentLayer: [center] },
+  ).result;
 
-    // Special rules for farms
-    if (buildingType === BuildingType.farm) {
-      return this.handleBuildFarm(playerType, position, selectedPosition);
-    }
+// ============================================
+// TURN VALIDATION
+// ============================================
 
-    // Get building cost
-    const cost = this.getBuildingCost(buildingType);
+const validateTurn = (game: Game, playerType: PlayerType): ActionResult | null => {
+  if (game.gameOver) {
+    return { success: false, error: "Game is over" };
+  }
+  if (game.currentPlayer !== playerType) {
+    return { success: false, error: "Not your turn" };
+  }
+  return null;
+};
 
-    if (!this.canAfford(player, cost)) {
-      return { success: false, error: "Cannot afford this building" };
-    }
+// ============================================
+// ACTION HANDLERS
+// ============================================
 
-    // Deduct cost
-    const updatedBuildPlayer = player.withResources(
-      this.subtractResources(player.resources, cost),
-    );
-    this.updatePlayer(playerType, updatedBuildPlayer);
-
-    // Create building
-    const building = this.createBuilding(buildingType, updatedBuildPlayer);
-    const updatedTile: Tile = {
-      ...tile,
-      building,
-    };
-    this.replaceTile(updatedTile);
-
-    this.tick();
-    return { success: true, message: `Built ${buildingType}` };
+export const handleMove = (
+  game: Game,
+  action: MoveAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
   }
 
-  private handleBuildFarm(
-    playerType: PlayerType,
-    position: TilePosition,
-    selectedPosition?: TilePosition,
-  ): ActionResult {
-    const tile = this.findTile(position);
-    if (!tile) {
-      return { success: false, error: "Invalid tile position" };
-    }
+  const fromTile = findTile(game.tiles, action.from);
+  const toTile = findTile(game.tiles, action.to);
 
-    const player = this.getPlayer(playerType);
-
-    // Farm must be adjacent to a house
-    const neighbors = this.getNeighbors(tile);
-    const isNeighborToHouse = neighbors.some(
-      (n) =>
-        n.building?.type === BuildingType.house &&
-        n.building?.owner?.type === playerType,
-    );
-
-    if (!isNeighborToHouse) {
-      return { success: false, error: "Farm must be adjacent to your house" };
-    }
-
-    // Selected tile must be a house with a peasant
-    if (selectedPosition) {
-      const selectedTile = this.findTile(selectedPosition);
-      if (
-        !selectedTile ||
-        selectedTile.building?.type !== BuildingType.house ||
-        selectedTile.piece?.type !== PieceType.peasant ||
-        selectedTile.piece?.owner?.type !== playerType
-      ) {
-        return {
-          success: false,
-          error: "Must have a peasant in your house to build a farm",
-        };
-      }
-    }
-
-    const cost = this.getBuildingCost(BuildingType.farm);
-    if (!this.canAfford(player, cost)) {
-      return { success: false, error: "Cannot afford farm" };
-    }
-
-    const updatedFarmPlayer = player.withResources(
-      this.subtractResources(player.resources, cost),
-    );
-    this.updatePlayer(playerType, updatedFarmPlayer);
-
-    const building = this.createBuilding(BuildingType.farm, updatedFarmPlayer);
-    const updatedTile: Tile = {
-      ...tile,
-      building,
-    };
-    this.replaceTile(updatedTile);
-
-    this.tick();
-    return { success: true, message: "Built farm" };
+  if (fromTile === undefined || toTile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
   }
 
-  private getBuildingCost(buildingType: BuildingType): ResourceMap {
-    switch (buildingType) {
-      case BuildingType.house:
-        return new ResourceMap({ wood: 2 });
-      case BuildingType.castle:
-        return new ResourceMap({ wood: 10, stone: 10 });
-      case BuildingType.tower:
-        return new ResourceMap({ wood: 1, stone: 3 });
-      case BuildingType.farm:
-        return new ResourceMap({ wood: 1 });
-      case BuildingType.boat:
-        return new ResourceMap({});
-      default:
-        return new ResourceMap({});
-    }
+  if (fromTile.piece === null || fromTile.piece.owner !== action.player) {
+    return { game, result: { success: false, error: "No piece to move or not your piece" } };
   }
 
-  private createBuilding(buildingType: BuildingType, owner: Player): Building {
-    switch (buildingType) {
-      case BuildingType.house:
-        return Building.house(owner);
-      case BuildingType.castle:
-        return Building.castle(owner);
-      case BuildingType.tower:
-        return Building.tower(owner);
-      case BuildingType.farm:
-        return Building.farm(owner);
-      case BuildingType.boat:
-        return Building.boat(owner);
-      default:
-        throw new Error(`Unknown building type: ${buildingType}`);
-    }
+  if (toTile.piece !== null) {
+    return { game, result: { success: false, error: "Target tile is occupied" } };
   }
 
-  /**
-   * Handle creating a peasant
-   */
-  handleCreatePeasant(
-    playerType: PlayerType,
-    position: TilePosition,
-  ): ActionResult {
-    if (this.game.currentPlayer !== playerType) {
-      return { success: false, error: "Not your turn" };
-    }
+  // Check walkable terrain
+  if (
+    toTile.landscape === null ||
+    !fromTile.piece.walkableLandscape.includes(toTile.landscape.type)
+  ) {
+    return { game, result: { success: false, error: "Cannot walk on this terrain" } };
+  }
 
-    const tile = this.findTile(position);
-    if (!tile) {
-      return { success: false, error: "Invalid tile position" };
-    }
+  // Check building walkability
+  if (toTile.building !== null && !toTile.building.isWalkableBy(action.player)) {
+    return { game, result: { success: false, error: "Cannot enter this building" } };
+  }
 
-    // Must be on a house owned by the player
+  // Check move range (path must be clear and within range)
+  const distance = findDistance(game.tiles, action.from, action.to, fromTile.piece);
+  if (distance === null || distance > fromTile.piece.move) {
+    return { game, result: { success: false, error: "Target is out of move range" } };
+  }
+
+  // Handle mounting a steed
+  const movedPiece = (() => {
     if (
-      tile.building?.type !== BuildingType.house ||
-      tile.building?.owner?.type !== playerType
+      toTile.piece === null &&
+      toTile.steed !== undefined &&
+      toTile.steed !== null &&
+      fromTile.piece.canMountSteed &&
+      fromTile.piece.steed === null
     ) {
-      return { success: false, error: "Must create peasant in your house" };
+      return fromTile.piece.withSteed(toTile.steed);
     }
+    return fromTile.piece;
+  })();
 
-    // Can't create if there's already a piece
-    if (tile.piece) {
-      return { success: false, error: "Tile already has a unit" };
-    }
+  const updatedTiles = replaceTile(
+    replaceTile(game.tiles, { ...fromTile, piece: null }),
+    { ...toTile, piece: movedPiece, steed: undefined },
+  );
 
-    const player = this.getPlayer(playerType);
-    const cost = Piece.costOfUpgrade(PieceType.peasant);
+  const afterMove = advanceClock({ ...game, tiles: updatedTiles }, action.player);
+  return { game: afterMove, result: { success: true, message: "Piece moved" } };
+};
 
-    if (!this.canAfford(player, cost)) {
-      return { success: false, error: "Cannot afford peasant" };
-    }
-
-    const updatedPeasantPlayer = player.withResources(
-      this.subtractResources(player.resources, cost),
-    );
-    this.updatePlayer(playerType, updatedPeasantPlayer);
-
-    const peasant = Piece.peasant(updatedPeasantPlayer);
-    const updatedTile: Tile = {
-      ...tile,
-      piece: peasant,
-    };
-    this.replaceTile(updatedTile);
-
-    this.tick();
-    return { success: true, message: "Created peasant" };
+/**
+ * Simple BFS distance for movement, respecting walkable terrain.
+ * Returns null if no path exists.
+ */
+const findDistance = (
+  tiles: ReadonlyArray<Tile>,
+  from: TilePosition,
+  to: TilePosition,
+  piece: Piece,
+): number | null => {
+  if (from.row === to.row && from.column === to.column) {
+    return 0;
   }
 
-  /**
-   * Handle upgrading a piece
-   */
-  handleUpgrade(
-    playerType: PlayerType,
-    position: TilePosition,
-    targetType?: PieceType,
-  ): ActionResult {
-    if (this.game.currentPlayer !== playerType) {
-      return { success: false, error: "Not your turn" };
+  const visited = new Set<string>();
+  visited.add(`${from.row},${from.column}`);
+  const frontier: { position: TilePosition; distance: number }[] = [
+    { position: from, distance: 0 },
+  ];
+
+  // eslint-disable-next-line no-constant-condition
+  while (frontier.length > 0) {
+    const current = frontier.shift()!;
+    if (current.distance >= piece.move) {
+      continue;
     }
 
-    const tile = this.findTile(position);
-    if (!tile) {
-      return { success: false, error: "Invalid tile position" };
+    const neighbors = getNeighborTiles(tiles, current.position);
+    const reachableNeighbor = neighbors.find(
+      (neighbor) =>
+        neighbor.row === to.row && neighbor.column === to.column,
+    );
+    if (reachableNeighbor !== undefined) {
+      return current.distance + 1;
     }
 
-    if (!tile.piece || tile.piece.owner?.type !== playerType) {
-      return { success: false, error: "No piece to upgrade or not your piece" };
-    }
-
-    const player = this.getPlayer(playerType);
-
-    // If targeting archer specifically
-    if (targetType === PieceType.archer) {
-      const cost = Piece.costOfUpgrade(PieceType.archer);
-      if (!this.canAfford(player, cost)) {
-        return { success: false, error: "Cannot afford archer upgrade" };
+    neighbors.forEach((neighbor) => {
+      const key = `${neighbor.row},${neighbor.column}`;
+      if (visited.has(key)) {
+        return;
       }
-
-      const updatedArcherPlayer = player.withResources(
-        this.subtractResources(player.resources, cost),
-      );
-      this.updatePlayer(playerType, updatedArcherPlayer);
-
-      const archer = Piece.archer(updatedArcherPlayer);
-      const updatedTile: Tile = {
-        ...tile,
-        piece: archer,
-      };
-      this.replaceTile(updatedTile);
-
-      return { success: true, message: "Upgraded to archer" };
-    }
-
-    // Regular upgrade path: peasant → soldier → knight
-    const nextType = ((): PieceType | null => {
-      switch (tile.piece.type) {
-        case PieceType.peasant:
-          return PieceType.soldier;
-        case PieceType.soldier:
-          return PieceType.knight;
-        default:
-          return null;
+      if (neighbor.piece !== null) {
+        return; // Can't pass through occupied tiles
       }
-    })();
-
-    if (nextType === null) {
-      return { success: false, error: "Unit cannot be upgraded further" };
-    }
-
-    const cost = Piece.costOfUpgrade(nextType);
-    if (!this.canAfford(player, cost)) {
-      return { success: false, error: `Cannot afford ${nextType} upgrade` };
-    }
-
-    const updatedUpgradePlayer = player.withResources(
-      this.subtractResources(player.resources, cost),
-    );
-    this.updatePlayer(playerType, updatedUpgradePlayer);
-
-    const upgradedPiece = ((): Piece | null => {
-      switch (nextType) {
-        case PieceType.soldier:
-          return Piece.soldier(updatedUpgradePlayer);
-        case PieceType.knight:
-          return Piece.knight(updatedUpgradePlayer);
-        default:
-          return null;
+      if (
+        neighbor.landscape === null ||
+        !piece.walkableLandscape.includes(neighbor.landscape.type)
+      ) {
+        return;
       }
-    })();
-
-    if (upgradedPiece === null) {
-      return { success: false, error: "Invalid upgrade target" };
-    }
-
-    const updatedTile: Tile = {
-      ...tile,
-      piece: upgradedPiece,
-    };
-    this.replaceTile(updatedTile);
-
-    return { success: true, message: `Upgraded to ${nextType}` };
-  }
-
-  /**
-   * Handle attack action
-   */
-  handleAttack(
-    playerType: PlayerType,
-    targetPosition: TilePosition,
-    selectedPosition: TilePosition,
-  ): ActionResult {
-    if (this.game.currentPlayer !== playerType) {
-      return { success: false, error: "Not your turn" };
-    }
-
-    const selectedTile = this.findTile(selectedPosition);
-    const targetTile = this.findTile(targetPosition);
-
-    if (!selectedTile || !targetTile) {
-      return { success: false, error: "Invalid tile positions" };
-    }
-
-    if (!selectedTile.piece || selectedTile.piece.owner?.type !== playerType) {
-      return { success: false, error: "No attacking piece or not your piece" };
-    }
-
-    if (!targetTile.piece) {
-      return { success: false, error: "No target to attack" };
-    }
-
-    if (targetTile.piece.owner?.type === playerType) {
-      return { success: false, error: "Cannot attack your own units" };
-    }
-
-    // Check range using attackRange (not viewRange)
-    const attackerRange = selectedTile.piece.attackRange ?? 1;
-    const tilesInRange = this.getTilesInRange(selectedPosition, attackerRange);
-    const inRange = tilesInRange.some(
-      (t) => t.row === targetPosition.row && t.column === targetPosition.column,
-    );
-
-    if (!inRange) {
-      return { success: false, error: "Target is out of range" };
-    }
-
-    // Destroy the target piece
-    const updatedTargetTile: Tile = {
-      ...targetTile,
-      piece: null,
-    };
-    this.replaceTile(updatedTargetTile);
-
-    this.tick();
-
-    // Check for win condition after destroying a unit
-    this.checkWinCondition();
-
-    return { success: true, message: "Attack successful" };
-  }
-
-  // ============================================
-  // WIN CONDITION
-  // ============================================
-
-  /**
-   * Check if the game has been won.
-   * Victory condition: opponent has no pieces AND no houses.
-   */
-  checkWinCondition(): void {
-    // Don't check if game is already over
-    if (this.game.gameOver) return;
-
-    const dayHasPieces = this.game.tiles.some(
-      (tile) => tile.piece?.owner?.type === "day",
-    );
-    const dayHasHouses = this.game.tiles.some(
-      (tile) =>
-        tile.building?.type === BuildingType.house &&
-        tile.building?.owner?.type === "day",
-    );
-    const dayIsAlive = dayHasPieces || dayHasHouses;
-
-    const nightHasPieces = this.game.tiles.some(
-      (tile) => tile.piece?.owner?.type === "night",
-    );
-    const nightHasHouses = this.game.tiles.some(
-      (tile) =>
-        tile.building?.type === BuildingType.house &&
-        tile.building?.owner?.type === "night",
-    );
-    const nightIsAlive = nightHasPieces || nightHasHouses;
-
-    if (!dayIsAlive) {
-      this.game.gameOver = true;
-      this.game.winner = "night";
-      console.log("Game over! Night player wins!");
-    } else if (!nightIsAlive) {
-      this.game.gameOver = true;
-      this.game.winner = "day";
-      console.log("Game over! Day player wins!");
-    }
-  }
-
-  // ============================================
-  // GETTERS
-  // ============================================
-
-  getGameState(): Game {
-    return this.game;
-  }
-
-  /**
-   * Get the game state filtered for a specific player's perspective.
-   * Only tiles that are visible to the player are fully revealed.
-   * Other tiles are shown as "unexplored" with no piece/building info.
-   */
-  getFilteredGameState(forPlayer: PlayerType): Game {
-    const visibleTilePositions = this.getVisibleTilesForPlayer(forPlayer);
-
-    const filteredTiles = this.game.tiles.map((tile) => {
-      const isVisible = visibleTilePositions.some(
-        (pos) => pos.row === tile.row && pos.column === tile.column,
-      );
-
-      if (isVisible) {
-        // Player can see this tile - return full info
-        return tile;
-      } else {
-        // Player cannot see this tile - hide piece and building info
-        // but keep the tile coordinates
-        return {
-          ...tile,
-          piece: null,
-          building: null,
-          landscape: new Landscape({ type: LandscapeType.unexplored }),
-        } as Tile;
-      }
+      visited.add(key);
+      frontier.push({
+        position: { row: neighbor.row, column: neighbor.column },
+        distance: current.distance + 1,
+      });
     });
+  }
 
-    // Return the game state with filtered tiles
-    // Only return the player's own resources
+  return null;
+};
+
+export const handleBuild = (
+  game: Game,
+  action: BuildAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const tile = findTile(game.tiles, action.position);
+  if (tile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (tile.landscape?.type !== LandscapeType.grass) {
+    return { game, result: { success: false, error: "Can only build on grass" } };
+  }
+
+  if (tile.building !== null) {
+    return { game, result: { success: false, error: "Tile already has a building" } };
+  }
+
+  // Must be adjacent to one of your units
+  const neighbors = getNeighborTiles(game.tiles, action.position);
+  const hasAdjacentUnit = neighbors.some(
+    (neighbor) => neighbor.piece !== null && neighbor.piece.owner === action.player,
+  );
+  if (!hasAdjacentUnit) {
     return {
-      ...this.game,
-      tiles: filteredTiles,
-      // Only expose the current player's own detailed resources
-      dayPlayer:
-        forPlayer === "day"
-          ? this.game.dayPlayer
-          : new Player({ type: "day", resources: new ResourceMap({}) }),
-      nightPlayer:
-        forPlayer === "night"
-          ? this.game.nightPlayer
-          : new Player({ type: "night", resources: new ResourceMap({}) }),
+      game,
+      result: { success: false, error: "Must build adjacent to one of your units" },
     };
   }
 
-  /**
-   * Get all tile positions visible to a specific player.
-   * A player can see tiles:
-   * - Where they have a piece (and within that piece's view range)
-   * - Where they have a building
-   */
-  private getVisibleTilesForPlayer(playerType: PlayerType): TilePosition[] {
-    const visiblePositions = this.game.tiles.flatMap((tile) => {
-      const positions: TilePosition[] = [];
+  const player = getPlayer(game, action.player);
+  const cost = Building.costOf(action.buildingType);
 
-      // Check if tile has a piece owned by this player
-      if (tile.piece?.owner?.type === playerType) {
-        positions.push({ row: tile.row, column: tile.column });
+  if (!player.canAfford(cost)) {
+    return { game, result: { success: false, error: "Cannot afford this building" } };
+  }
 
-        const viewRange = tile.piece.viewRange ?? 1;
-        const tilesInRange = this.getTilesInRange(
-          { row: tile.row, column: tile.column },
-          viewRange,
-        );
-        positions.push(...tilesInRange);
-      }
+  const updatedPlayer = player.pay(cost);
+  const building = Building[action.buildingType](action.player);
 
-      // Check if tile has a building owned by this player
-      if (tile.building?.owner?.type === playerType) {
-        positions.push({ row: tile.row, column: tile.column });
+  // When a house is built, adjacent grass tiles convert to farm
+  const tilesAfterBuild = (() => {
+    const withBuilding = replaceTile(game.tiles, { ...tile, building });
+    if (action.buildingType === BuildingType.house) {
+      return convertAdjacentGrassToFarm(withBuilding, action.position);
+    }
+    return withBuilding;
+  })();
 
-        const viewRange = tile.building.viewRange ?? 1;
-        const tilesInRange = this.getTilesInRange(
-          { row: tile.row, column: tile.column },
-          viewRange,
-        );
-        positions.push(...tilesInRange);
-      }
+  const afterBuild = advanceClock(
+    updatePlayer({ ...game, tiles: tilesAfterBuild }, action.player, updatedPlayer),
+    action.player,
+  );
+  return { game: afterBuild, result: { success: true, message: `Built ${action.buildingType}` } };
+};
 
-      return positions;
+const convertAdjacentGrassToFarm = (
+  tiles: ReadonlyArray<Tile>,
+  housePosition: TilePosition,
+): ReadonlyArray<Tile> => {
+  const neighbors = getNeighborTiles(tiles, housePosition);
+  return neighbors
+    .filter(
+      (neighbor) =>
+        neighbor.landscape?.type === LandscapeType.grass &&
+        neighbor.building === null,
+    )
+    .reduce(
+      (acc, neighbor) =>
+        replaceTile(acc, { ...neighbor, landscape: Landscape.farm() }),
+      tiles,
+    );
+};
+
+export const handleSpawnPeasant = (
+  game: Game,
+  action: SpawnPeasantAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const tile = findTile(game.tiles, action.position);
+  if (tile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (
+    tile.building === null ||
+    tile.building.type !== BuildingType.house ||
+    tile.building.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "Must spawn peasant in your house" } };
+  }
+
+  if (tile.piece !== null) {
+    return { game, result: { success: false, error: "House already has a unit" } };
+  }
+
+  const player = getPlayer(game, action.player);
+  const cost = Piece.spawnCost();
+
+  if (!player.canAfford(cost)) {
+    return { game, result: { success: false, error: "Cannot afford peasant" } };
+  }
+
+  const updatedPlayer = player.pay(cost);
+  const peasant = Piece.peasant(action.player);
+  const updatedTiles = replaceTile(game.tiles, { ...tile, piece: peasant });
+
+  const afterSpawn = advanceClock(
+    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    action.player,
+  );
+  return { game: afterSpawn, result: { success: true, message: "Spawned peasant" } };
+};
+
+export const handleCraftEquipment = (
+  game: Game,
+  action: CraftEquipmentAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const tile = findTile(game.tiles, action.piecePosition);
+  if (tile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (tile.piece === null || tile.piece.owner !== action.player) {
+    return { game, result: { success: false, error: "No piece or not your piece" } };
+  }
+
+  if (!tile.piece.canEquip) {
+    return { game, result: { success: false, error: "This unit cannot carry equipment" } };
+  }
+
+  const equipment = Equipment[action.equipmentType]();
+
+  if (tile.piece.hasEquipment(equipment.type)) {
+    return { game, result: { success: false, error: "Already has this equipment" } };
+  }
+
+  const player = getPlayer(game, action.player);
+  if (!player.canAfford(equipment.cost)) {
+    return { game, result: { success: false, error: "Cannot afford this equipment" } };
+  }
+
+  const updatedPlayer = player.pay(equipment.cost);
+  const equippedPiece = tile.piece.withEquipment(equipment);
+  const updatedTiles = replaceTile(game.tiles, { ...tile, piece: equippedPiece });
+
+  const afterCraft = advanceClock(
+    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    action.player,
+  );
+  return {
+    game: afterCraft,
+    result: { success: true, message: `Equipped ${action.equipmentType}` },
+  };
+};
+
+export const handleBuySteed = (
+  game: Game,
+  action: BuySteedAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const houseTile = findTile(game.tiles, action.housePosition);
+  const targetTile = findTile(game.tiles, action.targetPosition);
+
+  if (houseTile === undefined || targetTile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (
+    houseTile.building === null ||
+    houseTile.building.type !== BuildingType.house ||
+    houseTile.building.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "Must buy steed from your house" } };
+  }
+
+  if (!hex.isNeighborTo(targetTile, houseTile)) {
+    return { game, result: { success: false, error: "Target must be adjacent to house" } };
+  }
+
+  // Boats must be placed on water
+  if (action.steedType === SteedType.boat) {
+    if (targetTile.landscape?.type !== LandscapeType.water) {
+      return { game, result: { success: false, error: "Boat must be placed on water" } };
+    }
+  }
+
+  if (targetTile.piece !== null) {
+    return { game, result: { success: false, error: "Target tile is occupied" } };
+  }
+
+  const steed = action.steedType === SteedType.horse ? Steed.horse() : Steed.boat();
+  const player = getPlayer(game, action.player);
+
+  if (!player.canAfford(steed.cost)) {
+    return { game, result: { success: false, error: "Cannot afford steed" } };
+  }
+
+  const updatedPlayer = player.pay(steed.cost);
+  // Place steed on the target tile (as a steed field, not a piece)
+  const updatedTiles = replaceTile(game.tiles, {
+    ...targetTile,
+    steed,
+  } as Tile);
+
+  const afterBuy = advanceClock(
+    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    action.player,
+  );
+  return {
+    game: afterBuy,
+    result: { success: true, message: `Placed ${action.steedType}` },
+  };
+};
+
+export const handleTrainPriest = (
+  game: Game,
+  action: TrainPriestAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const tile = findTile(game.tiles, action.churchPosition);
+  if (tile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (
+    tile.building === null ||
+    tile.building.type !== BuildingType.church ||
+    tile.building.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "Must train priest at your church" } };
+  }
+
+  if (tile.piece !== null) {
+    return { game, result: { success: false, error: "Church already has a unit" } };
+  }
+
+  const player = getPlayer(game, action.player);
+  const cost = Piece.priestCost();
+
+  if (!player.canAfford(cost)) {
+    return { game, result: { success: false, error: "Cannot afford priest" } };
+  }
+
+  const updatedPlayer = player.pay(cost);
+  const priest = Piece.priest(action.player);
+  const updatedTiles = replaceTile(game.tiles, { ...tile, piece: priest });
+
+  const afterTrain = advanceClock(
+    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    action.player,
+  );
+  return { game: afterTrain, result: { success: true, message: "Trained priest" } };
+};
+
+export const handleHeal = (
+  game: Game,
+  action: HealAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const priestTile = findTile(game.tiles, action.priestPosition);
+  const targetTile = findTile(game.tiles, action.targetPosition);
+
+  if (priestTile === undefined || targetTile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (
+    priestTile.piece === null ||
+    priestTile.piece.kind !== PieceKind.priest ||
+    priestTile.piece.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "No priest or not your priest" } };
+  }
+
+  if (targetTile.piece === null || targetTile.piece.owner !== action.player) {
+    return { game, result: { success: false, error: "No friendly piece to heal" } };
+  }
+
+  if (!hex.isNeighborTo(priestTile, targetTile)) {
+    return { game, result: { success: false, error: "Target must be adjacent to priest" } };
+  }
+
+  if (targetTile.piece.hearts >= targetTile.piece.maxHearts) {
+    return { game, result: { success: false, error: "Target is already at full health" } };
+  }
+
+  const player = getPlayer(game, action.player);
+  const cost = new ResourceMap({ faith: 1 });
+
+  if (!player.canAfford(cost)) {
+    return { game, result: { success: false, error: "Not enough faith" } };
+  }
+
+  const updatedPlayer = player.pay(cost);
+  const healedPiece = targetTile.piece.withHealing(1);
+  const updatedTiles = replaceTile(game.tiles, { ...targetTile, piece: healedPiece });
+
+  const afterHeal = advanceClock(
+    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    action.player,
+  );
+  return { game: afterHeal, result: { success: true, message: "Healed 1 heart" } };
+};
+
+export const handleResearch = (
+  game: Game,
+  action: ResearchAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const tile = findTile(game.tiles, action.castlePosition);
+  if (tile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (
+    tile.building === null ||
+    tile.building.type !== BuildingType.castle ||
+    tile.building.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "Must research at your castle" } };
+  }
+
+  const player = getPlayer(game, action.player);
+
+  if (!player.research.canResearch(action.researchType)) {
+    return { game, result: { success: false, error: "Cannot research this" } };
+  }
+
+  const cost = Research.costOf(action.researchType);
+
+  if (!player.canAfford(cost)) {
+    return { game, result: { success: false, error: "Cannot afford research" } };
+  }
+
+  const updatedPlayer = player
+    .pay(cost)
+    .withResearch(player.research.withResearch(action.researchType));
+
+  const afterResearch = advanceClock(
+    updatePlayer(game, action.player, updatedPlayer),
+    action.player,
+  );
+  return {
+    game: afterResearch,
+    result: { success: true, message: `Researched ${action.researchType}` },
+  };
+};
+
+export const handleEnterTower = (
+  game: Game,
+  action: EnterTowerAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const kingTile = findTile(game.tiles, action.kingPosition);
+  const towerTile = findTile(game.tiles, action.towerPosition);
+
+  if (kingTile === undefined || towerTile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (
+    kingTile.piece === null ||
+    kingTile.piece.kind !== PieceKind.king ||
+    kingTile.piece.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "No king or not your king" } };
+  }
+
+  if (
+    towerTile.building === null ||
+    towerTile.building.type !== BuildingType.tower ||
+    towerTile.building.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "No tower or not your tower" } };
+  }
+
+  if (!hex.isNeighborTo(kingTile, towerTile)) {
+    return { game, result: { success: false, error: "King must be adjacent to tower" } };
+  }
+
+  // Transform tower into castle with king inside
+  const castle = Building.castle(action.player);
+  const king = kingTile.piece;
+  const updatedTiles = replaceTile(
+    replaceTile(game.tiles, { ...kingTile, piece: null }),
+    { ...towerTile, building: castle, piece: king },
+  );
+
+  const afterEnter = advanceClock({ ...game, tiles: updatedTiles }, action.player);
+  return { game: afterEnter, result: { success: true, message: "King entered tower, castle created" } };
+};
+
+export const handleSummonArchAngel = (
+  game: Game,
+  action: SummonArchAngelAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const tile = findTile(game.tiles, action.churchPosition);
+  if (tile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (
+    tile.building === null ||
+    tile.building.type !== BuildingType.church ||
+    tile.building.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "Must summon at your church" } };
+  }
+
+  if (tile.piece !== null) {
+    return { game, result: { success: false, error: "Church is occupied" } };
+  }
+
+  const prayingPriests = countPrayingPriests(action.player, game.tiles);
+  if (prayingPriests < ARCH_ANGEL_PRIEST_REQUIREMENT) {
+    return {
+      game,
+      result: {
+        success: false,
+        error: `Need ${ARCH_ANGEL_PRIEST_REQUIREMENT} praying priests, have ${prayingPriests}`,
+      },
+    };
+  }
+
+  const player = getPlayer(game, action.player);
+  const cost = Piece.archAngelCost();
+
+  if (!player.canAfford(cost)) {
+    return { game, result: { success: false, error: "Not enough faith" } };
+  }
+
+  const updatedPlayer = player.pay(cost);
+  const archAngel = Piece.archAngel(action.player);
+  const updatedTiles = replaceTile(game.tiles, { ...tile, piece: archAngel });
+
+  const afterSummon = advanceClock(
+    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    action.player,
+  );
+  return { game: afterSummon, result: { success: true, message: "Summoned arch angel" } };
+};
+
+export const handleAttack = (
+  game: Game,
+  action: AttackAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const attackerTile = findTile(game.tiles, action.attackerPosition);
+  const targetTile = findTile(game.tiles, action.targetPosition);
+
+  if (attackerTile === undefined || targetTile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+
+  if (attackerTile.piece === null || attackerTile.piece.owner !== action.player) {
+    return { game, result: { success: false, error: "No attacker or not your piece" } };
+  }
+
+  const attacker = attackerTile.piece;
+
+  // Determine attack range (bow in tower gets tower range)
+  const effectiveRange = (() => {
+    if (
+      attackerTile.building !== null &&
+      attackerTile.building.type === BuildingType.tower &&
+      attacker.hasEquipment(EquipmentType.bow)
+    ) {
+      return attackerTile.building.viewRange; // Tower range (4)
+    }
+    return attacker.attackRange;
+  })();
+
+  // Check range
+  const tilesInRange = getTilesInRange(game.tiles, action.attackerPosition, effectiveRange);
+  const inRange = tilesInRange.some(
+    (pos) => pos.row === action.targetPosition.row && pos.column === action.targetPosition.column,
+  );
+
+  if (!inRange) {
+    return { game, result: { success: false, error: "Target is out of range" } };
+  }
+
+  // Determine target: building first (pieces inside buildings are protected),
+  // then piece if no enemy building on the tile.
+  if (targetTile.building !== null && targetTile.building.owner !== action.player) {
+    const combatResult = resolveCombat(attacker, {
+      kind: "building",
+      building: targetTile.building,
     });
 
-    // Deduplicate
-    return visiblePositions.reduce<TilePosition[]>((unique, pos) => {
-      const exists = unique.some(
-        (existing) => existing.row === pos.row && existing.column === pos.column,
-      );
-      if (!exists) {
-        unique.push(pos);
-      }
-      return unique;
-    }, []);
+    if (combatResult.targetKind === "building") {
+      const updatedTargetTile: Tile = combatResult.destroyed
+        ? {
+            ...targetTile,
+            building: null,
+            // If castle destroyed, king inside dies
+            piece:
+              targetTile.building.type === BuildingType.castle
+                ? null
+                : targetTile.piece,
+          }
+        : targetTile;
+      const updatedTiles = replaceTile(game.tiles, updatedTargetTile);
+      const afterAttack = advanceClock({ ...game, tiles: updatedTiles }, action.player);
+      const afterWinCheck = checkWinCondition(afterAttack);
+      return { game: afterWinCheck, result: { success: true, message: "Attack successful" } };
+    }
   }
 
-  getClockDisplay(): string {
-    const hours = this.game.clock.time % 24;
-    const hoursString = hours.toString().padStart(2, "0");
-    const period = this.isDay() ? "(day)" : "(night)";
-    return `${hoursString}:00 ${period}`;
+  if (targetTile.piece !== null && targetTile.piece.owner !== action.player) {
+    const combatResult = resolveCombat(attacker, {
+      kind: "piece",
+      piece: targetTile.piece,
+    });
+
+    if (combatResult.targetKind === "piece") {
+      const updatedTargetTile: Tile = combatResult.destroyed
+        ? { ...targetTile, piece: null }
+        : { ...targetTile, piece: combatResult.survivingPiece };
+      const updatedTiles = replaceTile(game.tiles, updatedTargetTile);
+      const afterAttack = advanceClock({ ...game, tiles: updatedTiles }, action.player);
+      const afterWinCheck = checkWinCondition(afterAttack);
+      return { game: afterWinCheck, result: { success: true, message: "Attack successful" } };
+    }
   }
-}
+
+  return { game, result: { success: false, error: "No valid target" } };
+};
+
+// ============================================
+// WIN CONDITION
+// ============================================
+
+export const checkWinCondition = (game: Game): Game => {
+  if (game.gameOver) {
+    return game;
+  }
+
+  const dayKingAlive = game.tiles.some(
+    (tile) =>
+      tile.piece !== null &&
+      tile.piece.kind === PieceKind.king &&
+      tile.piece.owner === "day",
+  );
+
+  const nightKingAlive = game.tiles.some(
+    (tile) =>
+      tile.piece !== null &&
+      tile.piece.kind === PieceKind.king &&
+      tile.piece.owner === "night",
+  );
+
+  const dayHasPiecesOrHouses =
+    dayKingAlive ||
+    game.tiles.some(
+      (tile) =>
+        (tile.piece !== null && tile.piece.owner === "day") ||
+        (tile.building !== null &&
+          tile.building.type === BuildingType.house &&
+          tile.building.owner === "day"),
+    );
+
+  const nightHasPiecesOrHouses =
+    nightKingAlive ||
+    game.tiles.some(
+      (tile) =>
+        (tile.piece !== null && tile.piece.owner === "night") ||
+        (tile.building !== null &&
+          tile.building.type === BuildingType.house &&
+          tile.building.owner === "night"),
+    );
+
+  if (!dayKingAlive || !dayHasPiecesOrHouses) {
+    return { ...game, gameOver: true, winner: "night" };
+  }
+
+  if (!nightKingAlive || !nightHasPiecesOrHouses) {
+    return { ...game, gameOver: true, winner: "day" };
+  }
+
+  return game;
+};
+
+// ============================================
+// VISION (FOG OF WAR)
+// ============================================
+
+export const getVisibleTiles = (
+  game: Game,
+  playerType: PlayerType,
+): Set<string> => {
+  const player = getPlayer(game, playerType);
+  const visible = new Set<string>();
+
+  game.tiles.forEach((tile) => {
+    // Pieces reveal tiles within their view range
+    if (tile.piece !== null && tile.piece.owner === playerType) {
+      const tilesInRange = getTilesInRange(game.tiles, tile, tile.piece.view);
+      tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
+    }
+
+    // Buildings reveal tiles within their view range
+    if (tile.building !== null && tile.building.owner === playerType) {
+      const tilesInRange = getTilesInRange(game.tiles, tile, tile.building.viewRange);
+      tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
+
+      // Queen research: all tiles adjacent to buildings become visible
+      if (player.research.hasQueen) {
+        const neighbors = getNeighborTiles(game.tiles, tile);
+        neighbors.forEach((neighbor) =>
+          visible.add(`${neighbor.row},${neighbor.column}`),
+        );
+      }
+    }
+  });
+
+  return visible;
+};
+
+export const getFilteredGameState = (game: Game, forPlayer: PlayerType): Game => {
+  const visible = getVisibleTiles(game, forPlayer);
+
+  const filteredTiles = game.tiles.map((tile) => {
+    if (visible.has(`${tile.row},${tile.column}`)) {
+      return tile;
+    }
+    return {
+      ...tile,
+      piece: null,
+      building: null,
+      landscape: new Landscape({ type: LandscapeType.unexplored }),
+    } as Tile;
+  });
+
+  return {
+    ...game,
+    tiles: filteredTiles,
+    dayPlayer:
+      forPlayer === "day"
+        ? game.dayPlayer
+        : new Player({ type: "day" }),
+    nightPlayer:
+      forPlayer === "night"
+        ? game.nightPlayer
+        : new Player({ type: "night" }),
+  };
+};
+
+// ============================================
+// ACTION DISPATCHER
+// ============================================
+
+export const handleAction = (
+  game: Game,
+  action: GameAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  switch (action.type) {
+    case "move":
+      return handleMove(game, action);
+    case "build":
+      return handleBuild(game, action);
+    case "spawnPeasant":
+      return handleSpawnPeasant(game, action);
+    case "craftEquipment":
+      return handleCraftEquipment(game, action);
+    case "buySteed":
+      return handleBuySteed(game, action);
+    case "trainPriest":
+      return handleTrainPriest(game, action);
+    case "heal":
+      return handleHeal(game, action);
+    case "research":
+      return handleResearch(game, action);
+    case "enterTower":
+      return handleEnterTower(game, action);
+    case "summonArchAngel":
+      return handleSummonArchAngel(game, action);
+    case "attack":
+      return handleAttack(game, action);
+    default:
+      return { game, result: { success: false, error: "Unknown action type" } };
+  }
+};

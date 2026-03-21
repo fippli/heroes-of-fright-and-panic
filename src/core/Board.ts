@@ -1,4 +1,5 @@
 import type { Canvas } from "../canvas";
+import { type ImageAssets, defaultImageAssets } from "../images";
 import type { Coordinate } from "../types/coordinate";
 import { BuildingType } from "./Building";
 import { Clock } from "./Clock";
@@ -12,9 +13,9 @@ import type {
 } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
 import { Notifications } from "./Notifications";
-import { PieceType } from "./Piece";
+import { PieceKind } from "./Piece";
 import { Player } from "@shared/player";
-import { ResourceMap } from "@shared/player/resource-map";
+import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
 
 /**
@@ -56,12 +57,20 @@ export class Game {
   gameOver: boolean = false;
   winner: PlayerType | null = null;
 
-  constructor(canvas: Canvas, myPlayerType: PlayerType | null = null) {
+  // Image assets (with optional theme override)
+  imageAssets: ImageAssets;
+
+  constructor(
+    canvas: Canvas,
+    myPlayerType: PlayerType | null = null,
+    imageAssets: ImageAssets = defaultImageAssets,
+  ) {
     this.canvas = canvas;
     this.myPlayerType = myPlayerType;
     this.dayPlayer = new Player({ type: "day" });
     this.nightPlayer = new Player({ type: "night" });
     this.dialog = new Dialog();
+    this.imageAssets = imageAssets;
   }
 
   /**
@@ -232,7 +241,7 @@ export class Game {
 
     // Render all tiles
     this.tiles.forEach((tile: Tile) => {
-      tile.render(canvas.ctx);
+      tile.render(canvas.ctx, this.imageAssets);
     });
 
     // Render selected tile highlight and valid moves/attacks
@@ -478,6 +487,8 @@ export class Game {
 
   /**
    * Build a farm at the given position
+   * Note: Farms are now auto-created when houses are built (adjacent grass → farm).
+   * This method builds a house instead.
    */
   async buildFarm({ x, y }: Coordinate): Promise<void> {
     if (this.myPlayerType === null) return;
@@ -488,7 +499,7 @@ export class Game {
     await this.sendAction({
       type: "build",
       player: this.myPlayerType,
-      buildingType: BuildingType.farm,
+      buildingType: BuildingType.house,
       position: tilePosition,
       selectedPosition: this.getSelectedPosition(),
     });
@@ -539,7 +550,7 @@ export class Game {
       type: "upgrade",
       player: this.myPlayerType,
       position: tilePosition,
-      targetType: PieceType.archer,
+      targetKind: PieceKind.peasant,
     });
   }
 
@@ -566,23 +577,3 @@ export class Game {
     });
   }
 }
-
-const renderResourcesInDOM = (resourceMap: ResourceMap): void => {
-  const woodElement = document.getElementById("wood");
-  const stoneElement = document.getElementById("stone");
-  const goldElement = document.getElementById("gold");
-  const foodElement = document.getElementById("food");
-
-  if (woodElement !== null) {
-    woodElement.textContent = resourceMap.wood.toString();
-  }
-  if (stoneElement !== null) {
-    stoneElement.textContent = resourceMap.stone.toString();
-  }
-  if (goldElement !== null) {
-    goldElement.textContent = resourceMap.gold.toString();
-  }
-  if (foodElement !== null) {
-    foodElement.textContent = resourceMap.food.toString();
-  }
-};

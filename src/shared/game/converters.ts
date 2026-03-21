@@ -1,5 +1,7 @@
+import type { Tile } from "../map/tile.ts";
 import { Player } from "../player/index.ts";
 import { ResourceMap } from "../player/resource-map.ts";
+import { Research } from "../research/index.ts";
 import type { Game, GameRow } from "./types.ts";
 
 // Convert database row to application type
@@ -14,10 +16,12 @@ export const rowToGame = (row: GameRow): Game => {
     dayPlayer: new Player({
       type: row.day_player.type,
       resources: new ResourceMap(row.day_player.resources),
+      research: new Research(row.day_player.research ?? {}),
     }),
     nightPlayer: new Player({
       type: row.night_player.type,
       resources: new ResourceMap(row.night_player.resources),
+      research: new Research(row.night_player.research ?? {}),
     }),
     currentPlayer: row.current_player,
     clock: row.clock,
@@ -35,6 +39,7 @@ export const rowToGame = (row: GameRow): Game => {
     invitedEmail: row.invited_email,
     gameOver: row.game_over,
     winner: row.winner,
+    themeId: row.theme_id,
   };
 };
 
@@ -48,7 +53,7 @@ export const gameToRow = (
     row.updated_at = game.updatedAt.toISOString();
   if (game.name !== undefined) row.name = game.name ?? null;
   if (game.size !== undefined) row.size = game.size;
-  if (game.tiles !== undefined) row.tiles = game.tiles;
+  if (game.tiles !== undefined) row.tiles = game.tiles as Tile[];
   if (game.dayPlayer !== undefined) row.day_player = game.dayPlayer;
   if (game.nightPlayer !== undefined) row.night_player = game.nightPlayer;
   if (game.currentPlayer !== undefined)
@@ -68,6 +73,7 @@ export const gameToRow = (
     row.invited_email = game.invitedEmail ?? null;
   if (game.gameOver !== undefined) row.game_over = game.gameOver ?? false;
   if (game.winner !== undefined) row.winner = game.winner ?? null;
+  if (game.themeId !== undefined) row.theme_id = game.themeId ?? null;
 
   return row;
 };

@@ -1,5 +1,6 @@
 import * as hex from "@shared/map/hex";
 import type { TilePosition } from "@shared/map/tile";
+import type { ImageAssets } from "../images";
 import type { Building } from "./Building";
 import { Hexagon } from "./Hexagon";
 
@@ -45,18 +46,18 @@ export class Tile {
     this.landscape = landscape ?? null;
   }
 
-  render(ctx: CanvasRenderingContext2D) {
+  render(ctx: CanvasRenderingContext2D, imageAssets: ImageAssets) {
     ctx.save();
     ctx.clip(Hexagon.path(this.x, this.y));
 
     if (this.explored) {
       if (this.landscape !== null) {
-        this.landscape.render(ctx, this);
-        this.building?.render(ctx, this);
-        this.piece?.render(ctx, this);
+        this.landscape.render(ctx, this, imageAssets);
+        this.building?.render(ctx, this, imageAssets);
+        this.piece?.render(ctx, this, imageAssets);
       }
     } else {
-      Landscape.unexplored(ctx, this.x, this.y);
+      Landscape.unexplored(ctx, this.x, this.y, imageAssets);
     }
 
     ctx.restore();
@@ -199,11 +200,7 @@ export class Tile {
     );
   }
 
-  canLoot(tile: Tile): boolean {
-    if (tile.landscape === null) return false;
-    if (tile.landscape.lootDrop === undefined) return false;
-    return (
-      this.piece?.lootableLandscape.includes(tile.landscape.type) ?? false
-    );
+  canLoot(_tile: Tile): boolean {
+    return false;
   }
 }

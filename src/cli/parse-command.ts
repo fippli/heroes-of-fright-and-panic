@@ -1,9 +1,16 @@
-import type { GameAction, TilePosition, PlayerType } from "@shared/actions/index.ts";
+import type { TilePosition, PlayerType } from "@shared/actions/index.ts";
 import { BuildingType } from "@shared/building/index.ts";
-import { PieceType } from "@shared/piece/index.ts";
+
+type ParsedAction = {
+  readonly type: string;
+  readonly player: PlayerType;
+  readonly position?: TilePosition;
+  readonly selectedPosition?: TilePosition;
+  readonly buildingType?: BuildingType;
+};
 
 type ParsedCommand =
-  | { type: "action"; action: GameAction }
+  | { type: "action"; action: ParsedAction }
   | { type: "select"; position: TilePosition }
   | { type: "inspect"; position: TilePosition }
   | { type: "help" }
@@ -87,10 +94,10 @@ export const parseCommand = (
       return {
         type: "action",
         action: {
-          type: "click",
+          type: "move",
           player: currentPlayer,
-          position,
-          selectedPosition,
+          from: selectedPosition,
+          to: position,
         },
       };
     }
@@ -113,8 +120,8 @@ export const parseCommand = (
         action: {
           type: "attack",
           player: currentPlayer,
-          position,
-          selectedPosition,
+          attackerPosition: selectedPosition,
+          targetPosition: position,
         },
       };
     }
@@ -158,7 +165,7 @@ export const parseCommand = (
       return {
         type: "action",
         action: {
-          type: "createPeasant",
+          type: "spawnPeasant",
           player: currentPlayer,
           position,
         },
@@ -176,14 +183,12 @@ export const parseCommand = (
       if (position === null) {
         return { type: "error", message: "Invalid position. Use: row,col" };
       }
-      const targetType = targetName === "archer" ? PieceType.archer : undefined;
       return {
         type: "action",
         action: {
           type: "upgrade",
           player: currentPlayer,
           position,
-          targetType,
         },
       };
     }
@@ -204,10 +209,10 @@ export const parseCommand = (
       return {
         type: "action",
         action: {
-          type: "click",
+          type: "move",
           player: currentPlayer,
-          position,
-          selectedPosition,
+          from: selectedPosition,
+          to: position,
         },
       };
     }
@@ -221,8 +226,10 @@ const parseBuildingType = (name: string): BuildingType | null => {
   switch (name) {
     case "house":
       return BuildingType.house;
-    case "farm":
-      return BuildingType.farm;
+    case "wall":
+      return BuildingType.wall;
+    case "church":
+      return BuildingType.church;
     case "tower":
       return BuildingType.tower;
     case "castle":
