@@ -1,13 +1,12 @@
 import type { Canvas } from "../canvas";
 import { type ImageAssets, defaultImageAssets } from "../images";
-import { supabase, getEdgeFunctionError } from "../lib/supabase";
 import type { Coordinate } from "../types/coordinate";
 import { BuildingType } from "./Building";
 import { Clock } from "./Clock";
 import { Dialog } from "./Dialog";
+import { GameClient } from "./GameClient";
 import { parseGameState } from "./GameParser";
 import type {
-  ActionResponse,
   GameAction,
   PlayerType,
   ServerGameState,
@@ -15,8 +14,8 @@ import type {
 import { Hexagon } from "./Hexagon";
 import { Notifications } from "./Notifications";
 import { PieceKind } from "./Piece";
-import { Player } from "./Player";
-import { renderResources } from "./ResourceMap";
+import { Player } from "@shared/player";
+import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
 
 /**
@@ -48,15 +47,11 @@ export class Game {
   // UI state (client-only, not persisted)
   selectedTile: Tile | undefined | null = undefined;
 
-  // Loading state for API calls
-  private isProcessingAction: boolean = false;
+  // API client for server communication
+  private readonly client: GameClient = new GameClient();
 
   // Track previous time for transition detection
   private previousWasDay: boolean = true;
-
-  // Polling interval for game state updates
-  private pollIntervalId: number | null = null;
-  private readonly POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
 
   // Game over state
   gameOver: boolean = false;
@@ -157,24 +152,7 @@ export class Game {
    * This allows us to see when the other player makes a move
    */
   private startPolling(): void {
-    if (this.pollIntervalId !== null) return; // Already polling
-
-    this.pollIntervalId = window.setInterval(async () => {
-      // Don't poll while we're processing an action
-      if (this.isProcessingAction) return;
-
-      try {
-        const { data, error } = await supabase.functions.invoke(
-          "game-state",
-          { body: { gameId: this.id } },
-        );
-        if (error === null && data !== null) {
-          this.parseQuiet(data);
-        }
-      } catch (pollError) {
-        console.warn("Polling error:", pollError);
-      }
-    }, this.POLL_INTERVAL_MS);
+    this.client.startPolling(this.id, (game) => this.parseQuiet(game));
   }
 
   /**
@@ -248,10 +226,7 @@ export class Game {
    * Stop polling for game state updates
    */
   private stopPolling(): void {
-    if (this.pollIntervalId !== null) {
-      window.clearInterval(this.pollIntervalId);
-      this.pollIntervalId = null;
-    }
+    this.client.stopPolling();
   }
 
   /**
@@ -299,7 +274,7 @@ export class Game {
     canvas.ctx.restore();
 
     // Render UI
-    renderResources(this.player.resources);
+    renderResourcesInDOM(this.player.resources);
     this.clock.render(this.currentPlayer, this.myPlayerType ?? undefined);
   }
 
@@ -376,60 +351,38 @@ export class Game {
    * Send an action to the server and update local state with response
    */
   private async sendAction(action: GameAction): Promise<boolean> {
-    // Check if we have a player assigned
     if (this.myPlayerType === null) {
       console.warn("No player assigned - cannot send actions");
       return false;
     }
 
-    // Check if it's our turn
     if (!this.isMyTurn) {
       console.warn("Not your turn - action blocked");
       return false;
     }
 
-    if (this.isProcessingAction) {
-      console.log("Action already in progress, ignoring");
+    const { success, response } = await this.client.sendAction(
+      this.id,
+      action,
+    );
+
+    if (response === undefined) {
       return false;
     }
 
-    this.isProcessingAction = true;
-
-    try {
-      const { data, error } = await supabase.functions.invoke("game-action", {
-        body: { gameId: this.id, action },
-      });
-
-      if (error !== null) {
-        console.error(
-          "Error sending action:",
-          await getEdgeFunctionError(error),
-        );
-        return false;
+    if (response.result.success) {
+      this.parseQuiet(response.game);
+      if (response.result.message !== undefined) {
+        console.log("Action result:", response.result.message);
       }
-
-      const response = data as ActionResponse;
-
-      if (response.result.success) {
+    } else {
+      console.warn("Action failed:", response.result.error);
+      if (response.game !== undefined) {
         this.parseQuiet(response.game);
-
-        if (response.result.message !== undefined) {
-          console.log("Action result:", response.result.message);
-        }
-      } else {
-        console.warn("Action failed:", response.result.error);
-        if (response.game !== undefined) {
-          this.parseQuiet(response.game);
-        }
       }
-
-      return response.result.success;
-    } catch (actionError) {
-      console.error("Error sending action:", actionError);
-      return false;
-    } finally {
-      this.isProcessingAction = false;
     }
+
+    return success;
   }
 
   // ============================================

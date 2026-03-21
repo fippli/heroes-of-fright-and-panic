@@ -3,7 +3,7 @@ import { GameImage } from "../core/GameImage";
 import { Hexagon } from "../core/Hexagon";
 import { LandscapeType } from "../core/Landscape";
 import { PieceKind } from "../core/Piece";
-import type { Player } from "../core/Player";
+import type { Player } from "@shared/player";
 import { themesApi, type ThemeAsset } from "../lib/theme-api";
 
 const pieceAssetKey = (player: Player, kind: PieceKind): string => {

@@ -2,8 +2,8 @@ import { PieceKind } from "@shared/piece";
 import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import { LandscapeType } from "./Landscape";
-import type { Player } from "./Player";
-import { ResourceMap } from "./ResourceMap";
+import type { Player } from "@shared/player";
+import { ResourceMap } from "@shared/player/resource-map";
 import type { TilePosition } from "./Tile";
 
 export { PieceKind };

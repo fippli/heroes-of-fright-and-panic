@@ -3,10 +3,7 @@ import type { EquipmentType } from "@shared/equipment/index.ts";
 import type { ResearchType } from "@shared/research/index.ts";
 import type { SteedType } from "@shared/steed/index.ts";
 
-export type TilePosition = {
-  readonly row: number;
-  readonly column: number;
-};
+export type { TilePosition } from "@shared/map/tile.ts";
 
 export type PlayerType = "day" | "night";
 

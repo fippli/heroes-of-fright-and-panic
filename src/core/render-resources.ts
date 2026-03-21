@@ -1,8 +1,6 @@
-import { ResourceMap } from "@shared/player/resource-map";
+import type { ResourceMap } from "@shared/player/resource-map";
 
-export { ResourceMap };
-
-export const renderResources = (resourceMap: ResourceMap): void => {
+export const renderResourcesInDOM = (resourceMap: ResourceMap): void => {
   const woodElement = document.getElementById("wood");
   const stoneElement = document.getElementById("stone");
   const goldElement = document.getElementById("gold");

@@ -7,8 +7,8 @@ import { parseGameState } from "./GameParser";
 import type { PlayerType, ServerGameState } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
 import { PieceKind } from "./Piece";
-import { Player } from "./Player";
-import { renderResources } from "./ResourceMap";
+import { Player } from "@shared/player";
+import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
 import { handleAction } from "@shared/game/engine.ts";
 import { createGame } from "@shared/game/create-game.ts";
@@ -136,7 +136,7 @@ export class DevGame {
 
     canvas.ctx.restore();
 
-    renderResources(this.player.resources);
+    renderResourcesInDOM(this.player.resources);
     this.clock.render(this.currentPlayer);
   }
 
