@@ -1,7 +1,7 @@
 import { LandscapeType } from "@shared/map/landscape.ts";
-import { Equipment, EquipmentType } from "@shared/equipment/index.ts";
-import { Steed } from "@shared/steed/index.ts";
-import { ResourceMap } from "@shared/player/resource-map.ts";
+import { type Equipment, EquipmentType } from "@shared/equipment/index.ts";
+import type { Steed } from "@shared/steed/index.ts";
+import { createResourceMap, type ResourceMap } from "@shared/player/resource-map.ts";
 
 export type PlayerType = "day" | "night";
 
@@ -12,7 +12,7 @@ export enum PieceKind {
   archAngel = "archAngel",
 }
 
-export class Piece {
+export type Piece = {
   readonly kind: PieceKind;
   readonly owner: PlayerType;
   readonly hearts: number;
@@ -26,257 +26,213 @@ export class Piece {
   readonly steed: Steed | null;
   readonly canEquip: boolean;
   readonly canMountSteed: boolean;
+};
 
-  constructor({
-    kind,
-    owner,
-    hearts,
-    maxHearts,
-    baseAttack,
-    baseDefense = 0,
-    baseView = 1,
-    baseMove = 1,
-    baseAttackRange = 1,
-    equipment = [],
-    steed = null,
-    canEquip = true,
-    canMountSteed = true,
-  }: {
-    kind: PieceKind;
-    owner: PlayerType;
-    hearts: number;
-    maxHearts?: number;
-    baseAttack: number;
-    baseDefense?: number;
-    baseView?: number;
-    baseMove?: number;
-    baseAttackRange?: number;
-    equipment?: ReadonlyArray<Equipment>;
-    steed?: Steed | null;
-    canEquip?: boolean;
-    canMountSteed?: boolean;
-  }) {
-    this.kind = kind;
-    this.owner = owner;
-    this.hearts = hearts;
-    this.maxHearts = maxHearts ?? hearts;
-    this.baseAttack = baseAttack;
-    this.baseDefense = baseDefense;
-    this.baseView = baseView;
-    this.baseMove = baseMove;
-    this.baseAttackRange = baseAttackRange;
-    this.equipment = equipment;
-    this.steed = steed;
-    this.canEquip = canEquip;
-    this.canMountSteed = canMountSteed;
-  }
+// ============================================
+// FACTORY FUNCTIONS
+// ============================================
 
-  static peasant(owner: PlayerType): Piece {
-    return new Piece({
-      kind: PieceKind.peasant,
-      owner,
-      hearts: 1,
-      baseAttack: 1,
-      baseDefense: 0,
-      baseView: 1,
-      baseMove: 1,
-      baseAttackRange: 1,
-    });
-  }
+export const createPeasant = (owner: PlayerType): Piece => ({
+  kind: PieceKind.peasant,
+  owner,
+  hearts: 1,
+  maxHearts: 1,
+  baseAttack: 1,
+  baseDefense: 0,
+  baseView: 1,
+  baseMove: 1,
+  baseAttackRange: 1,
+  equipment: [],
+  steed: null,
+  canEquip: true,
+  canMountSteed: true,
+});
 
-  static king(owner: PlayerType): Piece {
-    return new Piece({
-      kind: PieceKind.king,
-      owner,
-      hearts: 3,
-      baseAttack: 1,
-      baseDefense: 1,
-      baseView: 2,
-      baseMove: 1,
-      baseAttackRange: 1,
-      canEquip: false,
-    });
-  }
+export const createKing = (owner: PlayerType): Piece => ({
+  kind: PieceKind.king,
+  owner,
+  hearts: 3,
+  maxHearts: 3,
+  baseAttack: 1,
+  baseDefense: 1,
+  baseView: 2,
+  baseMove: 1,
+  baseAttackRange: 1,
+  equipment: [],
+  steed: null,
+  canEquip: false,
+  canMountSteed: true,
+});
 
-  static priest(owner: PlayerType): Piece {
-    return new Piece({
-      kind: PieceKind.priest,
-      owner,
-      hearts: 3,
-      baseAttack: 0,
-      baseDefense: 0,
-      baseView: 1,
-      baseMove: 1,
-      baseAttackRange: 1,
-      canEquip: false,
-    });
-  }
+export const createPriest = (owner: PlayerType): Piece => ({
+  kind: PieceKind.priest,
+  owner,
+  hearts: 3,
+  maxHearts: 3,
+  baseAttack: 0,
+  baseDefense: 0,
+  baseView: 1,
+  baseMove: 1,
+  baseAttackRange: 1,
+  equipment: [],
+  steed: null,
+  canEquip: false,
+  canMountSteed: true,
+});
 
-  static archAngel(owner: PlayerType): Piece {
-    return new Piece({
-      kind: PieceKind.archAngel,
-      owner,
-      hearts: 3,
-      baseAttack: 3,
-      baseDefense: 3,
-      baseView: 3,
-      baseMove: 3,
-      baseAttackRange: 1,
-      canEquip: false,
-      canMountSteed: false,
-    });
-  }
+export const createArchAngel = (owner: PlayerType): Piece => ({
+  kind: PieceKind.archAngel,
+  owner,
+  hearts: 3,
+  maxHearts: 3,
+  baseAttack: 3,
+  baseDefense: 3,
+  baseView: 3,
+  baseMove: 3,
+  baseAttackRange: 1,
+  equipment: [],
+  steed: null,
+  canEquip: false,
+  canMountSteed: false,
+});
 
-  static spawnCost(): ResourceMap {
-    return new ResourceMap({ food: 1 });
-  }
+// ============================================
+// COST FUNCTIONS
+// ============================================
 
-  static priestCost(): ResourceMap {
-    return new ResourceMap({ gold: 1 });
-  }
+export const peasantSpawnCost = (): ResourceMap =>
+  createResourceMap({ food: 1 });
 
-  static archAngelCost(): ResourceMap {
-    return new ResourceMap({ faith: 100 });
-  }
+export const priestTrainCost = (): ResourceMap =>
+  createResourceMap({ gold: 1 });
 
-  get attack(): number {
-    const equipmentBonus = this.equipment.reduce(
-      (sum, equip) => sum + equip.attackBonus,
-      0,
-    );
-    return this.baseAttack + equipmentBonus;
-  }
+export const archAngelSummonCost = (): ResourceMap =>
+  createResourceMap({ faith: 100 });
 
-  get defense(): number {
-    const equipmentBonus = this.equipment.reduce(
-      (sum, equip) => sum + equip.defenseBonus,
-      0,
-    );
-    return this.baseDefense + equipmentBonus;
-  }
+// ============================================
+// COMPUTED VALUE FUNCTIONS
+// ============================================
 
-  get view(): number {
-    const steedBonus = this.steed !== null ? this.steed.viewBonus : 0;
-    return this.baseView + steedBonus;
-  }
+export const getPieceAttack = (piece: Piece): number => {
+  const equipmentBonus = piece.equipment.reduce(
+    (sum, equip) => sum + equip.attackBonus,
+    0,
+  );
+  return piece.baseAttack + equipmentBonus;
+};
 
-  get move(): number {
-    const steedBonus = this.steed !== null ? this.steed.moveBonus : 0;
-    return this.baseMove + steedBonus;
-  }
+export const getPieceDefense = (piece: Piece): number => {
+  const equipmentBonus = piece.equipment.reduce(
+    (sum, equip) => sum + equip.defenseBonus,
+    0,
+  );
+  return piece.baseDefense + equipmentBonus;
+};
 
-  get attackRange(): number {
-    const hasBow = this.hasEquipment(EquipmentType.bow);
-    if (!hasBow) {
-      return this.baseAttackRange;
-    }
-    const bowRangeBonus = this.equipment
-      .filter((equip) => equip.type === EquipmentType.bow)
-      .reduce((sum, equip) => sum + equip.attackRangeBonus, 0);
-    const steedBowBonus =
-      this.steed !== null && hasBow ? this.steed.bowRangeBonus : 0;
-    return this.baseAttackRange + bowRangeBonus + steedBowBonus;
-  }
+export const getPieceView = (piece: Piece): number => {
+  const steedBonus = piece.steed !== null ? piece.steed.viewBonus : 0;
+  return piece.baseView + steedBonus;
+};
 
-  get totalHp(): number {
-    return this.hearts + this.defense;
-  }
+export const getPieceMove = (piece: Piece): number => {
+  const steedBonus = piece.steed !== null ? piece.steed.moveBonus : 0;
+  return piece.baseMove + steedBonus;
+};
 
-  get walkableLandscape(): ReadonlyArray<LandscapeType> {
-    const base = [LandscapeType.grass, LandscapeType.sand, LandscapeType.farm];
-    const canWalkTrees = this.equipment.some((equip) => equip.canWalkOnTrees);
-    const canWalkWater = this.steed?.enablesWaterTravel === true;
-    return [
-      ...base,
-      ...(canWalkTrees ? [LandscapeType.tree] : []),
-      ...(canWalkWater ? [LandscapeType.water] : []),
-    ];
+export const getPieceAttackRange = (piece: Piece): number => {
+  const hasBow = pieceHasEquipment(piece, EquipmentType.bow);
+  if (!hasBow) {
+    return piece.baseAttackRange;
   }
+  const bowRangeBonus = piece.equipment
+    .filter((equip) => equip.type === EquipmentType.bow)
+    .reduce((sum, equip) => sum + equip.attackRangeBonus, 0);
+  const steedBowBonus =
+    piece.steed !== null && hasBow ? piece.steed.bowRangeBonus : 0;
+  return piece.baseAttackRange + bowRangeBonus + steedBowBonus;
+};
 
-  hasEquipment(equipmentType: EquipmentType): boolean {
-    return this.equipment.some((equip) => equip.type === equipmentType);
-  }
+export const getPieceTotalHp = (piece: Piece): number =>
+  piece.hearts + getPieceDefense(piece);
 
-  withEquipment(newEquipment: Equipment): Piece {
-    if (!this.canEquip) {
-      return this;
-    }
-    if (this.hasEquipment(newEquipment.type)) {
-      return this;
-    }
-    return new Piece({
-      ...this.toConstructorArgs(),
-      equipment: [...this.equipment, newEquipment],
-    });
-  }
+export const getWalkableLandscape = (
+  piece: Piece,
+): ReadonlyArray<LandscapeType> => {
+  const base = [LandscapeType.grass, LandscapeType.sand, LandscapeType.farm];
+  const canWalkTrees = piece.equipment.some((equip) => equip.canWalkOnTrees);
+  const canWalkWater = piece.steed?.enablesWaterTravel === true;
+  return [
+    ...base,
+    ...(canWalkTrees ? [LandscapeType.tree] : []),
+    ...(canWalkWater ? [LandscapeType.water] : []),
+  ];
+};
 
-  withSteed(newSteed: Steed): Piece {
-    if (!this.canMountSteed) {
-      return this;
-    }
-    if (this.steed !== null) {
-      return this;
-    }
-    return new Piece({
-      ...this.toConstructorArgs(),
-      steed: newSteed,
-    });
-  }
+export const isPieceAlive = (piece: Piece): boolean => piece.hearts > 0;
 
-  withDamage(damage: number): Piece {
-    const totalDefense = this.defense;
-    const defenseAbsorbed = Math.min(totalDefense, damage);
-    const remainingDamage = damage - defenseAbsorbed;
-    const newBaseDefense = Math.max(0, this.baseDefense - defenseAbsorbed);
-    const newHearts = Math.max(0, this.hearts - remainingDamage);
-    // Remove equipment that contributed defense if all defense is consumed
-    const updatedEquipment =
-      defenseAbsorbed >= totalDefense
-        ? this.equipment.filter((equip) => equip.defenseBonus === 0)
-        : this.equipment;
-    return new Piece({
-      ...this.toConstructorArgs(),
-      hearts: newHearts,
-      baseDefense: newBaseDefense,
-      equipment: updatedEquipment,
-    });
-  }
+export const isPieceDead = (piece: Piece): boolean => piece.hearts <= 0;
 
-  withHealing(amount: number): Piece {
-    const newHearts = Math.min(this.maxHearts, this.hearts + amount);
-    return new Piece({
-      ...this.toConstructorArgs(),
-      hearts: newHearts,
-    });
-  }
+// ============================================
+// QUERY / TRANSFORMATION FUNCTIONS
+// ============================================
 
-  get isAlive(): boolean {
-    return this.hearts > 0;
-  }
+export const pieceHasEquipment = (
+  piece: Piece,
+  equipmentType: EquipmentType,
+): boolean => piece.equipment.some((equip) => equip.type === equipmentType);
 
-  get isDead(): boolean {
-    return this.hearts <= 0;
+export const pieceWithEquipment = (
+  piece: Piece,
+  newEquipment: Equipment,
+): Piece => {
+  if (!piece.canEquip) {
+    return piece;
   }
+  if (pieceHasEquipment(piece, newEquipment.type)) {
+    return piece;
+  }
+  return {
+    ...piece,
+    equipment: [...piece.equipment, newEquipment],
+  };
+};
 
-  isOwnedBy(playerType: PlayerType): boolean {
-    return this.owner === playerType;
+export const pieceWithSteed = (piece: Piece, newSteed: Steed): Piece => {
+  if (!piece.canMountSteed) {
+    return piece;
   }
+  if (piece.steed !== null) {
+    return piece;
+  }
+  return {
+    ...piece,
+    steed: newSteed,
+  };
+};
 
-  private toConstructorArgs() {
-    return {
-      kind: this.kind,
-      owner: this.owner,
-      hearts: this.hearts,
-      maxHearts: this.maxHearts,
-      baseAttack: this.baseAttack,
-      baseDefense: this.baseDefense,
-      baseView: this.baseView,
-      baseMove: this.baseMove,
-      baseAttackRange: this.baseAttackRange,
-      equipment: this.equipment,
-      steed: this.steed,
-      canEquip: this.canEquip,
-      canMountSteed: this.canMountSteed,
-    };
-  }
-}
+export const pieceWithDamage = (piece: Piece, damage: number): Piece => {
+  const totalDefense = getPieceDefense(piece);
+  const defenseAbsorbed = Math.min(totalDefense, damage);
+  const remainingDamage = damage - defenseAbsorbed;
+  const newBaseDefense = Math.max(0, piece.baseDefense - defenseAbsorbed);
+  const newHearts = Math.max(0, piece.hearts - remainingDamage);
+  // Remove equipment that contributed defense if all defense is consumed
+  const updatedEquipment =
+    defenseAbsorbed >= totalDefense
+      ? piece.equipment.filter((equip) => equip.defenseBonus === 0)
+      : piece.equipment;
+  return {
+    ...piece,
+    hearts: newHearts,
+    baseDefense: newBaseDefense,
+    equipment: updatedEquipment,
+  };
+};
+
+export const pieceWithHealing = (piece: Piece, amount: number): Piece => {
+  const newHearts = Math.min(piece.maxHearts, piece.hearts + amount);
+  return {
+    ...piece,
+    hearts: newHearts,
+  };
+};

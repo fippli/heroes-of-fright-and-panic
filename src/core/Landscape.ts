@@ -1,7 +1,7 @@
 import { LandscapeType } from "@shared/map/landscape";
 import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
-import { ResourceMap } from "@shared/player/resource-map";
+import { createResourceMap, type ResourceMap } from "@shared/player/resource-map";
 import type { TilePosition } from "./Tile";
 
 export { LandscapeType };
@@ -22,7 +22,7 @@ export class Landscape {
     lootDrop?: ResourceMap;
   }) {
     this.type = type;
-    this.lootDrop = lootDrop ? new ResourceMap(lootDrop) : undefined;
+    this.lootDrop = lootDrop ? createResourceMap(lootDrop) : undefined;
   }
 
   render(

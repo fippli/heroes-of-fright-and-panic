@@ -2,8 +2,7 @@ import { Building } from "./Building";
 import { Clock } from "./Clock";
 import { Landscape } from "./Landscape";
 import { Piece } from "./Piece";
-import { Player } from "@shared/player";
-import { ResourceMap } from "@shared/player/resource-map";
+import { createPlayer, type Player } from "@shared/player";
 import { Tile } from "./Tile";
 import type { ServerGameState, ServerTile, ServerPlayer } from "./GameTypes";
 
@@ -11,9 +10,9 @@ const parseClock = (clock?: { time: number }): Clock =>
   new Clock(clock?.time ?? 6);
 
 const parsePlayer = (serverPlayer: ServerPlayer): Player =>
-  new Player({
+  createPlayer({
     type: serverPlayer.type,
-    resources: new ResourceMap(serverPlayer.resources ?? {}),
+    resources: serverPlayer.resources,
   });
 
 const parseTile = (tile: ServerTile): Tile =>
@@ -26,7 +25,7 @@ const parseTile = (tile: ServerTile): Tile =>
         ? new Building({
             type: tile.building.type,
             viewRange: tile.building.viewRange ?? 1,
-            owner: new Player({
+            owner: createPlayer({
               type: tile.building.owner ?? "day",
             }),
           })
@@ -37,7 +36,7 @@ const parseTile = (tile: ServerTile): Tile =>
             kind: tile.piece.kind,
             viewRange: tile.piece.viewRange ?? 1,
             attackRange: tile.piece.attackRange ?? tile.piece.viewRange ?? 1,
-            owner: new Player({ type: tile.piece.owner ?? "day" }),
+            owner: createPlayer({ type: tile.piece.owner ?? "day" }),
             walkableLandscape: tile.piece.walkableLandscape ?? [],
           })
         : undefined,

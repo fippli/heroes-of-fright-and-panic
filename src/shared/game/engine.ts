@@ -14,19 +14,36 @@ import type {
   AttackAction,
   GameAction,
 } from "../actions/index.ts";
-import { Building, BuildingType } from "../building/index.ts";
+import { buildingCostOf, createBuilding, createCastleBuilding, isBuildingWalkableBy, BuildingType } from "../building/index.ts";
 import { resolveCombat } from "../combat/index.ts";
-import { Equipment, EquipmentType } from "../equipment/index.ts";
+import { createEquipment, EquipmentType } from "../equipment/index.ts";
 import * as hex from "../map/hex.ts";
-import { LandscapeType, Landscape } from "../map/landscape.ts";
+import { LandscapeType, farm as farmLandscape, unexplored as unexploredLandscape } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
-import type { PlayerType } from "../piece/index.ts";
-import { Piece, PieceKind } from "../piece/index.ts";
-import { Player } from "../player/index.ts";
-import { ResourceMap } from "../player/resource-map.ts";
+import type { PlayerType, Piece } from "../piece/index.ts";
+import {
+  PieceKind,
+  createPeasant,
+  createKing,
+  createPriest,
+  createArchAngel,
+  peasantSpawnCost,
+  priestTrainCost,
+  archAngelSummonCost,
+  getPieceMove,
+  getPieceView,
+  getPieceAttackRange,
+  getWalkableLandscape,
+  pieceHasEquipment,
+  pieceWithEquipment,
+  pieceWithSteed,
+  pieceWithHealing,
+} from "../piece/index.ts";
+import { createPlayer, playerCollect, playerCanAfford, playerPay, playerWithResearch, type Player } from "../player/index.ts";
+import { createResourceMap } from "../player/resource-map.ts";
 import { calculateProduction, countPrayingPriests } from "../production/index.ts";
-import { Research, ResearchType, SPEED_LEVELS } from "../research/index.ts";
-import { Steed, SteedType } from "../steed/index.ts";
+import { canResearch, applyResearch, researchCostOf, ResearchType, SPEED_LEVELS } from "../research/index.ts";
+import { createSteed, SteedType } from "../steed/index.ts";
 import type { Game, GameClock } from "./types.ts";
 
 const ARCH_ANGEL_PRIEST_REQUIREMENT = 10;
@@ -93,7 +110,7 @@ const advanceClock = (game: Game, playerType: PlayerType): Game => {
 const triggerProduction = (game: Game, playerType: PlayerType): Game => {
   const player = getPlayer(game, playerType);
   const production = calculateProduction(playerType, game.tiles, player.research);
-  const updatedPlayer = player.collect(production);
+  const updatedPlayer = playerCollect(player,production);
   return updatePlayer(game, playerType, updatedPlayer);
 };
 
@@ -213,19 +230,19 @@ export const handleMove = (
   // Check walkable terrain
   if (
     toTile.landscape === null ||
-    !fromTile.piece.walkableLandscape.includes(toTile.landscape.type)
+    !getWalkableLandscape(fromTile.piece).includes(toTile.landscape.type)
   ) {
     return { game, result: { success: false, error: "Cannot walk on this terrain" } };
   }
 
   // Check building walkability
-  if (toTile.building !== null && !toTile.building.isWalkableBy(action.player)) {
+  if (toTile.building !== null && !isBuildingWalkableBy(toTile.building, action.player)) {
     return { game, result: { success: false, error: "Cannot enter this building" } };
   }
 
   // Check move range (path must be clear and within range)
   const distance = findDistance(game.tiles, action.from, action.to, fromTile.piece);
-  if (distance === null || distance > fromTile.piece.move) {
+  if (distance === null || distance > getPieceMove(fromTile.piece)) {
     return { game, result: { success: false, error: "Target is out of move range" } };
   }
 
@@ -238,7 +255,7 @@ export const handleMove = (
       fromTile.piece.canMountSteed &&
       fromTile.piece.steed === null
     ) {
-      return fromTile.piece.withSteed(toTile.steed);
+      return pieceWithSteed(fromTile.piece, toTile.steed);
     }
     return fromTile.piece;
   })();
@@ -275,7 +292,7 @@ const findDistance = (
   // eslint-disable-next-line no-constant-condition
   while (frontier.length > 0) {
     const current = frontier.shift()!;
-    if (current.distance >= piece.move) {
+    if (current.distance >= getPieceMove(piece)) {
       continue;
     }
 
@@ -298,7 +315,7 @@ const findDistance = (
       }
       if (
         neighbor.landscape === null ||
-        !piece.walkableLandscape.includes(neighbor.landscape.type)
+        !getWalkableLandscape(piece).includes(neighbor.landscape.type)
       ) {
         return;
       }
@@ -348,14 +365,14 @@ export const handleBuild = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = Building.costOf(action.buildingType);
+  const cost = buildingCostOf(action.buildingType);
 
-  if (!player.canAfford(cost)) {
+  if (!playerCanAfford(player,cost)) {
     return { game, result: { success: false, error: "Cannot afford this building" } };
   }
 
-  const updatedPlayer = player.pay(cost);
-  const building = Building[action.buildingType](action.player);
+  const updatedPlayer = playerPay(player,cost);
+  const building = createBuilding(action.buildingType, action.player);
 
   // When a house is built, adjacent grass tiles convert to farm
   const tilesAfterBuild = (() => {
@@ -386,7 +403,7 @@ const convertAdjacentGrassToFarm = (
     )
     .reduce(
       (acc, neighbor) =>
-        replaceTile(acc, { ...neighbor, landscape: Landscape.farm() }),
+        replaceTile(acc, { ...neighbor, landscape: farmLandscape() }),
       tiles,
     );
 };
@@ -418,14 +435,14 @@ export const handleSpawnPeasant = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = Piece.spawnCost();
+  const cost = peasantSpawnCost();
 
-  if (!player.canAfford(cost)) {
+  if (!playerCanAfford(player,cost)) {
     return { game, result: { success: false, error: "Cannot afford peasant" } };
   }
 
-  const updatedPlayer = player.pay(cost);
-  const peasant = Piece.peasant(action.player);
+  const updatedPlayer = playerPay(player,cost);
+  const peasant = createPeasant(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: peasant });
 
   const afterSpawn = advanceClock(
@@ -457,19 +474,19 @@ export const handleCraftEquipment = (
     return { game, result: { success: false, error: "This unit cannot carry equipment" } };
   }
 
-  const equipment = Equipment[action.equipmentType]();
+  const equipment = createEquipment(action.equipmentType);
 
-  if (tile.piece.hasEquipment(equipment.type)) {
+  if (pieceHasEquipment(tile.piece, equipment.type)) {
     return { game, result: { success: false, error: "Already has this equipment" } };
   }
 
   const player = getPlayer(game, action.player);
-  if (!player.canAfford(equipment.cost)) {
+  if (!playerCanAfford(player,equipment.cost)) {
     return { game, result: { success: false, error: "Cannot afford this equipment" } };
   }
 
-  const updatedPlayer = player.pay(equipment.cost);
-  const equippedPiece = tile.piece.withEquipment(equipment);
+  const updatedPlayer = playerPay(player,equipment.cost);
+  const equippedPiece = pieceWithEquipment(tile.piece, equipment);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: equippedPiece });
 
   const afterCraft = advanceClock(
@@ -521,14 +538,14 @@ export const handleBuySteed = (
     return { game, result: { success: false, error: "Target tile is occupied" } };
   }
 
-  const steed = action.steedType === SteedType.horse ? Steed.horse() : Steed.boat();
+  const steed = createSteed(action.steedType);
   const player = getPlayer(game, action.player);
 
-  if (!player.canAfford(steed.cost)) {
+  if (!playerCanAfford(player,steed.cost)) {
     return { game, result: { success: false, error: "Cannot afford steed" } };
   }
 
-  const updatedPlayer = player.pay(steed.cost);
+  const updatedPlayer = playerPay(player,steed.cost);
   // Place steed on the target tile (as a steed field, not a piece)
   const updatedTiles = replaceTile(game.tiles, {
     ...targetTile,
@@ -572,14 +589,14 @@ export const handleTrainPriest = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = Piece.priestCost();
+  const cost = priestTrainCost();
 
-  if (!player.canAfford(cost)) {
+  if (!playerCanAfford(player,cost)) {
     return { game, result: { success: false, error: "Cannot afford priest" } };
   }
 
-  const updatedPlayer = player.pay(cost);
-  const priest = Piece.priest(action.player);
+  const updatedPlayer = playerPay(player,cost);
+  const priest = createPriest(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: priest });
 
   const afterTrain = advanceClock(
@@ -626,14 +643,14 @@ export const handleHeal = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = new ResourceMap({ faith: 1 });
+  const cost = createResourceMap({ faith: 1 });
 
-  if (!player.canAfford(cost)) {
+  if (!playerCanAfford(player,cost)) {
     return { game, result: { success: false, error: "Not enough faith" } };
   }
 
-  const updatedPlayer = player.pay(cost);
-  const healedPiece = targetTile.piece.withHealing(1);
+  const updatedPlayer = playerPay(player,cost);
+  const healedPiece = pieceWithHealing(targetTile.piece, 1);
   const updatedTiles = replaceTile(game.tiles, { ...targetTile, piece: healedPiece });
 
   const afterHeal = advanceClock(
@@ -667,19 +684,20 @@ export const handleResearch = (
 
   const player = getPlayer(game, action.player);
 
-  if (!player.research.canResearch(action.researchType)) {
+  if (!canResearch(player.research, action.researchType)) {
     return { game, result: { success: false, error: "Cannot research this" } };
   }
 
-  const cost = Research.costOf(action.researchType);
+  const cost = researchCostOf(action.researchType);
 
-  if (!player.canAfford(cost)) {
+  if (!playerCanAfford(player,cost)) {
     return { game, result: { success: false, error: "Cannot afford research" } };
   }
 
-  const updatedPlayer = player
-    .pay(cost)
-    .withResearch(player.research.withResearch(action.researchType));
+  const updatedPlayer = playerWithResearch(
+    playerPay(player, cost),
+    applyResearch(player.research, action.researchType),
+  );
 
   const afterResearch = advanceClock(
     updatePlayer(game, action.player, updatedPlayer),
@@ -728,7 +746,7 @@ export const handleEnterTower = (
   }
 
   // Transform tower into castle with king inside
-  const castle = Building.castle(action.player);
+  const castle = createCastleBuilding(action.player);
   const king = kingTile.piece;
   const updatedTiles = replaceTile(
     replaceTile(game.tiles, { ...kingTile, piece: null }),
@@ -777,14 +795,14 @@ export const handleSummonArchAngel = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = Piece.archAngelCost();
+  const cost = archAngelSummonCost();
 
-  if (!player.canAfford(cost)) {
+  if (!playerCanAfford(player,cost)) {
     return { game, result: { success: false, error: "Not enough faith" } };
   }
 
-  const updatedPlayer = player.pay(cost);
-  const archAngel = Piece.archAngel(action.player);
+  const updatedPlayer = playerPay(player,cost);
+  const archAngel = createArchAngel(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: archAngel });
 
   const afterSummon = advanceClock(
@@ -821,11 +839,11 @@ export const handleAttack = (
     if (
       attackerTile.building !== null &&
       attackerTile.building.type === BuildingType.tower &&
-      attacker.hasEquipment(EquipmentType.bow)
+      pieceHasEquipment(attacker, EquipmentType.bow)
     ) {
       return attackerTile.building.viewRange; // Tower range (4)
     }
-    return attacker.attackRange;
+    return getPieceAttackRange(attacker);
   })();
 
   // Check range
@@ -953,7 +971,7 @@ export const getVisibleTiles = (
   game.tiles.forEach((tile) => {
     // Pieces reveal tiles within their view range
     if (tile.piece !== null && tile.piece.owner === playerType) {
-      const tilesInRange = getTilesInRange(game.tiles, tile, tile.piece.view);
+      const tilesInRange = getTilesInRange(game.tiles, tile, getPieceView(tile.piece));
       tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
     }
 
@@ -986,7 +1004,7 @@ export const getFilteredGameState = (game: Game, forPlayer: PlayerType): Game =>
       ...tile,
       piece: null,
       building: null,
-      landscape: new Landscape({ type: LandscapeType.unexplored }),
+      landscape: unexploredLandscape(),
     } as Tile;
   });
 
@@ -996,11 +1014,11 @@ export const getFilteredGameState = (game: Game, forPlayer: PlayerType): Game =>
     dayPlayer:
       forPlayer === "day"
         ? game.dayPlayer
-        : new Player({ type: "day" }),
+        : createPlayer({ type: "day" }),
     nightPlayer:
       forPlayer === "night"
         ? game.nightPlayer
-        : new Player({ type: "night" }),
+        : createPlayer({ type: "night" }),
   };
 };
 

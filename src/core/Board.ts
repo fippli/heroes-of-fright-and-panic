@@ -14,7 +14,7 @@ import type {
 import { Hexagon } from "./Hexagon";
 import { Notifications } from "./Notifications";
 import { PieceKind } from "./Piece";
-import { Player } from "@shared/player";
+import { createPlayer, type Player } from "@shared/player";
 import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
 
@@ -67,8 +67,8 @@ export class Game {
   ) {
     this.canvas = canvas;
     this.myPlayerType = myPlayerType;
-    this.dayPlayer = new Player({ type: "day" });
-    this.nightPlayer = new Player({ type: "night" });
+    this.dayPlayer = createPlayer({ type: "day" });
+    this.nightPlayer = createPlayer({ type: "night" });
     this.dialog = new Dialog();
     this.imageAssets = imageAssets;
   }
@@ -283,16 +283,18 @@ export class Game {
    * Uses myPlayerType (not currentPlayer) so each client sees their own fog of war
    */
   private calculateExploration(): void {
-    // If no player assigned (spectator), show everything
-    const viewingPlayer = this.myPlayerType ?? this.currentPlayer;
+    // Spectator: show everything
+    if (this.myPlayerType === null) {
+      this.tiles.forEach((tile) => (tile.explored = true));
+      return;
+    }
 
     // First, unexplore all tiles
     this.tiles.forEach((tile) => (tile.explored = false));
 
     // Then explore tiles visible to our player
     this.tiles.forEach((tile) => {
-      // Check if tile has a piece owned by our player
-      if (tile.piece?.owner?.type === viewingPlayer) {
+      if (tile.piece?.owner?.type === this.myPlayerType) {
         tile.explored = true;
         const viewRange = Math.max(
           tile.building?.viewRange ?? 0,
@@ -302,8 +304,7 @@ export class Game {
         tilesInRange.forEach((rangeTile) => (rangeTile.explored = true));
       }
 
-      // Check if tile has a building owned by our player
-      if (tile.building?.owner?.type === viewingPlayer) {
+      if (tile.building?.owner?.type === this.myPlayerType) {
         tile.explored = true;
       }
     });

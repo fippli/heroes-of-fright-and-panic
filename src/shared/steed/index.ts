@@ -1,53 +1,42 @@
-import { ResourceMap } from "@shared/player/resource-map.ts";
+import { createResourceMap, type ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum SteedType {
   horse = "horse",
   boat = "boat",
 }
 
-export class Steed {
+export type Steed = {
   readonly type: SteedType;
   readonly cost: ResourceMap;
   readonly viewBonus: number;
   readonly moveBonus: number;
   readonly bowRangeBonus: number;
   readonly enablesWaterTravel: boolean;
+};
 
-  constructor({
-    type,
-    cost,
-    viewBonus = 1,
-    moveBonus = 1,
-    bowRangeBonus = 1,
-    enablesWaterTravel = false,
-  }: {
-    type: SteedType;
-    cost: ResourceMap;
-    viewBonus?: number;
-    moveBonus?: number;
-    bowRangeBonus?: number;
-    enablesWaterTravel?: boolean;
-  }) {
-    this.type = type;
-    this.cost = cost;
-    this.viewBonus = viewBonus;
-    this.moveBonus = moveBonus;
-    this.bowRangeBonus = bowRangeBonus;
-    this.enablesWaterTravel = enablesWaterTravel;
-  }
+export const createHorse = (): Steed => ({
+  type: SteedType.horse,
+  cost: createResourceMap({ food: 10 }),
+  viewBonus: 1,
+  moveBonus: 1,
+  bowRangeBonus: 1,
+  enablesWaterTravel: false,
+});
 
-  static horse(): Steed {
-    return new Steed({
-      type: SteedType.horse,
-      cost: new ResourceMap({ food: 10 }),
-    });
-  }
+export const createBoat = (): Steed => ({
+  type: SteedType.boat,
+  cost: createResourceMap({ wood: 10 }),
+  viewBonus: 1,
+  moveBonus: 1,
+  bowRangeBonus: 1,
+  enablesWaterTravel: true,
+});
 
-  static boat(): Steed {
-    return new Steed({
-      type: SteedType.boat,
-      cost: new ResourceMap({ wood: 10 }),
-      enablesWaterTravel: true,
-    });
+export const createSteed = (steedType: SteedType): Steed => {
+  switch (steedType) {
+    case SteedType.horse:
+      return createHorse();
+    case SteedType.boat:
+      return createBoat();
   }
-}
+};

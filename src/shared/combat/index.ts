@@ -1,5 +1,10 @@
 import { Building } from "@shared/building/index.ts";
-import { Piece } from "@shared/piece/index.ts";
+import {
+  type Piece,
+  getPieceAttack,
+  pieceWithDamage,
+  isPieceDead,
+} from "@shared/piece/index.ts";
 
 export type CombatTargetPiece = {
   readonly kind: "piece";
@@ -49,8 +54,8 @@ const resolvePieceCombat = (
   attacker: Piece,
   target: Piece,
 ): PieceCombatResult => {
-  const damaged = target.withDamage(attacker.attack);
-  if (damaged.isDead) {
+  const damaged = pieceWithDamage(target, getPieceAttack(attacker));
+  if (isPieceDead(damaged)) {
     return { targetKind: "piece", destroyed: true, survivingPiece: null };
   }
   return { targetKind: "piece", destroyed: false, survivingPiece: damaged };
@@ -60,6 +65,6 @@ const resolveBuildingCombat = (
   attacker: Piece,
   target: Building,
 ): BuildingCombatResult => {
-  const destroyed = attacker.attack > target.defense;
+  const destroyed = getPieceAttack(attacker) > target.defense;
   return { targetKind: "building", destroyed };
 };

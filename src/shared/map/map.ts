@@ -1,6 +1,6 @@
 import { compose } from "@shared/utils/compose.ts";
 import * as hex from "./hex.ts";
-import { Landscape } from "./landscape.ts";
+import { generateLandscape, cleanupSingles, createBeaches, cleanupSand, placeTrees, placeMountains } from "./landscape.ts";
 import type { RandomFunction } from "@shared/utils/random.ts";
 import type { Tile, TilePosition } from "./tile.ts";
 
@@ -17,7 +17,7 @@ export class GameMap {
 
     const mapTiles = startTiles.reduce((acc, tile: Tile) => {
       const neighbours = GameMap.findNeighbors(tile, acc);
-      const landscape = Landscape.generate(neighbours, random);
+      const landscape = generateLandscape(neighbours, random);
       const newTile = { ...tile, landscape };
       return acc.map((tile) =>
         tile.row === newTile.row && tile.column === newTile.column
@@ -27,11 +27,11 @@ export class GameMap {
     }, startTiles);
 
     return compose(
-      Landscape.cleanupSingles,
-      Landscape.createBeaches,
-      Landscape.cleanupSand,
-      (tiles: Tile[]) => Landscape.placeTrees(tiles, random),
-      (tiles: Tile[]) => Landscape.placeMountains(tiles, random),
+      cleanupSingles,
+      createBeaches,
+      cleanupSand,
+      (tiles: Tile[]) => placeTrees(tiles, random),
+      (tiles: Tile[]) => placeMountains(tiles, random),
     )(mapTiles);
   }
 

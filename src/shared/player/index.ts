@@ -1,51 +1,63 @@
-import { ResourceMap } from "@shared/player/resource-map.ts";
-import { Research } from "@shared/research/index.ts";
+import {
+  createResourceMap,
+  addResources,
+  subtractResources,
+  canAfford,
+  type ResourceMap,
+} from "@shared/player/resource-map.ts";
+import { createResearch, type Research } from "@shared/research/index.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
 
-export class Player {
+export type Player = {
   readonly type: PlayerType;
   readonly resources: ResourceMap;
   readonly research: Research;
+};
 
-  constructor({
-    type,
-    resources,
-    research,
-  }: {
-    type: PlayerType;
-    resources?: ResourceMap;
-    research?: Research;
-  }) {
-    this.type = type;
-    this.resources = resources ?? new ResourceMap({});
-    this.research = research ?? new Research({});
-  }
+export const createPlayer = ({
+  type,
+  resources,
+  research,
+}: {
+  type: PlayerType;
+  resources?: ResourceMap;
+  research?: Research;
+}): Player => ({
+  type,
+  resources: resources ?? createResourceMap(),
+  research: research ?? createResearch(),
+});
 
-  withResources(resources: ResourceMap): Player {
-    return new Player({
-      type: this.type,
-      resources,
-      research: this.research,
-    });
-  }
+export const playerWithResources = (
+  player: Player,
+  resources: ResourceMap,
+): Player => ({
+  ...player,
+  resources,
+});
 
-  withResearch(research: Research): Player {
-    return new Player({
-      type: this.type,
-      resources: this.resources,
-      research,
-    });
-  }
+export const playerWithResearch = (
+  player: Player,
+  research: Research,
+): Player => ({
+  ...player,
+  research,
+});
 
-  collect(loot: ResourceMap): Player {
-    return this.withResources(this.resources.add(loot));
-  }
+export const playerCollect = (
+  player: Player,
+  loot: ResourceMap,
+): Player =>
+  playerWithResources(player, addResources(player.resources, loot));
 
-  canAfford(cost: ResourceMap): boolean {
-    return this.resources.canAfford(cost);
-  }
+export const playerCanAfford = (
+  player: Player,
+  cost: ResourceMap,
+): boolean =>
+  canAfford(player.resources, cost);
 
-  pay(cost: ResourceMap): Player {
-    return this.withResources(this.resources.subtract(cost));
-  }
-}
+export const playerPay = (
+  player: Player,
+  cost: ResourceMap,
+): Player =>
+  playerWithResources(player, subtractResources(player.resources, cost));

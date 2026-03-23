@@ -1,47 +1,37 @@
 import type { Tile } from "../map/tile.ts";
-import { Player } from "../player/index.ts";
-import { ResourceMap } from "../player/resource-map.ts";
-import { Research } from "../research/index.ts";
+import { createPlayer } from "../player/index.ts";
 import type { Game, GameRow } from "./types.ts";
 
-// Convert database row to application type
-export const rowToGame = (row: GameRow): Game => {
-  return {
-    id: row.id,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-    name: row.name ?? undefined,
-    size: row.size,
-    tiles: row.tiles,
-    dayPlayer: new Player({
-      type: row.day_player.type,
-      resources: new ResourceMap(row.day_player.resources),
-      research: new Research(row.day_player.research ?? {}),
-    }),
-    nightPlayer: new Player({
-      type: row.night_player.type,
-      resources: new ResourceMap(row.night_player.resources),
-      research: new Research(row.night_player.research ?? {}),
-    }),
-    currentPlayer: row.current_player,
-    clock: row.clock,
-    creatorEmail: row.creator_email,
-    dayPlayerEmail: row.day_player_email,
-    nightPlayerEmail: row.night_player_email,
-    dayPlayerLastMove:
-      row.day_player_last_move !== null
-        ? new Date(row.day_player_last_move)
-        : null,
-    nightPlayerLastMove:
-      row.night_player_last_move !== null
-        ? new Date(row.night_player_last_move)
-        : null,
-    invitedEmail: row.invited_email,
-    gameOver: row.game_over,
-    winner: row.winner,
-    themeId: row.theme_id,
-  };
-};
+// Convert database row to application type.
+// The factory calls normalize potentially missing fields (e.g. old rows
+// before faith/research were added) by filling in defaults.
+export const rowToGame = (row: GameRow): Game => ({
+  id: row.id,
+  createdAt: new Date(row.created_at),
+  updatedAt: new Date(row.updated_at),
+  name: row.name ?? undefined,
+  size: row.size,
+  tiles: row.tiles,
+  dayPlayer: createPlayer(row.day_player),
+  nightPlayer: createPlayer(row.night_player),
+  currentPlayer: row.current_player,
+  clock: row.clock,
+  creatorEmail: row.creator_email,
+  dayPlayerEmail: row.day_player_email,
+  nightPlayerEmail: row.night_player_email,
+  dayPlayerLastMove:
+    row.day_player_last_move !== null
+      ? new Date(row.day_player_last_move)
+      : null,
+  nightPlayerLastMove:
+    row.night_player_last_move !== null
+      ? new Date(row.night_player_last_move)
+      : null,
+  invitedEmail: row.invited_email,
+  gameOver: row.game_over,
+  winner: row.winner,
+  themeId: row.theme_id,
+});
 
 // Convert application type to database row for inserts/updates
 export const gameToRow = (

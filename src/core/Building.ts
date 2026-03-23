@@ -2,7 +2,7 @@ import { BuildingType } from "@shared/building";
 import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import type { Player } from "@shared/player";
-import { ResourceMap } from "@shared/player/resource-map";
+import { createResourceMap, type ResourceMap } from "@shared/player/resource-map";
 import type { TilePosition } from "./Tile";
 
 export { BuildingType };
@@ -38,8 +38,8 @@ export class Building {
     this.walkable = walkable ?? true;
     this.viewRange = viewRange ?? 1;
     this.type = type;
-    this.cost = cost ?? new ResourceMap({});
-    this.production = production ?? new ResourceMap({});
+    this.cost = cost ?? createResourceMap();
+    this.production = production ?? createResourceMap();
     this.owner = owner;
   }
 

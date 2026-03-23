@@ -7,7 +7,7 @@ import { parseGameState } from "./GameParser";
 import type { PlayerType, ServerGameState } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
 import { PieceKind } from "./Piece";
-import { Player } from "@shared/player";
+import { createPlayer, type Player } from "@shared/player";
 import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
 import { handleAction } from "@shared/game/engine.ts";
@@ -37,8 +37,8 @@ export class DevGame {
 
   constructor(canvas: Canvas, size: number) {
     this.canvas = canvas;
-    this.dayPlayer = new Player({ type: "day" });
-    this.nightPlayer = new Player({ type: "night" });
+    this.dayPlayer = createPlayer({ type: "day" });
+    this.nightPlayer = createPlayer({ type: "night" });
     this.imageAssets = defaultImageAssets;
     this.logElement = document.getElementById("dev-log");
 

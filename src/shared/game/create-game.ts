@@ -3,9 +3,9 @@ import { LandscapeType } from "@shared/map/landscape.ts";
 import { GameMap } from "@shared/map/map.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
-import { Piece } from "@shared/piece/index.ts";
-import { Player } from "@shared/player/index.ts";
-import { ResourceMap } from "@shared/player/resource-map.ts";
+import { createKing, createPeasant } from "@shared/piece/index.ts";
+import { createPlayer } from "@shared/player/index.ts";
+import { createResourceMap } from "@shared/player/resource-map.ts";
 import { createRandom } from "@shared/utils/random.ts";
 
 type CreateGameParams = {
@@ -18,13 +18,13 @@ type CreateGameParams = {
 };
 
 export const createGame = (params: CreateGameParams) => {
-  const dayPlayer = new Player({
+  const dayPlayer = createPlayer({
     type: "day",
-    resources: new ResourceMap({ wood: 5, stone: 2 }),
+    resources: createResourceMap({ wood: 5, stone: 2 }),
   });
-  const nightPlayer = new Player({
+  const nightPlayer = createPlayer({
     type: "night",
-    resources: new ResourceMap({ wood: 5, stone: 2 }),
+    resources: createResourceMap({ wood: 5, stone: 2 }),
   });
 
   const random = createRandom(params.seed);
@@ -67,7 +67,7 @@ export const createGame = (params: CreateGameParams) => {
 
   // Place pieces
   const tilesWithDayKing = GameMap.replaceTile(
-    { row: dayKingTile.row, column: dayKingTile.column, piece: Piece.king("day") },
+    { row: dayKingTile.row, column: dayKingTile.column, piece: createKing("day") },
     generatedTiles,
   ) as Tile[];
 
@@ -75,7 +75,7 @@ export const createGame = (params: CreateGameParams) => {
     {
       row: dayPeasantTile.row,
       column: dayPeasantTile.column,
-      piece: Piece.peasant("day"),
+      piece: createPeasant("day"),
     },
     tilesWithDayKing,
   ) as Tile[];
@@ -84,7 +84,7 @@ export const createGame = (params: CreateGameParams) => {
     {
       row: nightKingTile.row,
       column: nightKingTile.column,
-      piece: Piece.king("night"),
+      piece: createKing("night"),
     },
     tilesWithDayPeasant,
   ) as Tile[];
@@ -93,7 +93,7 @@ export const createGame = (params: CreateGameParams) => {
     {
       row: nightPeasantTile.row,
       column: nightPeasantTile.column,
-      piece: Piece.peasant("night"),
+      piece: createPeasant("night"),
     },
     tilesWithNightKing,
   ) as Tile[];

@@ -4,7 +4,7 @@ import { LandscapeType } from "@shared/map/landscape.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
 import { PieceKind } from "@shared/piece/index.ts";
-import { ResourceMap } from "@shared/player/resource-map.ts";
+import { createResourceMap, addResources, type ResourceMap } from "@shared/player/resource-map.ts";
 import type { Research } from "@shared/research/index.ts";
 
 /**
@@ -29,7 +29,7 @@ export const calculateProduction = (
   const churchProduction = calculateChurchProduction(playerType, tiles);
   const fishingProduction = calculateFishingProduction(playerType, tiles);
 
-  return houseProduction.add(churchProduction).add(fishingProduction);
+  return addResources(addResources(houseProduction, churchProduction), fishingProduction);
 };
 
 const calculateHouseProduction = (
@@ -59,11 +59,11 @@ const calculateHouseProduction = (
       const production = tileProduction(neighbor, research);
       if (production !== null) {
         producedTileKeys.add(tileKey);
-        return acc.add(production);
+        return addResources(acc, production);
       }
       return acc;
     }, total);
-  }, new ResourceMap({}));
+  }, createResourceMap({}));
 };
 
 const tileProduction = (
@@ -75,11 +75,11 @@ const tileProduction = (
   }
   switch (tile.landscape.type) {
     case LandscapeType.farm:
-      return new ResourceMap({ food: 1 });
+      return createResourceMap({ food: 1 });
     case LandscapeType.tree:
-      return new ResourceMap({ wood: 1 });
+      return createResourceMap({ wood: 1 });
     case LandscapeType.mountain:
-      return new ResourceMap({
+      return createResourceMap({
         stone: 1,
         iron: research.hasMiningII ? 1 : 0,
         gold: research.hasMiningIII ? 1 : 0,
@@ -102,7 +102,7 @@ const calculateChurchProduction = (
       tile.piece.owner === playerType,
   );
 
-  return new ResourceMap({ faith: churchesWithPriests.length });
+  return createResourceMap({ faith: churchesWithPriests.length });
 };
 
 const calculateFishingProduction = (
@@ -125,7 +125,7 @@ const calculateFishingProduction = (
     );
   });
 
-  return new ResourceMap({ food: fishingBoats.length });
+  return createResourceMap({ food: fishingBoats.length });
 };
 
 /**

@@ -5,9 +5,9 @@ import {
 } from "../_shared/supabase-client.ts";
 import { GameMap } from "@shared/map/map.ts";
 import { Piece } from "@shared/piece/index.ts";
-import { Player } from "@shared/player/index.ts";
+import { createPlayer } from "@shared/player/index.ts";
 import type { Tile } from "@shared/map/tile.ts";
-import { ResourceMap } from "@shared/player/resource-map.ts";
+import { createResourceMap } from "@shared/player/resource-map.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -36,13 +36,13 @@ Deno.serve(async (request) => {
     const inviteEmail = body.inviteEmail ?? null;
     const themeId = body.themeId ?? null;
 
-    const dayPlayer = new Player({
+    const dayPlayer = createPlayer({
       type: "day",
-      resources: new ResourceMap({ wood: 5, stone: 2 }),
+      resources: createResourceMap({ wood: 5, stone: 2 }),
     });
-    const nightPlayer = new Player({
+    const nightPlayer = createPlayer({
       type: "night",
-      resources: new ResourceMap({ wood: 5, stone: 2 }),
+      resources: createResourceMap({ wood: 5, stone: 2 }),
     });
 
     const generatedTiles = GameMap.generate(boardSize) as Tile[];

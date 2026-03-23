@@ -1,5 +1,5 @@
 import type { PlayerType } from "@shared/piece/index.ts";
-import { ResourceMap } from "@shared/player/resource-map.ts";
+import { createResourceMap, type ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum BuildingType {
   house = "house",
@@ -9,7 +9,7 @@ export enum BuildingType {
   church = "church",
 }
 
-export class Building {
+export type Building = {
   readonly type: BuildingType;
   readonly owner: PlayerType;
   readonly cost: ResourceMap;
@@ -17,105 +17,102 @@ export class Building {
   readonly defense: number;
   readonly walkableByOwner: boolean;
   readonly walkableByEnemy: boolean;
+};
 
-  constructor({
-    type,
-    owner,
-    cost,
-    viewRange = 1,
-    defense = 1,
-    walkableByOwner = true,
-    walkableByEnemy = true,
-  }: {
-    type: BuildingType;
-    owner: PlayerType;
-    cost: ResourceMap;
-    viewRange?: number;
-    defense?: number;
-    walkableByOwner?: boolean;
-    walkableByEnemy?: boolean;
-  }) {
-    this.type = type;
-    this.owner = owner;
-    this.cost = cost;
-    this.viewRange = viewRange;
-    this.defense = defense;
-    this.walkableByOwner = walkableByOwner;
-    this.walkableByEnemy = walkableByEnemy;
+export const buildingCostOf = (buildingType: BuildingType): ResourceMap => {
+  switch (buildingType) {
+    case BuildingType.house:
+      return createResourceMap({ wood: 1 });
+    case BuildingType.tower:
+      return createResourceMap({ stone: 10 });
+    case BuildingType.wall:
+      return createResourceMap({ stone: 1 });
+    case BuildingType.church:
+      return createResourceMap({ wood: 3, stone: 3 });
+    case BuildingType.castle:
+      return createResourceMap();
+    default:
+      return createResourceMap();
   }
+};
 
-  static house(owner: PlayerType): Building {
-    return new Building({
-      type: BuildingType.house,
-      owner,
-      cost: Building.costOf(BuildingType.house),
-      viewRange: 1,
-    });
-  }
+export const createHouseBuilding = (owner: PlayerType): Building => ({
+  type: BuildingType.house,
+  owner,
+  cost: buildingCostOf(BuildingType.house),
+  viewRange: 1,
+  defense: 1,
+  walkableByOwner: true,
+  walkableByEnemy: true,
+});
 
-  static tower(owner: PlayerType): Building {
-    return new Building({
-      type: BuildingType.tower,
-      owner,
-      cost: Building.costOf(BuildingType.tower),
-      viewRange: 4,
-    });
-  }
+export const createTowerBuilding = (owner: PlayerType): Building => ({
+  type: BuildingType.tower,
+  owner,
+  cost: buildingCostOf(BuildingType.tower),
+  viewRange: 4,
+  defense: 1,
+  walkableByOwner: true,
+  walkableByEnemy: true,
+});
 
-  static castle(owner: PlayerType): Building {
-    return new Building({
-      type: BuildingType.castle,
-      owner,
-      cost: new ResourceMap({}),
-      viewRange: 3,
-    });
-  }
+export const createCastleBuilding = (owner: PlayerType): Building => ({
+  type: BuildingType.castle,
+  owner,
+  cost: createResourceMap(),
+  viewRange: 3,
+  defense: 1,
+  walkableByOwner: true,
+  walkableByEnemy: true,
+});
 
-  static wall(owner: PlayerType): Building {
-    return new Building({
-      type: BuildingType.wall,
-      owner,
-      cost: Building.costOf(BuildingType.wall),
-      viewRange: 0,
-      walkableByOwner: true,
-      walkableByEnemy: false,
-    });
-  }
+export const createWallBuilding = (owner: PlayerType): Building => ({
+  type: BuildingType.wall,
+  owner,
+  cost: buildingCostOf(BuildingType.wall),
+  viewRange: 0,
+  defense: 1,
+  walkableByOwner: true,
+  walkableByEnemy: false,
+});
 
-  static church(owner: PlayerType): Building {
-    return new Building({
-      type: BuildingType.church,
-      owner,
-      cost: Building.costOf(BuildingType.church),
-      viewRange: 1,
-    });
-  }
+export const createChurchBuilding = (owner: PlayerType): Building => ({
+  type: BuildingType.church,
+  owner,
+  cost: buildingCostOf(BuildingType.church),
+  viewRange: 1,
+  defense: 1,
+  walkableByOwner: true,
+  walkableByEnemy: true,
+});
 
-  static costOf(buildingType: BuildingType): ResourceMap {
-    switch (buildingType) {
-      case BuildingType.house:
-        return new ResourceMap({ wood: 1 });
-      case BuildingType.tower:
-        return new ResourceMap({ stone: 10 });
-      case BuildingType.wall:
-        return new ResourceMap({ stone: 1 });
-      case BuildingType.church:
-        return new ResourceMap({ wood: 3, stone: 3 });
-      case BuildingType.castle:
-        return new ResourceMap({});
-      default:
-        return new ResourceMap({});
-    }
+export const createBuilding = (
+  buildingType: BuildingType,
+  owner: PlayerType,
+): Building => {
+  switch (buildingType) {
+    case BuildingType.house:
+      return createHouseBuilding(owner);
+    case BuildingType.tower:
+      return createTowerBuilding(owner);
+    case BuildingType.castle:
+      return createCastleBuilding(owner);
+    case BuildingType.wall:
+      return createWallBuilding(owner);
+    case BuildingType.church:
+      return createChurchBuilding(owner);
   }
+};
 
-  isWalkableBy(playerType: PlayerType): boolean {
-    if (playerType === this.owner) {
-      return this.walkableByOwner;
-    }
-    return this.walkableByEnemy;
-  }
+export const isBuildingWalkableBy = (
+  building: Building,
+  playerType: PlayerType,
+): boolean =>
+  playerType === building.owner
+    ? building.walkableByOwner
+    : building.walkableByEnemy;
 
-  isOwnedBy(playerType: PlayerType): boolean {
-    return this.owner === playerType;
-  }
-}
+export const isBuildingOwnedBy = (
+  building: Building,
+  playerType: PlayerType,
+): boolean => building.owner === playerType;

@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { Building, BuildingType } from "@shared/building/index.ts";
-import { Landscape, LandscapeType } from "@shared/map/landscape.ts";
+import { createChurchBuilding, createHouseBuilding } from "@shared/building/index.ts";
+import { LandscapeType, grass, farm as farmLandscape, tree as treeLandscape, mountain as mountainLandscape, water as waterLandscape, sand as sandLandscape } from "@shared/map/landscape.ts";
 import type { Tile } from "@shared/map/tile.ts";
-import { Piece, PieceKind } from "@shared/piece/index.ts";
-import { Research } from "@shared/research/index.ts";
+import { createPeasant, createPriest } from "@shared/piece/index.ts";
+import { createResearch } from "@shared/research/index.ts";
 import { calculateProduction, countPrayingPriests } from "./index.ts";
 
 /**
@@ -16,7 +16,7 @@ const makeTile = (
 ): Tile => ({
   row,
   column,
-  landscape: Landscape.grass(),
+  landscape: grass(),
   piece: null,
   building: null,
   ...overrides,
@@ -33,15 +33,15 @@ const makeHouseWithNeighbors = (
 ): Tile[] => {
   // Center tile at (0, 1) is the house
   const houseTile = makeTile(0, 1, {
-    building: Building.house(owner),
-    piece: Piece.peasant(owner),
+    building: createHouseBuilding(owner),
+    piece: createPeasant(owner),
   });
 
   // Neighbors: (0,0) is west, (0,2) is east
   const tiles: Tile[] = [
-    makeTile(0, 0, { landscape: neighborLandscapes.at(0) ?? Landscape.grass() }),
+    makeTile(0, 0, { landscape: neighborLandscapes.at(0) ?? grass() }),
     houseTile,
-    makeTile(0, 2, { landscape: neighborLandscapes.at(1) ?? Landscape.grass() }),
+    makeTile(0, 2, { landscape: neighborLandscapes.at(1) ?? grass() }),
   ];
 
   return tiles;
@@ -50,32 +50,32 @@ const makeHouseWithNeighbors = (
 describe("calculateProduction", () => {
   it("produces food from adjacent farm tiles", () => {
     const tiles = makeHouseWithNeighbors("day", [
-      Landscape.farm(),
-      Landscape.farm(),
+      farmLandscape(),
+      farmLandscape(),
     ]);
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.food).toBe(2);
     expect(production.wood).toBe(0);
   });
 
   it("produces wood from adjacent tree tiles", () => {
     const tiles = makeHouseWithNeighbors("day", [
-      Landscape.tree(),
-      Landscape.grass(),
+      treeLandscape(),
+      grass(),
     ]);
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.wood).toBe(1);
   });
 
   it("produces stone from adjacent mountain tiles", () => {
     const tiles = makeHouseWithNeighbors("day", [
-      Landscape.mountain(),
-      Landscape.grass(),
+      mountainLandscape(),
+      grass(),
     ]);
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.stone).toBe(1);
     expect(production.iron).toBe(0);
     expect(production.gold).toBe(0);
@@ -83,11 +83,11 @@ describe("calculateProduction", () => {
 
   it("produces stone + iron from mountain with Mining II", () => {
     const tiles = makeHouseWithNeighbors("day", [
-      Landscape.mountain(),
-      Landscape.grass(),
+      mountainLandscape(),
+      grass(),
     ]);
 
-    const research = new Research({ hasMiningII: true });
+    const research = createResearch({ hasMiningII: true });
     const production = calculateProduction("day", tiles, research);
     expect(production.stone).toBe(1);
     expect(production.iron).toBe(1);
@@ -96,11 +96,11 @@ describe("calculateProduction", () => {
 
   it("produces stone + iron + gold from mountain with Mining III", () => {
     const tiles = makeHouseWithNeighbors("day", [
-      Landscape.mountain(),
-      Landscape.grass(),
+      mountainLandscape(),
+      grass(),
     ]);
 
-    const research = new Research({ hasMiningII: true, hasMiningIII: true });
+    const research = createResearch({ hasMiningII: true, hasMiningIII: true });
     const production = calculateProduction("day", tiles, research);
     expect(production.stone).toBe(1);
     expect(production.iron).toBe(1);
@@ -109,54 +109,54 @@ describe("calculateProduction", () => {
 
   it("does not produce from house without peasant", () => {
     const tiles: Tile[] = [
-      makeTile(0, 0, { landscape: Landscape.farm() }),
+      makeTile(0, 0, { landscape: farmLandscape() }),
       makeTile(0, 1, {
-        building: Building.house("day"),
+        building: createHouseBuilding("day"),
         piece: null, // no peasant
       }),
-      makeTile(0, 2, { landscape: Landscape.farm() }),
+      makeTile(0, 2, { landscape: farmLandscape() }),
     ];
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.food).toBe(0);
   });
 
   it("does not produce from enemy houses", () => {
     const tiles = makeHouseWithNeighbors("night", [
-      Landscape.farm(),
-      Landscape.farm(),
+      farmLandscape(),
+      farmLandscape(),
     ]);
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.food).toBe(0);
   });
 
   it("each terrain tile produces once regardless of adjacent house count", () => {
     // Two houses share a farm tile between them
     // House at (0,0) and house at (0,2), shared farm at (0,1)
-    const sharedFarm = makeTile(0, 1, { landscape: Landscape.farm() });
+    const sharedFarm = makeTile(0, 1, { landscape: farmLandscape() });
     const house1 = makeTile(0, 0, {
-      building: Building.house("day"),
-      piece: Piece.peasant("day"),
+      building: createHouseBuilding("day"),
+      piece: createPeasant("day"),
     });
     const house2 = makeTile(0, 2, {
-      building: Building.house("day"),
-      piece: Piece.peasant("day"),
+      building: createHouseBuilding("day"),
+      piece: createPeasant("day"),
     });
 
     const tiles = [house1, sharedFarm, house2];
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     // The farm at (0,1) should only produce once
     expect(production.food).toBe(1);
   });
 
   it("does not produce from water, sand, grass, or unexplored tiles", () => {
     const tiles = makeHouseWithNeighbors("day", [
-      Landscape.water(),
-      Landscape.sand(),
+      waterLandscape(),
+      sandLandscape(),
     ]);
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.food).toBe(0);
     expect(production.wood).toBe(0);
     expect(production.stone).toBe(0);
@@ -167,44 +167,44 @@ describe("calculateChurchProduction", () => {
   it("produces faith from church with praying priest", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, {
-        building: Building.church("day"),
-        piece: Piece.priest("day"),
+        building: createChurchBuilding("day"),
+        piece: createPriest("day"),
       }),
     ];
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.faith).toBe(1);
   });
 
   it("does not produce faith from church without priest", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, {
-        building: Building.church("day"),
+        building: createChurchBuilding("day"),
         piece: null,
       }),
     ];
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.faith).toBe(0);
   });
 
   it("produces faith from multiple churches with priests", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, {
-        building: Building.church("day"),
-        piece: Piece.priest("day"),
+        building: createChurchBuilding("day"),
+        piece: createPriest("day"),
       }),
       makeTile(0, 1, {
-        building: Building.church("day"),
-        piece: Piece.priest("day"),
+        building: createChurchBuilding("day"),
+        piece: createPriest("day"),
       }),
       makeTile(0, 2, {
-        building: Building.church("day"),
-        piece: Piece.priest("day"),
+        building: createChurchBuilding("day"),
+        piece: createPriest("day"),
       }),
     ];
 
-    const production = calculateProduction("day", tiles, new Research({}));
+    const production = calculateProduction("day", tiles, createResearch());
     expect(production.faith).toBe(3);
   });
 });
@@ -213,15 +213,15 @@ describe("countPrayingPriests", () => {
   it("counts priests in churches", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, {
-        building: Building.church("day"),
-        piece: Piece.priest("day"),
+        building: createChurchBuilding("day"),
+        piece: createPriest("day"),
       }),
       makeTile(0, 1, {
-        building: Building.church("day"),
-        piece: Piece.priest("day"),
+        building: createChurchBuilding("day"),
+        piece: createPriest("day"),
       }),
       makeTile(0, 2, {
-        building: Building.church("day"),
+        building: createChurchBuilding("day"),
         piece: null,
       }),
     ];
@@ -232,8 +232,8 @@ describe("countPrayingPriests", () => {
   it("does not count enemy priests", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, {
-        building: Building.church("night"),
-        piece: Piece.priest("night"),
+        building: createChurchBuilding("night"),
+        piece: createPriest("night"),
       }),
     ];
 
@@ -243,7 +243,7 @@ describe("countPrayingPriests", () => {
   it("does not count priests outside churches", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, {
-        piece: Piece.priest("day"),
+        piece: createPriest("day"),
       }),
     ];
 

@@ -17,15 +17,17 @@ export const GamePage = () => {
   const animationFrameRef = useRef<number | null>(null);
   const { id: gameId } = useParams();
   const [searchParams] = useSearchParams();
-  const playerParam = searchParams.get("player") as "day" | "night" | null;
+  const playerParam = searchParams.get("player");
   const [error, setError] = useState<string | null>(null);
+
+  const isSpectator = playerParam === "spectator";
 
   // Validate player param
   const myPlayerType: "day" | "night" | null =
     playerParam === "day" || playerParam === "night" ? playerParam : null;
 
   useEffect(() => {
-    if (canvasRef.current === null || wrapperRef.current === null || gameId === undefined || myPlayerType === null) {
+    if (canvasRef.current === null || wrapperRef.current === null || gameId === undefined || (myPlayerType === null && !isSpectator)) {
       return;
     }
 
@@ -126,7 +128,7 @@ Units:
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [gameId, myPlayerType]);
+  }, [gameId, myPlayerType, isSpectator]);
 
   // Show error state
   if (error !== null) {
@@ -158,7 +160,7 @@ Units:
     );
   }
 
-  if (myPlayerType === null) {
+  if (myPlayerType === null && !isSpectator) {
     return (
       <div className="game-body">
         <div className="container container--centered">
@@ -173,6 +175,9 @@ Units:
             </Link>
           </div>
           <p className="text-muted mt-lg">Share the other link with your opponent!</p>
+          <Link to={`?player=spectator`} className="text-muted mt-lg">
+            Spectate
+          </Link>
         </div>
       </div>
     );
