@@ -32,3 +32,4 @@ dist-ssr
 # Copied shared code for Edge Functions (generated from src/shared)
 supabase/functions/shared/
 supabase/.temp/
+games/
