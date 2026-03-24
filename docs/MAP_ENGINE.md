@@ -76,26 +76,35 @@ Both use the same Mulberry32 PRNG seeded from the game seed, but produce differe
 
 ### Step 2: Elevation to terrain
 
-Each tile's raw elevation noise is blended with an **island mask** — a distance-from-center falloff that pushes land toward the center and water toward edges:
+Each tile's raw elevation noise is multiplied by a **hexagonal island mask** to produce the final elevation:
 
 ```
-elevation = rawNoise * 0.6 + islandMask * 0.4
+elevation = rawNoise * islandMask
 ```
 
-The island mask returns 1.0 at the map center and ~0.0 at corners, creating a natural continent shape.
+The island mask uses **cube-coordinate hex distance** from the map center. It converts each tile's offset coordinates to cube coordinates `(q, r, s)`, computes hex distance as `max(|Δq|, |Δr|, |Δs|)`, then applies a quadratic falloff. This produces a **hexagon-shaped island** surrounded by water — the mask is 1.0 at the center and 0.0 beyond the hex boundary.
 
-Terrain is then assigned by elevation thresholds:
+The hex boundary radius is controlled by the `waterLevel` config parameter:
+- `waterLevel = 0`: radius = 75% of grid size (large island, minimal water)
+- `waterLevel = 0.5`: radius = 52% (default)
+- `waterLevel = 1`: radius = 30% (tiny island, mostly water)
 
-| Elevation range | Terrain    | Notes                                     |
-|-----------------|------------|-------------------------------------------|
-| < 0.30          | water      | Deep water, large bodies                  |
-| 0.30 – 0.38     | sand       | Shorelines                                |
-| 0.38 – 0.55     | grass      | Open meadows, buildable land              |
-| 0.55 – 0.72     | grass/tree | Mixed zone — vegetation noise determines tree placement |
-| 0.72 – 0.85     | tree       | Dense forest                              |
-| > 0.85          | mountain   | Mountain ranges along ridgelines          |
+Because the blend is multiplicative, any tile where the mask is 0 is guaranteed to be deep water regardless of noise value.
 
-In the mixed zone (0.55–0.72), the vegetation noise creates natural clearings within forests rather than uniform coverage.
+Terrain is assigned by configurable elevation thresholds:
+
+| Elevation range       | Terrain    | Notes                                     |
+|-----------------------|------------|-------------------------------------------|
+| < 0.30                | water      | Deep water, large bodies                  |
+| 0.30 – 0.38          | sand       | Shorelines                                |
+| 0.38 – grassEnd      | grass      | Open meadows, buildable land              |
+| grassEnd – treeEnd    | grass/tree | Mixed zone — vegetation noise determines tree placement |
+| treeEnd – mountainStart | tree     | Dense forest                              |
+| > mountainStart       | mountain   | Mountain ranges along ridgelines          |
+
+The `grassEnd`, `treeEnd`, and `mountainStart` thresholds are derived from the `forestDensity` and `mountainDensity` config parameters (see Configuration section below). At default settings (0.5/0.5), the thresholds are approximately 0.65/0.85/0.79.
+
+In the mixed zone, the vegetation noise creates natural clearings within forests rather than uniform coverage.
 
 ### Step 3: Create beaches
 
@@ -157,20 +166,40 @@ Approximate distribution on a typical 15x15 map (225 tiles):
 
 The noise-based approach produces much more open grass than the previous system (which converted 70% of grass to trees). Games finish more frequently because players can reach each other through connected walkable terrain.
 
+## Configuration
+
+Map generation accepts a `MapConfig` object with three parameters:
+
+| Parameter        | Range | Default | Effect                                           |
+|------------------|-------|---------|--------------------------------------------------|
+| `waterLevel`     | 0–1   | 0.5     | Controls island size. 0 = large island, 1 = tiny island |
+| `forestDensity`  | 0–1   | 0.5     | Controls tree coverage. 0 = no trees, 1 = maximum forest |
+| `mountainDensity`| 0–1   | 0.5     | Controls mountain coverage. 0 = no mountains, 1 = maximum |
+
+`waterLevel` adjusts the hexagonal island mask radius. `forestDensity` and `mountainDensity` shift the elevation thresholds that determine where grass ends and trees/mountains begin.
+
+The config is stored in the game state (`Game.mapConfig`) so the map parameters are preserved alongside the seed.
+
 ## Visual preview
 
 The `/map` route in the web UI provides a visual map generator for tuning and inspection:
 
 - Renders terrain as colored hexagons on an HTML5 canvas (no game assets needed)
 - Controls: seed text input, random seed button, size slider (5–40)
+- Sliders for water level, forest density, and mountain density
+- Theme selector with 6 color palettes (Classic, Parchment, Satellite, Winter, Desert, Night)
 - Displays terrain counts with percentages
 - Scales to `devicePixelRatio` for sharp rendering on high-DPI displays
 
 ## Design properties
 
+### Hexagonal island shape
+
+The island mask uses cube-coordinate hex distance rather than Euclidean distance, producing a hexagon-shaped landmass that matches the hex grid geometry. The hex boundary is cleanly defined — tiles outside it are guaranteed water.
+
 ### No directional bias
 
-Every tile's terrain is computed independently from its noise coordinates, not from previously-generated neighbors. The island mask is symmetric around the center, so neither player's corner is inherently advantaged.
+Every tile's terrain is computed independently from its noise coordinates, not from previously-generated neighbors. The hexagonal island mask is symmetric around the center, so neither player's corner is inherently advantaged.
 
 ### Natural feature clustering
 
