@@ -1,6 +1,7 @@
 import type { Tile } from "../map/tile.ts";
 import type { Player } from "../player/index.ts";
 import type { PlayerType } from "../piece/index.ts";
+import type { MapConfig } from "../map/map.ts";
 
 export type GameClock = {
   readonly time: number; // Hour of day (0-23), advances with actions
@@ -52,4 +53,5 @@ export type Game = {
   readonly gameOver: boolean;
   readonly winner?: PlayerType | null;
   readonly themeId?: string | null;
+  readonly mapConfig?: MapConfig | null;
 };

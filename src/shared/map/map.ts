@@ -21,11 +21,14 @@ export type MapConfig = {
   readonly forestDensity: number;
   /** Mountain density: 0 = no mountains, 1 = maximum mountain coverage. Default 0.5. */
   readonly mountainDensity: number;
+  /** Water level: 0 = minimal water (large island), 1 = mostly water (tiny island). Default 0.5. */
+  readonly waterLevel: number;
 };
 
 export const defaultMapConfig: MapConfig = {
   forestDensity: 0.5,
   mountainDensity: 0.5,
+  waterLevel: 0.5,
 };
 
 // ============================================
@@ -105,6 +108,7 @@ const islandMask = (
   row: number,
   column: number,
   size: number,
+  waterLevel: number,
 ): number => {
   const centerRow = (size - 1) / 2;
   const centerCol = (size - 1) / 2;
@@ -129,7 +133,8 @@ const islandMask = (
   );
 
   // hexRadius controls island size — larger = more land
-  const hexRadius = size * 0.55;
+  // waterLevel 0 = radius 0.75 (big island), waterLevel 1 = radius 0.30 (tiny island)
+  const hexRadius = size * (0.75 - waterLevel * 0.45);
   const normalized = hexDistance / hexRadius;
 
   // Smooth falloff: 1.0 at center, tapering to 0.0 at edge and beyond
@@ -190,7 +195,7 @@ export class GameMap {
         column * ELEVATION_SCALE,
         row * ELEVATION_SCALE,
       );
-      const mask = islandMask(row, column, size);
+      const mask = islandMask(row, column, size, config.waterLevel);
       // Multiplicative blend: mask=0 forces deep water, mask=1 uses full noise
       const elevation = rawElevation * mask;
 

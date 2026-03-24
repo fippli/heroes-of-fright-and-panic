@@ -1,7 +1,7 @@
 /**
  * Randomized self-play test harness.
  *
- * Imports the game engine directly and plays games with randomized valid moves.
+ * Uses the shared AI module to play games with weighted random moves.
  * After every action it checks a set of invariants to catch engine bugs.
  *
  * Usage:
@@ -9,22 +9,12 @@
  */
 
 import { createGame } from "../src/shared/game/create-game.ts";
-import { handleAction, checkWinCondition } from "../src/shared/game/engine.ts";
+import { handleAction } from "../src/shared/game/engine.ts";
 import type { Game } from "../src/shared/game/types.ts";
-import type { GameAction, PlayerType, TilePosition } from "../src/shared/actions/index.ts";
-import type { Tile } from "../src/shared/map/tile.ts";
-import { LandscapeType } from "../src/shared/map/landscape.ts";
-import { BuildingType } from "../src/shared/building/index.ts";
-import { EquipmentType } from "../src/shared/equipment/index.ts";
-import { ResearchType, canResearch } from "../src/shared/research/index.ts";
-import { SteedType } from "../src/shared/steed/index.ts";
-import { PieceKind, getWalkableLandscape, getPieceAttackRange, pieceHasEquipment } from "../src/shared/piece/index.ts";
-import { canAfford, type ResourceMap } from "../src/shared/player/resource-map.ts";
-import { buildingCostOf } from "../src/shared/building/index.ts";
-import { createEquipment } from "../src/shared/equipment/index.ts";
-import { createSteed } from "../src/shared/steed/index.ts";
-import { researchCostOf } from "../src/shared/research/index.ts";
-import * as hex from "../src/shared/map/hex.ts";
+import type { GameAction, PlayerType } from "../src/shared/actions/index.ts";
+import { PieceKind } from "../src/shared/piece/index.ts";
+import type { ResourceMap } from "../src/shared/player/resource-map.ts";
+import { generateAllActions, pickAction } from "../src/shared/ai/index.ts";
 
 // ============================================
 // CLI ARGS
@@ -47,360 +37,6 @@ const createSeededRandom = (seed: string): (() => number) => {
     state.value = (state.value * 1664525 + 1013904223) | 0;
     return (state.value >>> 0) / 4294967296;
   };
-};
-
-const pickRandom = <T>(items: ReadonlyArray<T>, random: () => number): T | undefined =>
-  items.at(Math.floor(random() * items.length));
-
-// ============================================
-// HELPERS
-// ============================================
-
-const getPlayer = (game: Game, playerType: PlayerType) =>
-  playerType === "day" ? game.dayPlayer : game.nightPlayer;
-
-const findNeighbors = (position: TilePosition, tiles: ReadonlyArray<Tile>): ReadonlyArray<Tile> =>
-  hex.findNeighbors(position, tiles as Tile[]);
-
-const findTile = (tiles: ReadonlyArray<Tile>, position: TilePosition): Tile | undefined =>
-  tiles.find((tile) => tile.row === position.row && tile.column === position.column);
-
-// ============================================
-// ACTION GENERATORS
-// ============================================
-
-const generateMoveActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const myPieces = game.tiles.filter(
-    (tile) => tile.piece !== null && tile.piece.owner === player,
-  );
-
-  return myPieces.flatMap((fromTile) => {
-    const piece = fromTile.piece!;
-    const walkable = getWalkableLandscape(piece);
-    const neighbors = findNeighbors(fromTile, game.tiles);
-
-    return neighbors
-      .filter((neighbor) => {
-        if (neighbor.piece !== null) return false;
-        if (neighbor.landscape === null) return false;
-        if (!walkable.includes(neighbor.landscape.type)) return false;
-        if (neighbor.building !== null && neighbor.building.owner !== player && !neighbor.building.walkableByEnemy) return false;
-        return true;
-      })
-      .map((neighbor): GameAction => ({
-        type: "move",
-        player,
-        from: { row: fromTile.row, column: fromTile.column },
-        to: { row: neighbor.row, column: neighbor.column },
-      }));
-  });
-};
-
-const generateBuildActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const playerData = getPlayer(game, player);
-  const buildableTypes = [BuildingType.house, BuildingType.tower, BuildingType.wall, BuildingType.church]
-    .filter((buildingType) => canAfford(playerData.resources, buildingCostOf(buildingType)));
-
-  if (buildableTypes.length === 0) return [];
-
-  const myPiecePositions = game.tiles.filter(
-    (tile) => tile.piece !== null && tile.piece.owner === player,
-  );
-
-  const grassNeighbors = myPiecePositions.flatMap((pieceTile) =>
-    findNeighbors(pieceTile, game.tiles).filter(
-      (neighbor) =>
-        neighbor.landscape?.type === LandscapeType.grass &&
-        neighbor.building === null,
-    ),
-  );
-
-  // Deduplicate positions
-  const seen = new Set<string>();
-  const uniqueGrass = grassNeighbors.filter((tile) => {
-    const key = `${tile.row},${tile.column}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  return uniqueGrass.flatMap((grassTile) =>
-    buildableTypes.map((buildingType): GameAction => ({
-      type: "build",
-      player,
-      buildingType,
-      position: { row: grassTile.row, column: grassTile.column },
-    })),
-  );
-};
-
-const generateSpawnActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const playerData = getPlayer(game, player);
-  if (!canAfford(playerData.resources, { wood: 0, stone: 0, iron: 0, gold: 0, food: 1, faith: 0 })) return [];
-
-  return game.tiles
-    .filter(
-      (tile) =>
-        tile.building !== null &&
-        tile.building.type === BuildingType.house &&
-        tile.building.owner === player &&
-        tile.piece === null,
-    )
-    .map((tile): GameAction => ({
-      type: "spawnPeasant",
-      player,
-      position: { row: tile.row, column: tile.column },
-    }));
-};
-
-const generateCraftActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const playerData = getPlayer(game, player);
-  const myEquippable = game.tiles.filter(
-    (tile) =>
-      tile.piece !== null &&
-      tile.piece.owner === player &&
-      tile.piece.canEquip,
-  );
-
-  return myEquippable.flatMap((tile) => {
-    const piece = tile.piece!;
-    return [EquipmentType.sword, EquipmentType.shield, EquipmentType.bow]
-      .filter((equipType) => {
-        if (pieceHasEquipment(piece, equipType)) return false;
-        const equip = createEquipment(equipType);
-        return canAfford(playerData.resources, equip.cost);
-      })
-      .map((equipmentType): GameAction => ({
-        type: "craftEquipment",
-        player,
-        equipmentType,
-        piecePosition: { row: tile.row, column: tile.column },
-      }));
-  });
-};
-
-const generateAttackActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const myPieces = game.tiles.filter(
-    (tile) =>
-      tile.piece !== null &&
-      tile.piece.owner === player &&
-      tile.piece.baseAttack > 0,
-  );
-
-  return myPieces.flatMap((attackerTile) => {
-    const piece = attackerTile.piece!;
-    const attackRange = (() => {
-      if (
-        attackerTile.building !== null &&
-        attackerTile.building.type === BuildingType.tower &&
-        pieceHasEquipment(piece, EquipmentType.bow)
-      ) {
-        return attackerTile.building.viewRange;
-      }
-      return getPieceAttackRange(piece);
-    })();
-
-    // Find all tiles in range with enemy pieces or buildings
-    const tilesInRange = getTilesInRange(game.tiles, attackerTile, attackRange);
-
-    return tilesInRange
-      .map((pos) => findTile(game.tiles, pos))
-      .filter((tile): tile is Tile => tile !== undefined)
-      .filter((tile) => {
-        const hasEnemyPiece = tile.piece !== null && tile.piece.owner !== player;
-        const hasEnemyBuilding = tile.building !== null && tile.building.owner !== player;
-        return hasEnemyPiece || hasEnemyBuilding;
-      })
-      .map((targetTile): GameAction => ({
-        type: "attack",
-        player,
-        attackerPosition: { row: attackerTile.row, column: attackerTile.column },
-        targetPosition: { row: targetTile.row, column: targetTile.column },
-      }));
-  });
-};
-
-const generateTrainActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const playerData = getPlayer(game, player);
-  if (!canAfford(playerData.resources, { wood: 0, stone: 0, iron: 0, gold: 1, food: 0, faith: 0 })) return [];
-
-  return game.tiles
-    .filter(
-      (tile) =>
-        tile.building !== null &&
-        tile.building.type === BuildingType.church &&
-        tile.building.owner === player &&
-        tile.piece === null,
-    )
-    .map((tile): GameAction => ({
-      type: "trainPriest",
-      player,
-      churchPosition: { row: tile.row, column: tile.column },
-    }));
-};
-
-const generateHealActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const playerData = getPlayer(game, player);
-  if (!canAfford(playerData.resources, { wood: 0, stone: 0, iron: 0, gold: 0, food: 0, faith: 1 })) return [];
-
-  const priests = game.tiles.filter(
-    (tile) =>
-      tile.piece !== null &&
-      tile.piece.kind === PieceKind.priest &&
-      tile.piece.owner === player,
-  );
-
-  return priests.flatMap((priestTile) =>
-    findNeighbors(priestTile, game.tiles)
-      .filter(
-        (neighbor) =>
-          neighbor.piece !== null &&
-          neighbor.piece.owner === player &&
-          neighbor.piece.hearts < neighbor.piece.maxHearts,
-      )
-      .map((targetTile): GameAction => ({
-        type: "heal",
-        player,
-        priestPosition: { row: priestTile.row, column: priestTile.column },
-        targetPosition: { row: targetTile.row, column: targetTile.column },
-      })),
-  );
-};
-
-const generateResearchActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const playerData = getPlayer(game, player);
-  const castles = game.tiles.filter(
-    (tile) =>
-      tile.building !== null &&
-      tile.building.type === BuildingType.castle &&
-      tile.building.owner === player,
-  );
-
-  if (castles.length === 0) return [];
-
-  const researchable = [ResearchType.speed, ResearchType.miningII, ResearchType.miningIII, ResearchType.queen]
-    .filter((researchType) =>
-      canResearch(playerData.research, researchType) &&
-      canAfford(playerData.resources, researchCostOf(researchType)),
-    );
-
-  return castles.flatMap((castle) =>
-    researchable.map((researchType): GameAction => ({
-      type: "research",
-      player,
-      researchType,
-      castlePosition: { row: castle.row, column: castle.column },
-    })),
-  );
-};
-
-const generateEnterTowerActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const kingTile = game.tiles.find(
-    (tile) =>
-      tile.piece !== null &&
-      tile.piece.kind === PieceKind.king &&
-      tile.piece.owner === player,
-  );
-
-  if (kingTile === undefined) return [];
-
-  const adjacentTowers = findNeighbors(kingTile, game.tiles).filter(
-    (tile) =>
-      tile.building !== null &&
-      tile.building.type === BuildingType.tower &&
-      tile.building.owner === player,
-  );
-
-  return adjacentTowers.map((towerTile): GameAction => ({
-    type: "enterTower",
-    player,
-    kingPosition: { row: kingTile.row, column: kingTile.column },
-    towerPosition: { row: towerTile.row, column: towerTile.column },
-  }));
-};
-
-const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const playerData = getPlayer(game, player);
-  const houses = game.tiles.filter(
-    (tile) =>
-      tile.building !== null &&
-      tile.building.type === BuildingType.house &&
-      tile.building.owner === player,
-  );
-
-  if (houses.length === 0) return [];
-
-  const affordableSteeds = [SteedType.horse, SteedType.boat].filter((steedType) =>
-    canAfford(playerData.resources, createSteed(steedType).cost),
-  );
-
-  if (affordableSteeds.length === 0) return [];
-
-  return houses.flatMap((houseTile) =>
-    findNeighbors(houseTile, game.tiles)
-      .filter((neighbor) => neighbor.piece === null)
-      .flatMap((neighbor) =>
-        affordableSteeds
-          .filter((steedType) => {
-            if (steedType === SteedType.boat) {
-              return neighbor.landscape?.type === LandscapeType.water;
-            }
-            return true;
-          })
-          .map((steedType): GameAction => ({
-            type: "buySteed",
-            player,
-            steedType,
-            housePosition: { row: houseTile.row, column: houseTile.column },
-            targetPosition: { row: neighbor.row, column: neighbor.column },
-          })),
-      ),
-  );
-};
-
-const generateAllActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => [
-  ...generateMoveActions(game, player),
-  ...generateBuildActions(game, player),
-  ...generateSpawnActions(game, player),
-  ...generateCraftActions(game, player),
-  ...generateAttackActions(game, player),
-  ...generateTrainActions(game, player),
-  ...generateHealActions(game, player),
-  ...generateResearchActions(game, player),
-  ...generateEnterTowerActions(game, player),
-  ...generateSteedActions(game, player),
-];
-
-// ============================================
-// TILES IN RANGE (simplified BFS)
-// ============================================
-
-const getTilesInRange = (
-  tiles: ReadonlyArray<Tile>,
-  center: TilePosition,
-  range: number,
-): ReadonlyArray<TilePosition> => {
-  const visited = new Set<string>();
-  visited.add(`${center.row},${center.column}`);
-  const result: TilePosition[] = [center];
-  const frontier: TilePosition[] = [center];
-
-  Array.from({ length: range }, () => {
-    const nextFrontier: TilePosition[] = [];
-    frontier.splice(0).forEach((pos) => {
-      findNeighbors(pos, tiles).forEach((neighbor) => {
-        const key = `${neighbor.row},${neighbor.column}`;
-        if (!visited.has(key)) {
-          visited.add(key);
-          result.push({ row: neighbor.row, column: neighbor.column });
-          nextFrontier.push({ row: neighbor.row, column: neighbor.column });
-        }
-      });
-    });
-    frontier.push(...nextFrontier);
-  });
-
-  return result;
 };
 
 // ============================================
@@ -452,7 +88,7 @@ const checkInvariants = (
     }
   });
 
-  // 3. No two pieces on the same tile (tiles array integrity)
+  // 3. No duplicate tiles
   const tileKeys = new Set<string>();
   game.tiles.forEach((tile) => {
     const key = `${tile.row},${tile.column}`;
@@ -496,7 +132,7 @@ const checkInvariants = (
 
   // 6. currentPlayer matches clock phase (unless game over)
   if (!game.gameOver) {
-    const expectedPlayer = game.clock.time >= 6 && game.clock.time < 18 ? "day" : "night";
+    const expectedPlayer: PlayerType = game.clock.time >= 6 && game.clock.time < 18 ? "day" : "night";
     if (game.currentPlayer !== expectedPlayer) {
       violations.push({
         invariant: "player-matches-phase",
@@ -579,7 +215,6 @@ const runGame = (gameIndex: number, seed: string): GameResult => {
     const actions = generateAllActions(state.game, currentPlayer);
 
     if (actions.length === 0) {
-      // No valid actions — stalemate
       if (verbose) {
         console.log(`  Game ${gameIndex}: no valid actions for ${currentPlayer} at action #${state.actionCount}`);
       }
@@ -592,18 +227,16 @@ const runGame = (gameIndex: number, seed: string): GameResult => {
       };
     }
 
-    const action = pickRandom(actions, random);
+    const action = pickAction(actions, random);
     if (action === undefined) break;
 
     try {
       const { game: nextGame, result } = handleAction(state.game, action);
 
       if (!result.success) {
-        // Generated action was rejected — this is a bug in our generator
         if (verbose) {
           console.log(`  Game ${gameIndex} action #${state.actionCount}: ${action.type} REJECTED: ${result.error}`);
         }
-        // Skip and try another action (generator imperfection, not engine bug)
         state.actionCount++;
         continue;
       }
@@ -615,7 +248,6 @@ const runGame = (gameIndex: number, seed: string): GameResult => {
         console.log(`  Game ${gameIndex}: ${state.actionCount} actions...`);
       }
 
-      // Check invariants after every successful action
       const violations = checkInvariants(state.game, state.actionCount, action);
       violations.forEach((violation) => {
         allViolations.push(violation);
@@ -661,7 +293,7 @@ const runGame = (gameIndex: number, seed: string): GameResult => {
 
 console.log(`Running ${totalGames} randomized games (seed base: "${baseSeed}")...\n`);
 
-const stats = { dayWins: 0, nightWins: 0, stalemates: 0, errors: 0, totalViolations: 0, totalActions: 0, rejectedActions: 0 };
+const stats = { dayWins: 0, nightWins: 0, stalemates: 0, errors: 0, totalViolations: 0, totalActions: 0 };
 
 const results = Array.from({ length: totalGames }, (_, gameIndex) => {
   const seed = `${baseSeed}-${gameIndex}`;

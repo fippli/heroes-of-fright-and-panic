@@ -195,6 +195,7 @@ export const MapPage = () => {
   const [themeIndex, setThemeIndex] = useState(0);
   const [forestDensity, setForestDensity] = useState(defaultMapConfig.forestDensity);
   const [mountainDensity, setMountainDensity] = useState(defaultMapConfig.mountainDensity);
+  const [waterLevel, setWaterLevel] = useState(defaultMapConfig.waterLevel);
   const [stats, setStats] = useState<Record<string, number>>({});
   const tilesRef = useRef<ReadonlyArray<Tile>>([]);
 
@@ -202,10 +203,10 @@ export const MapPage = () => {
 
   const generateTiles = useCallback(() => {
     const random = createRandom(seed);
-    const config: MapConfig = { forestDensity, mountainDensity };
+    const config: MapConfig = { forestDensity, mountainDensity, waterLevel };
     tilesRef.current = GameMap.generate(size, random, config) as Tile[];
     setStats(countTerrain(tilesRef.current));
-  }, [seed, size, forestDensity, mountainDensity]);
+  }, [seed, size, forestDensity, mountainDensity, waterLevel]);
 
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -260,6 +261,18 @@ export const MapPage = () => {
             max={40}
             value={size}
             onChange={(event) => setSize(Number(event.target.value))}
+            className="map-slider"
+          />
+        </label>
+
+        <label className="map-control-label">
+          Water: {Math.round(waterLevel * 100)}%
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(waterLevel * 100)}
+            onChange={(event) => setWaterLevel(Number(event.target.value) / 100)}
             className="map-slider"
           />
         </label>

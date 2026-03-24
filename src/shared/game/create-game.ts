@@ -1,6 +1,6 @@
 import * as hex from "@shared/map/hex.ts";
 import { LandscapeType, grass as grassLandscape } from "@shared/map/landscape.ts";
-import { GameMap } from "@shared/map/map.ts";
+import { GameMap, defaultMapConfig, type MapConfig } from "@shared/map/map.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
 import { createKing, createPeasant } from "@shared/piece/index.ts";
@@ -15,6 +15,7 @@ type CreateGameParams = {
   readonly creatorEmail: string;
   readonly inviteEmail: string | null;
   readonly seed?: string | number;
+  readonly mapConfig?: MapConfig;
 };
 
 export const createGame = (params: CreateGameParams) => {
@@ -27,8 +28,9 @@ export const createGame = (params: CreateGameParams) => {
     resources: createResourceMap({ wood: 5, stone: 2 }),
   });
 
+  const mapConfig = params.mapConfig ?? defaultMapConfig;
   const random = createRandom(params.seed);
-  const generatedTiles = GameMap.generate(params.boardSize, random) as Tile[];
+  const generatedTiles = GameMap.generate(params.boardSize, random, mapConfig) as Tile[];
 
   const walkableTiles = generatedTiles.filter(
     (tile) =>
@@ -132,6 +134,7 @@ export const createGame = (params: CreateGameParams) => {
     invitedEmail: params.inviteEmail,
     gameOver: false,
     winner: null,
+    mapConfig,
   };
 };
 

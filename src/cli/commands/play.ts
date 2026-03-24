@@ -2,6 +2,8 @@ import * as readline from "node:readline";
 import { handleAction } from "@shared/game/engine.ts";
 import type { Game } from "@shared/game/types.ts";
 import type { TilePosition, PlayerType } from "@shared/actions/index.ts";
+import { generateAllActions, pickAction } from "@shared/ai/index.ts";
+import { createRandom } from "@shared/utils/random.ts";
 import { readGameFile, writeGameFile } from "../game-file.ts";
 import { parseCommand } from "../parse-command.ts";
 import { renderBoard, renderStatus, renderTileInfo } from "../render.ts";
@@ -33,27 +35,30 @@ Commands:
 
 const parseArgs = (
   args: ReadonlyArray<string>,
-): { filePath: string; player: PlayerType | undefined; json: boolean } => {
+): { filePath: string; player: PlayerType | undefined; json: boolean; auto: boolean } => {
   const filePath = args.at(0) ?? "";
   const playerIndex = args.indexOf("--player");
   const playerArg = playerIndex !== -1 ? args.at(playerIndex + 1) : undefined;
   const json = args.includes("--json");
+  const auto = args.includes("--auto");
 
   const player: PlayerType | undefined =
     playerArg === "day" || playerArg === "night" ? playerArg : undefined;
 
-  return { filePath, player, json };
+  return { filePath, player, json, auto };
 };
 
 export const runPlay = async (args: ReadonlyArray<string>): Promise<void> => {
-  const { filePath, player, json } = parseArgs(args);
+  const { filePath, player, json, auto } = parseArgs(args);
 
   if (filePath === "") {
-    console.error("Usage: cli play <file> [--player <day|night>] [--json]");
+    console.error("Usage: cli play <file> [--player <day|night>] [--json] [--auto]");
     process.exit(1);
   }
 
-  if (json) {
+  if (auto) {
+    await runAutoMode(filePath, player ?? "night");
+  } else if (json) {
     await runJsonMode(filePath, player ?? "day");
   } else if (player !== undefined) {
     await runInteractiveMode(filePath, player);
@@ -402,4 +407,62 @@ const runHotseatMode = async (filePath: string): Promise<void> => {
   showBoard(game);
   console.log("");
   prompt();
+};
+
+const runAutoMode = async (
+  filePath: string,
+  player: PlayerType,
+): Promise<void> => {
+  const random = createRandom(Date.now());
+  const delayMs = 500;
+
+  const sleep = (ms: number): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  console.log(`AI playing as: ${player}`);
+  console.log("Watching for turns... (Ctrl+C to exit)\n");
+
+  const tick = async (): Promise<void> => {
+    const game = await readGameFile(filePath);
+
+    if (game.gameOver === true) {
+      console.log(renderBoard(game));
+      console.log(renderStatus(game));
+      console.log(`\n\x1b[1mGame Over! ${game.winner ?? "Unknown"} wins!\x1b[0m`);
+      process.exit(0);
+      return;
+    }
+
+    if (game.currentPlayer !== player) {
+      await sleep(delayMs);
+      return tick();
+    }
+
+    const actions = generateAllActions(game, player);
+
+    if (actions.length === 0) {
+      console.log("No valid actions available. Waiting...");
+      await sleep(delayMs);
+      return tick();
+    }
+
+    const action = pickAction(actions, random);
+    if (action === undefined) {
+      await sleep(delayMs);
+      return tick();
+    }
+
+    const { game: updatedGame, result } = handleAction(game, action);
+
+    if (result.success) {
+      const summary = `${action.type}${result.message !== undefined ? `: ${result.message}` : ""}`;
+      console.log(`  [${player}] ${summary}`);
+      await writeGameFile(filePath, updatedGame);
+    }
+
+    await sleep(100);
+    return tick();
+  };
+
+  await tick();
 };
