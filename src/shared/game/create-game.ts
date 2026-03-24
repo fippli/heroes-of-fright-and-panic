@@ -1,5 +1,5 @@
 import * as hex from "@shared/map/hex.ts";
-import { LandscapeType } from "@shared/map/landscape.ts";
+import { LandscapeType, grass as grassLandscape } from "@shared/map/landscape.ts";
 import { GameMap } from "@shared/map/map.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
@@ -30,15 +30,23 @@ export const createGame = (params: CreateGameParams) => {
   const random = createRandom(params.seed);
   const generatedTiles = GameMap.generate(params.boardSize, random) as Tile[];
 
-  const grassTiles = generatedTiles.filter(
-    (tile) => tile.landscape?.type === LandscapeType.grass,
+  const walkableTiles = generatedTiles.filter(
+    (tile) =>
+      tile.landscape?.type === LandscapeType.grass ||
+      tile.landscape?.type === LandscapeType.sand,
   );
+
+  // Fallback: if no walkable tiles exist (degenerate map), use the center tile
+  const fallbackTile = generatedTiles.at(
+    Math.floor(generatedTiles.length / 2),
+  ) as Tile;
+  const startCandidates = walkableTiles.length > 0 ? walkableTiles : [fallbackTile];
 
   const maxRow = params.boardSize - 1;
   const maxCol = params.boardSize - 1;
 
   // Day player starts near bottom-left
-  const dayKingTile = grassTiles.reduce((closest, tile) => {
+  const dayKingTile = startCandidates.reduce((closest, tile) => {
     const distance = Math.sqrt(
       Math.pow(maxRow - tile.row, 2) + Math.pow(tile.column, 2),
     );
@@ -46,13 +54,13 @@ export const createGame = (params: CreateGameParams) => {
       Math.pow(maxRow - closest.row, 2) + Math.pow(closest.column, 2),
     );
     return distance < closestDistance ? tile : closest;
-  }, grassTiles.at(0)!);
+  }, startCandidates[0]);
 
-  // Find adjacent grass tile for day peasant
-  const dayPeasantTile = findAdjacentGrass(dayKingTile, generatedTiles);
+  // Clear a starting area around each king (convert trees/mountains to grass)
+  const tilesWithDayClearing = clearStartingArea(dayKingTile, generatedTiles);
 
   // Night player starts near top-right
-  const nightKingTile = grassTiles.reduce((closest, tile) => {
+  const nightKingTile = startCandidates.reduce((closest, tile) => {
     const distance = Math.sqrt(
       Math.pow(tile.row, 2) + Math.pow(maxCol - tile.column, 2),
     );
@@ -60,15 +68,18 @@ export const createGame = (params: CreateGameParams) => {
       Math.pow(closest.row, 2) + Math.pow(maxCol - closest.column, 2),
     );
     return distance < closestDistance ? tile : closest;
-  }, grassTiles.at(0)!);
+  }, startCandidates[0]);
 
-  // Find adjacent grass tile for night peasant
-  const nightPeasantTile = findAdjacentGrass(nightKingTile, generatedTiles);
+  const tilesWithBothClearings = clearStartingArea(nightKingTile, tilesWithDayClearing);
+
+  // Find adjacent grass tiles for peasants (now guaranteed to exist)
+  const dayPeasantTile = findAdjacentGrass(dayKingTile, tilesWithBothClearings);
+  const nightPeasantTile = findAdjacentGrass(nightKingTile, tilesWithBothClearings);
 
   // Place pieces
   const tilesWithDayKing = GameMap.replaceTile(
     { row: dayKingTile.row, column: dayKingTile.column, piece: createKing("day") },
-    generatedTiles,
+    tilesWithBothClearings,
   ) as Tile[];
 
   const tilesWithDayPeasant = GameMap.replaceTile(
@@ -122,6 +133,33 @@ export const createGame = (params: CreateGameParams) => {
     gameOver: false,
     winner: null,
   };
+};
+
+const CLEARABLE_TYPES: ReadonlyArray<LandscapeType> = [
+  LandscapeType.tree,
+  LandscapeType.mountain,
+];
+
+const clearStartingArea = (
+  center: Tile,
+  tiles: ReadonlyArray<Tile>,
+): Tile[] => {
+  const neighbors = hex.findNeighbors(center, tiles as Tile[]);
+  return neighbors.reduce<Tile[]>(
+    (acc, neighbor) => {
+      const shouldClear =
+        neighbor.landscape !== null &&
+        neighbor.landscape !== undefined &&
+        CLEARABLE_TYPES.includes(neighbor.landscape.type);
+      return shouldClear
+        ? GameMap.replaceTile(
+            { row: neighbor.row, column: neighbor.column, landscape: grassLandscape() },
+            acc,
+          ) as Tile[]
+        : acc;
+    },
+    tiles as Tile[],
+  );
 };
 
 const findAdjacentGrass = (

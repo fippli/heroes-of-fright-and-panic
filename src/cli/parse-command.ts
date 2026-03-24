@@ -10,6 +10,7 @@ export type ParsedCommand =
   | { readonly type: "inspect"; readonly position: TilePosition }
   | { readonly type: "help" }
   | { readonly type: "status" }
+  | { readonly type: "board" }
   | { readonly type: "quit" }
   | { readonly type: "error"; readonly message: string };
 
@@ -47,6 +48,10 @@ export const parseCommand = (
     case "st":
       return { type: "status" };
 
+    case "board":
+    case "show":
+      return { type: "board" };
+
     case "select":
     case "sel": {
       const posStr = parts.at(1);
@@ -75,49 +80,67 @@ export const parseCommand = (
 
     case "move":
     case "m": {
-      const posStr = parts.at(1);
-      if (posStr === undefined) {
-        return { type: "error", message: "Usage: move <row>,<col>" };
+      const firstStr = parts.at(1);
+      const secondStr = parts.at(2);
+      if (firstStr === undefined) {
+        return { type: "error", message: "Usage: move <from> <to> or select first then move <to>" };
       }
+      // Two-argument form: move <from> <to>
+      if (secondStr !== undefined) {
+        const from = parsePosition(firstStr);
+        const to = parsePosition(secondStr);
+        if (from === null || to === null) {
+          return { type: "error", message: "Invalid position. Use: row,col row,col" };
+        }
+        return {
+          type: "action",
+          action: { type: "move", player: currentPlayer, from, to },
+        };
+      }
+      // One-argument form: move <to> (requires selection)
       if (selectedPosition === undefined) {
-        return { type: "error", message: "No unit selected. Use: select <row>,<col> first" };
+        return { type: "error", message: "No unit selected. Use: select <row>,<col> first or move <from> <to>" };
       }
-      const position = parsePosition(posStr);
+      const position = parsePosition(firstStr);
       if (position === null) {
         return { type: "error", message: "Invalid position. Use: row,col" };
       }
       return {
         type: "action",
-        action: {
-          type: "move",
-          player: currentPlayer,
-          from: selectedPosition,
-          to: position,
-        },
+        action: { type: "move", player: currentPlayer, from: selectedPosition, to: position },
       };
     }
 
     case "attack":
     case "a": {
-      const posStr = parts.at(1);
-      if (posStr === undefined) {
-        return { type: "error", message: "Usage: attack <row>,<col>" };
+      const firstStr = parts.at(1);
+      const secondStr = parts.at(2);
+      if (firstStr === undefined) {
+        return { type: "error", message: "Usage: attack <attacker> <target> or select first then attack <target>" };
       }
+      // Two-argument form: attack <attacker> <target>
+      if (secondStr !== undefined) {
+        const attackerPosition = parsePosition(firstStr);
+        const targetPosition = parsePosition(secondStr);
+        if (attackerPosition === null || targetPosition === null) {
+          return { type: "error", message: "Invalid position. Use: row,col row,col" };
+        }
+        return {
+          type: "action",
+          action: { type: "attack", player: currentPlayer, attackerPosition, targetPosition },
+        };
+      }
+      // One-argument form: attack <target> (requires selection)
       if (selectedPosition === undefined) {
-        return { type: "error", message: "No unit selected. Use: select <row>,<col> first" };
+        return { type: "error", message: "No unit selected. Use: select <row>,<col> first or attack <from> <to>" };
       }
-      const position = parsePosition(posStr);
-      if (position === null) {
+      const targetPosition = parsePosition(firstStr);
+      if (targetPosition === null) {
         return { type: "error", message: "Invalid position. Use: row,col" };
       }
       return {
         type: "action",
-        action: {
-          type: "attack",
-          player: currentPlayer,
-          attackerPosition: selectedPosition,
-          targetPosition: position,
-        },
+        action: { type: "attack", player: currentPlayer, attackerPosition: selectedPosition, targetPosition },
       };
     }
 

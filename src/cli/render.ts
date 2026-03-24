@@ -190,8 +190,10 @@ export const renderResources = (game: Game, playerType: "day" | "night"): string
   return [
     `Wood: ${resources.wood}`,
     `Stone: ${resources.stone}`,
+    `Iron: ${resources.iron}`,
     `Gold: ${resources.gold}`,
     `Food: ${resources.food}`,
+    `Faith: ${resources.faith}`,
   ].join("  ");
 };
 

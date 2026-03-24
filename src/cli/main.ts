@@ -7,7 +7,7 @@ Heroes of Fright and Panic — CLI
 
 Usage:
   cli create  --size <n> --seed <s> --out <path>   Create a new game
-  cli play    <file> --player <day|night> [--json]  Play a game
+  cli play    <file> [--player <day|night>] [--json] Play a game (hotseat if no player)
   cli spectate <file>                               Watch a game
 
 Examples:

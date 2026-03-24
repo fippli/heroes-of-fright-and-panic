@@ -15,6 +15,7 @@ import { ThemesPage } from "./pages/admin/ThemesPage";
 import { ThemeEditorPage } from "./pages/admin/ThemeEditorPage";
 import { SettingsPage } from "./pages/admin/SettingsPage";
 import { DevPage } from "./pages/dev/DevPage";
+import { MapPage } from "./pages/map/MapPage";
 
 export const App = () => {
   return (
@@ -36,6 +37,7 @@ export const App = () => {
       <Route path="/admin/themes/:themeId/factions/:factionId" element={<ThemeEditorPage />} />
       <Route path="/admin/settings" element={<SettingsPage />} />
       <Route path="/dev" element={<DevPage />} />
+      <Route path="/map" element={<MapPage />} />
     </Routes>
   );
 };

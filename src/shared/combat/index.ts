@@ -1,4 +1,4 @@
-import { Building } from "@shared/building/index.ts";
+import type { Building } from "@shared/building/index.ts";
 import {
   type Piece,
   getPieceAttack,

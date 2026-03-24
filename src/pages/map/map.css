@@ -1,0 +1,175 @@
+.map-page {
+  display: flex;
+  height: 100vh;
+  background: #111;
+  color: #ddd;
+  font-family: monospace;
+  margin: calc(-1 * var(--spacing-2xl));
+}
+
+.map-controls {
+  width: 260px;
+  padding: 20px;
+  border-left: 1px solid #333;
+  overflow-y: auto;
+  flex-shrink: 0;
+  order: 1;
+}
+
+.map-controls h2 {
+  margin: 0 0 20px;
+  font-size: 18px;
+  color: #eee;
+}
+
+.map-controls h3 {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.map-control-label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.map-control-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.map-input {
+  flex: 1;
+  padding: 6px 8px;
+  background: #222;
+  border: 1px solid #444;
+  color: #eee;
+  font-family: monospace;
+  font-size: 13px;
+  border-radius: 3px;
+}
+
+.map-input:focus {
+  outline: none;
+  border-color: #888;
+}
+
+.map-slider {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.map-select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: #222;
+  border: 1px solid #444;
+  color: #eee;
+  font-family: monospace;
+  font-size: 13px;
+  border-radius: 3px;
+}
+
+.map-select:focus {
+  outline: none;
+  border-color: #888;
+}
+
+.map-btn {
+  padding: 6px 12px;
+  background: #333;
+  border: 1px solid #555;
+  color: #eee;
+  font-family: monospace;
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.map-btn:hover {
+  background: #444;
+}
+
+.map-btn-generate {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  background: #2a5a3c;
+  border-color: #3a7a4c;
+  font-size: 14px;
+}
+
+.map-btn-generate:hover {
+  background: #3a7a4c;
+}
+
+.map-stats {
+  margin-top: 8px;
+}
+
+.map-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.map-stat-total {
+  border-top: 1px solid #333;
+  margin-top: 4px;
+  padding-top: 6px;
+  font-weight: bold;
+}
+
+.map-stat-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.map-stat-label {
+  flex: 1;
+}
+
+.map-stat-count {
+  text-align: right;
+  min-width: 30px;
+  color: #aaa;
+}
+
+.map-stat-pct {
+  text-align: right;
+  min-width: 32px;
+  color: #888;
+}
+
+.map-legend {
+  margin-top: 8px;
+}
+
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.map-canvas-area {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
+.map-canvas-area canvas {
+  display: block;
+}

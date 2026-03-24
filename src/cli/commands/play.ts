@@ -10,8 +10,10 @@ import { formatJsonResponse } from "../json-output.ts";
 const HELP_TEXT = `
 Commands:
   select <row>,<col>        Select a tile (sel)
-  move <row>,<col>          Move selected unit (m)
-  attack <row>,<col>        Attack target (a)
+  move <from> <to>          Move unit between positions (m)
+  move <row>,<col>          Move selected unit to position (m)
+  attack <from> <to>        Attack from position to target (a)
+  attack <row>,<col>        Attack target with selected unit (a)
   build <type> <row>,<col>  Build: house, tower, wall, church (b)
   spawn <row>,<col>         Spawn peasant on your house
   craft <type> <row>,<col>  Craft: sword, shield, bow
@@ -24,20 +26,21 @@ Commands:
   loot <row>,<col>          Loot adjacent resource (l)
   inspect <row>,<col>       Show tile details (i)
   status                    Show resources and clock (st)
+  board                     Redraw the board (show)
   help                      Show this help (h)
   quit                      Exit (q)
 `;
 
 const parseArgs = (
   args: ReadonlyArray<string>,
-): { filePath: string; player: PlayerType; json: boolean } => {
+): { filePath: string; player: PlayerType | undefined; json: boolean } => {
   const filePath = args.at(0) ?? "";
   const playerIndex = args.indexOf("--player");
   const playerArg = playerIndex !== -1 ? args.at(playerIndex + 1) : undefined;
   const json = args.includes("--json");
 
-  const player: PlayerType =
-    playerArg === "day" || playerArg === "night" ? playerArg : "day";
+  const player: PlayerType | undefined =
+    playerArg === "day" || playerArg === "night" ? playerArg : undefined;
 
   return { filePath, player, json };
 };
@@ -46,14 +49,16 @@ export const runPlay = async (args: ReadonlyArray<string>): Promise<void> => {
   const { filePath, player, json } = parseArgs(args);
 
   if (filePath === "") {
-    console.error("Usage: cli play <file> --player <day|night> [--json]");
+    console.error("Usage: cli play <file> [--player <day|night>] [--json]");
     process.exit(1);
   }
 
   if (json) {
-    await runJsonMode(filePath, player);
-  } else {
+    await runJsonMode(filePath, player ?? "day");
+  } else if (player !== undefined) {
     await runInteractiveMode(filePath, player);
+  } else {
+    await runHotseatMode(filePath);
   }
 };
 
@@ -67,6 +72,8 @@ const runJsonMode = async (
     terminal: false,
   });
 
+  const selectedPosition: { value: TilePosition | undefined } = { value: undefined };
+
   const processLine = async (line: string): Promise<void> => {
     const game = await readGameFile(filePath);
 
@@ -75,10 +82,16 @@ const runJsonMode = async (
       return;
     }
 
-    const parsed = parseCommand(line, player, undefined);
+    const parsed = parseCommand(line, player, selectedPosition.value);
 
     if (parsed.type === "error") {
       console.log(JSON.stringify({ success: false, error: parsed.message }));
+      return;
+    }
+
+    if (parsed.type === "select") {
+      selectedPosition.value = parsed.position;
+      console.log(formatJsonResponse(game));
       return;
     }
 
@@ -90,6 +103,7 @@ const runJsonMode = async (
     const { game: updatedGame, result } = handleAction(game, parsed.action);
 
     if (result.success) {
+      selectedPosition.value = undefined;
       await writeGameFile(filePath, updatedGame);
     }
 
@@ -118,10 +132,15 @@ const runInteractiveMode = async (
   player: PlayerType,
 ): Promise<void> => {
   const selectedPosition: { value: TilePosition | undefined } = { value: undefined };
+  const closed: { value: boolean } = { value: false };
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
+  });
+
+  rl.on("close", () => {
+    closed.value = true;
   });
 
   const showBoard = (game: Game): void => {
@@ -130,7 +149,9 @@ const runInteractiveMode = async (
   };
 
   const prompt = (): void => {
+    if (closed.value) return;
     readGameFile(filePath).then((game) => {
+      if (closed.value) return;
       const isMyTurn = game.currentPlayer === player;
       const marker = player === "day" ? "\x1b[33m☀\x1b[0m" : "\x1b[35m☾\x1b[0m";
       const turnLabel = isMyTurn ? "" : " (waiting)";
@@ -143,6 +164,7 @@ const runInteractiveMode = async (
         handleInput(game, input);
       });
     }).catch((error) => {
+      if (closed.value) return;
       console.error("Error reading game file:", error);
       prompt();
     });
@@ -166,6 +188,11 @@ const runInteractiveMode = async (
 
       case "status": {
         console.log(renderStatus(currentGame));
+        break;
+      }
+
+      case "board": {
+        showBoard(currentGame);
         break;
       }
 
@@ -238,6 +265,140 @@ const runInteractiveMode = async (
   // Initial render
   const game = await readGameFile(filePath);
   console.log(`Playing as: ${player}`);
+  showBoard(game);
+  console.log("");
+  prompt();
+};
+
+const runHotseatMode = async (filePath: string): Promise<void> => {
+  const selectedPosition: { value: TilePosition | undefined } = { value: undefined };
+  const closed: { value: boolean } = { value: false };
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  rl.on("close", () => {
+    closed.value = true;
+  });
+
+  const showBoard = (game: Game): void => {
+    console.log("\n" + renderBoard(game, selectedPosition.value));
+    console.log(renderStatus(game));
+  };
+
+  const prompt = (): void => {
+    if (closed.value) return;
+    readGameFile(filePath).then((game) => {
+      if (closed.value) return;
+      if (game.gameOver === true) {
+        console.log(`\n\x1b[1mGame Over! ${game.winner ?? "Unknown"} wins!\x1b[0m`);
+        rl.close();
+        process.exit(0);
+        return;
+      }
+
+      const currentPlayer = game.currentPlayer;
+      const marker = currentPlayer === "day" ? "\x1b[33m☀\x1b[0m" : "\x1b[35m☾\x1b[0m";
+      const selLabel =
+        selectedPosition.value !== undefined
+          ? ` [${selectedPosition.value.row},${selectedPosition.value.column}]`
+          : "";
+
+      rl.question(`${marker} ${currentPlayer}${selLabel}> `, (input) => {
+        handleInput(game, input);
+      });
+    }).catch((error) => {
+      if (closed.value) return;
+      console.error("Error reading game file:", error);
+      prompt();
+    });
+  };
+
+  const handleInput = (currentGame: Game, input: string): void => {
+    const currentPlayer = currentGame.currentPlayer;
+    const parsed = parseCommand(input, currentPlayer, selectedPosition.value);
+
+    switch (parsed.type) {
+      case "help": {
+        console.log(HELP_TEXT);
+        break;
+      }
+
+      case "quit": {
+        console.log("Goodbye!");
+        rl.close();
+        process.exit(0);
+        break;
+      }
+
+      case "status": {
+        console.log(renderStatus(currentGame));
+        break;
+      }
+
+      case "board": {
+        showBoard(currentGame);
+        break;
+      }
+
+      case "select": {
+        const tile = currentGame.tiles.find(
+          (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+        );
+        if (tile === undefined) {
+          console.log("Invalid position.");
+        } else {
+          selectedPosition.value = parsed.position;
+          console.log(`Selected: ${renderTileInfo(tile)}`);
+        }
+        break;
+      }
+
+      case "inspect": {
+        const tile = currentGame.tiles.find(
+          (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+        );
+        if (tile === undefined) {
+          console.log("Invalid position.");
+        } else {
+          console.log(renderTileInfo(tile));
+        }
+        break;
+      }
+
+      case "action": {
+        readGameFile(filePath).then((latestGame) => {
+          const { game: updatedGame, result } = handleAction(latestGame, parsed.action);
+
+          if (result.success) {
+            console.log(result.message ?? "OK");
+            selectedPosition.value = undefined;
+            writeGameFile(filePath, updatedGame).then(() => {
+              showBoard(updatedGame);
+              prompt();
+            });
+            return;
+          }
+
+          console.log(`Error: ${result.error}`);
+          prompt();
+        });
+        return;
+      }
+
+      case "error": {
+        console.log(parsed.message);
+        break;
+      }
+    }
+
+    prompt();
+  };
+
+  const game = await readGameFile(filePath);
+  console.log("Hot-seat mode: both players share this terminal");
   showBoard(game);
   console.log("");
   prompt();
