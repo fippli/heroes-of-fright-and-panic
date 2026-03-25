@@ -1,13 +1,18 @@
 import * as readline from "node:readline";
 import { handleAction } from "@shared/game/engine.ts";
 import type { Game } from "@shared/game/types.ts";
-import type { TilePosition, PlayerType } from "@shared/actions/index.ts";
+import type { GameAction, TilePosition, PlayerType } from "@shared/actions/index.ts";
 import { generateAllActions, pickAction } from "@shared/ai/index.ts";
 import { createRandom } from "@shared/utils/random.ts";
 import { readGameFile, writeGameFile } from "../game-file.ts";
 import { parseCommand } from "../parse-command.ts";
 import { renderBoard, renderStatus, renderTileInfo } from "../render.ts";
 import { formatJsonResponse } from "../json-output.ts";
+import {
+  loadSupabaseConfig,
+  loadSession,
+  invokeEdgeFunction,
+} from "../supabase-client.ts";
 
 const HELP_TEXT = `
 Commands:
@@ -35,35 +40,38 @@ Commands:
 
 const parseArgs = (
   args: ReadonlyArray<string>,
-): { filePath: string; player: PlayerType | undefined; json: boolean; auto: boolean } => {
-  const filePath = args.at(0) ?? "";
+): { target: string; player: PlayerType | undefined; json: boolean; auto: boolean; online: boolean } => {
+  const target = args.at(0) ?? "";
   const playerIndex = args.indexOf("--player");
   const playerArg = playerIndex !== -1 ? args.at(playerIndex + 1) : undefined;
   const json = args.includes("--json");
   const auto = args.includes("--auto");
+  const online = args.includes("--online");
 
   const player: PlayerType | undefined =
     playerArg === "day" || playerArg === "night" ? playerArg : undefined;
 
-  return { filePath, player, json, auto };
+  return { target, player, json, auto, online };
 };
 
 export const runPlay = async (args: ReadonlyArray<string>): Promise<void> => {
-  const { filePath, player, json, auto } = parseArgs(args);
+  const { target, player, json, auto, online } = parseArgs(args);
 
-  if (filePath === "") {
-    console.error("Usage: cli play <file> [--player <day|night>] [--json] [--auto]");
+  if (target === "") {
+    console.error("Usage: cli play <file|game-id> [--player <day|night>] [--auto] [--online]");
     process.exit(1);
   }
 
-  if (auto) {
-    await runAutoMode(filePath, player ?? "night");
+  if (online) {
+    await runOnlineMode(target, player ?? "day", auto);
+  } else if (auto) {
+    await runAutoMode(target, player ?? "night");
   } else if (json) {
-    await runJsonMode(filePath, player ?? "day");
+    await runJsonMode(target, player ?? "day");
   } else if (player !== undefined) {
-    await runInteractiveMode(filePath, player);
+    await runInteractiveMode(target, player);
   } else {
-    await runHotseatMode(filePath);
+    await runHotseatMode(target);
   }
 };
 
@@ -465,4 +473,240 @@ const runAutoMode = async (
   };
 
   await tick();
+};
+
+// ============================================
+// ONLINE MODE (Supabase)
+// ============================================
+
+const parseOnlineGameState = (data: unknown): Game | null => {
+  if (data === null || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  if (record["tiles"] === undefined || record["currentPlayer"] === undefined) return null;
+  return {
+    ...record,
+    id: String(record["id"] ?? ""),
+    createdAt: new Date(String(record["createdAt"] ?? new Date().toISOString())),
+    updatedAt: new Date(String(record["updatedAt"] ?? new Date().toISOString())),
+    size: Number(record["size"] ?? 0),
+    tiles: record["tiles"] as Game["tiles"],
+    dayPlayer: record["dayPlayer"] as Game["dayPlayer"],
+    nightPlayer: record["nightPlayer"] as Game["nightPlayer"],
+    currentPlayer: record["currentPlayer"] as Game["currentPlayer"],
+    clock: record["clock"] as Game["clock"],
+    creatorEmail: String(record["creatorEmail"] ?? ""),
+    gameOver: record["gameOver"] === true,
+    winner: (record["winner"] as Game["winner"]) ?? null,
+  } as Game;
+};
+
+const runOnlineMode = async (
+  gameId: string,
+  player: PlayerType,
+  auto: boolean,
+): Promise<void> => {
+  const session = await loadSession();
+  if (session === null) {
+    console.error("Not logged in. Run: cli login --email <email> --password <password>");
+    process.exit(1);
+    return;
+  }
+
+  if (Date.now() > session.expiresAt) {
+    console.error("Session expired. Run: cli login --email <email> --password <password>");
+    process.exit(1);
+    return;
+  }
+
+  const config = await loadSupabaseConfig();
+  const random = createRandom(Date.now());
+
+  const sleep = (ms: number): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  const fetchGameState = async (): Promise<Game | null> => {
+    const { data, status } = await invokeEdgeFunction(config, session.accessToken, "game-state", { gameId });
+    if (status !== 200) {
+      const errorMessage = (data as Record<string, unknown>)?.["error"] ?? `HTTP ${status}`;
+      console.error(`Error fetching game: ${errorMessage}`);
+      return null;
+    }
+    return parseOnlineGameState(data);
+  };
+
+  const sendAction = async (action: GameAction): Promise<{ success: boolean; message?: string; error?: string }> => {
+    const { data, status } = await invokeEdgeFunction(config, session.accessToken, "game-action", { gameId, action });
+    const record = data as Record<string, unknown>;
+    if (status !== 200) {
+      return { success: false, error: String(record?.["error"] ?? `HTTP ${status}`) };
+    }
+    const result = record["result"] as Record<string, unknown> | undefined;
+    return {
+      success: result?.["success"] === true,
+      message: result?.["message"] as string | undefined,
+      error: result?.["error"] as string | undefined,
+    };
+  };
+
+  console.log(`Online mode: ${auto ? "AI" : "interactive"} as ${player}`);
+  console.log(`Game: ${gameId}`);
+  console.log(`Logged in as: ${session.email}\n`);
+
+  if (auto) {
+    const tick = async (): Promise<void> => {
+      const game = await fetchGameState();
+      if (game === null) {
+        await sleep(2000);
+        return tick();
+      }
+
+      if (game.gameOver === true) {
+        console.log(`\n\x1b[1mGame Over! ${game.winner ?? "Unknown"} wins!\x1b[0m`);
+        process.exit(0);
+        return;
+      }
+
+      if (game.currentPlayer !== player) {
+        await sleep(2000);
+        return tick();
+      }
+
+      const actions = generateAllActions(game, player);
+      const action = pickAction(actions, random);
+
+      if (action === undefined) {
+        console.log("No valid actions. Waiting...");
+        await sleep(2000);
+        return tick();
+      }
+
+      const result = await sendAction(action);
+      if (result.success) {
+        const summary = `${action.type}${result.message !== undefined ? `: ${result.message}` : ""}`;
+        console.log(`  [${player}] ${summary}`);
+      } else {
+        console.log(`  [${player}] ${action.type} failed: ${result.error}`);
+      }
+
+      await sleep(200);
+      return tick();
+    };
+
+    await tick();
+  } else {
+    // Interactive online mode
+    const closed = { value: false };
+    const selectedPosition: { value: TilePosition | undefined } = { value: undefined };
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    rl.on("close", () => {
+      closed.value = true;
+    });
+
+    const showBoard = (game: Game): void => {
+      console.log("\n" + renderBoard(game, selectedPosition.value));
+      console.log(renderStatus(game));
+    };
+
+    const prompt = async (): Promise<void> => {
+      if (closed.value) return;
+      const game = await fetchGameState();
+      if (game === null) {
+        console.error("Failed to fetch game state. Retrying...");
+        await sleep(2000);
+        return prompt();
+      }
+
+      if (game.gameOver === true) {
+        showBoard(game);
+        console.log(`\n\x1b[1mGame Over! ${game.winner ?? "Unknown"} wins!\x1b[0m`);
+        rl.close();
+        process.exit(0);
+        return;
+      }
+
+      const isMyTurn = game.currentPlayer === player;
+      const marker = player === "day" ? "\x1b[33m☀\x1b[0m" : "\x1b[35m☾\x1b[0m";
+      const turnLabel = isMyTurn ? "" : " (waiting)";
+
+      rl.question(`${marker} ${player}${turnLabel}> `, async (input) => {
+        const parsed = parseCommand(input, player, selectedPosition.value);
+
+        switch (parsed.type) {
+          case "help":
+            console.log(HELP_TEXT);
+            break;
+          case "quit":
+            console.log("Goodbye!");
+            rl.close();
+            process.exit(0);
+            break;
+          case "status":
+            console.log(renderStatus(game));
+            break;
+          case "board":
+            showBoard(game);
+            break;
+          case "select": {
+            const tile = game.tiles.find(
+              (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+            );
+            if (tile === undefined) {
+              console.log("Invalid position.");
+            } else {
+              selectedPosition.value = parsed.position;
+              console.log(`Selected: ${renderTileInfo(tile)}`);
+            }
+            break;
+          }
+          case "inspect": {
+            const tile = game.tiles.find(
+              (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+            );
+            if (tile === undefined) {
+              console.log("Invalid position.");
+            } else {
+              console.log(renderTileInfo(tile));
+            }
+            break;
+          }
+          case "action": {
+            if (!isMyTurn) {
+              console.log("Not your turn. Waiting for opponent.");
+              break;
+            }
+            const result = await sendAction(parsed.action);
+            if (result.success) {
+              console.log(result.message ?? "OK");
+              selectedPosition.value = undefined;
+              const updatedGame = await fetchGameState();
+              if (updatedGame !== null) {
+                showBoard(updatedGame);
+              }
+            } else {
+              console.log(`Error: ${result.error}`);
+            }
+            break;
+          }
+          case "error":
+            console.log(parsed.message);
+            break;
+        }
+
+        return prompt();
+      });
+    };
+
+    const game = await fetchGameState();
+    if (game !== null) {
+      console.log(`Playing as: ${player}`);
+      showBoard(game);
+      console.log("");
+    }
+    await prompt();
+  }
 };
