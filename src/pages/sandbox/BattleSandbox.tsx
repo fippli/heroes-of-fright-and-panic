@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Flex, Box, VStack, HStack, Text, Heading, Button } from "@chakra-ui/react";
 import { Canvas } from "../../canvas";
 import { Hexagon } from "../../core/Hexagon";
 import { Landscape, LandscapeType } from "../../core/Landscape";
@@ -449,82 +450,91 @@ export const BattleSandbox = () => {
   };
 
   return (
-    <div className="sandbox-page">
-      <div className="sandbox-canvas-area" ref={wrapperRef}>
-        <canvas ref={canvasRef} width="800" height="600" />
-      </div>
+    <Flex h="100%" bg="bg" fontFamily="mono">
+      <Box flex="1" overflow="hidden" ref={wrapperRef}>
+        <canvas ref={canvasRef} width="800" height="600" style={{ display: "block", width: "100%", height: "100%" }} />
+      </Box>
 
-      <div className="sandbox-controls">
-        <h2>Battle</h2>
+      <VStack
+        w="220px"
+        p="4"
+        borderLeft="1px solid"
+        borderColor="border"
+        overflow="auto"
+        flexShrink={0}
+        align="stretch"
+        gap="3"
+      >
+        <Heading size="md">Battle</Heading>
 
         {battleState.winner !== null && (
-          <div className="sandbox-section">
-            <h3>Victory</h3>
-            <div style={{ fontSize: "14px", color: battleState.winner === "day" ? "#ffc800" : "#aaaaff" }}>
+          <Box>
+            <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wide" mb="1">Victory</Text>
+            <Text fontSize="sm" fontWeight="bold" color={battleState.winner === "day" ? "day.500" : "night.500"}>
               {battleState.winner === "day" ? "Day" : "Night"} wins!
-            </div>
-          </div>
+            </Text>
+          </Box>
         )}
 
-        <div className="sandbox-section">
-          <h3>Current Turn</h3>
+        <Box>
+          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wide" mb="1">Current Turn</Text>
           {currentUnit !== null && (
-            <div style={{ fontSize: "12px" }}>
-              <span style={{ color: currentUnit.owner === "day" ? "#ffc800" : "#aaaaff" }}>
+            <Text fontSize="xs">
+              <Text as="span" color={currentUnit.owner === "day" ? "day.500" : "night.500"}>
                 {currentUnit.owner}
-              </span>
+              </Text>
               {" "}{currentUnit.kind}
               {" "}({currentUnit.hearts}/{currentUnit.maxHearts} hp)
-            </div>
+            </Text>
           )}
-          <div className="sandbox-row" style={{ marginTop: "8px" }}>
-            <button className="sandbox-btn" onClick={handleSkip}>
-              Skip Turn
-            </button>
-            <button className="sandbox-btn" onClick={handleReset}>
-              Reset
-            </button>
-          </div>
-        </div>
+          <HStack mt="2" gap="1">
+            <Button size="xs" variant="outline" onClick={handleSkip}>Skip</Button>
+            <Button size="xs" variant="outline" onClick={handleReset}>Reset</Button>
+          </HStack>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Turn Order</h3>
-          <div className="battle-unit-list">
+        <Box>
+          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wide" mb="1">Turn Order</Text>
+          <VStack gap="0.5" align="stretch">
             {battleState.turnOrder
               .map((unitId) => battleState.units.find((unit) => unit.id === unitId))
               .filter((unit): unit is BattleUnit => unit !== undefined && unit.hearts > 0)
               .map((unit) => (
-                <div
+                <Flex
                   key={unit.id}
-                  className={`battle-unit-item ${
-                    unit.id === currentUnitId ? "battle-unit-item-active" : ""
-                  } ${unit.owner === "day" ? "battle-unit-item-day" : "battle-unit-item-night"}`}
+                  justify="space-between"
+                  align="center"
+                  px="2"
+                  py="1"
+                  fontSize="xs"
+                  borderRadius="sm"
+                  bg={unit.id === currentUnitId ? "bg.muted" : "transparent"}
+                  borderLeft="3px solid"
+                  borderColor={unit.owner === "day" ? "day.500" : "night.500"}
                 >
-                  <span>{unit.kind}</span>
-                  <span className="battle-unit-hearts">{unit.hearts}/{unit.maxHearts}</span>
-                </div>
+                  <Text>{unit.kind}</Text>
+                  <Text color="red.400">{unit.hearts}/{unit.maxHearts}</Text>
+                </Flex>
               ))}
-          </div>
-        </div>
+          </VStack>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Controls</h3>
-          <div style={{ fontSize: "11px", color: "#888" }}>
-            Click green tile to move.
-            Click red enemy to attack.
-            Arrow keys to pan.
-          </div>
-        </div>
+        <Box>
+          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wide" mb="1">Controls</Text>
+          <Text fontSize="2xs" color="fg.muted">
+            Click green tile to move. Click red enemy to attack. Arrow keys to pan.
+          </Text>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Log</h3>
-          <div className="battle-log">
+        <Box>
+          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wide" mb="1">Log</Text>
+          <Box maxH="120px" overflow="auto" fontSize="2xs" color="fg.muted">
             {battleState.log.toReversed().map((entry, index) => (
-              <div key={index} className="battle-log-entry">{entry}</div>
+              <Text key={index} py="0.5">{entry}</Text>
             ))}
-          </div>
-        </div>
-      </div>
-    </div>
+          </Box>
+        </Box>
+      </VStack>
+    </Flex>
   );
 };

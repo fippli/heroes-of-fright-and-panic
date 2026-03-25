@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Flex, Box, VStack, HStack, Text, Heading, Button, Input } from "@chakra-ui/react";
 import { Canvas } from "../../canvas";
 import { Hexagon } from "../../core/Hexagon";
 import { Landscape, LandscapeType } from "../../core/Landscape";
@@ -8,13 +9,11 @@ import { Building, BuildingType } from "../../core/Building";
 import { defaultImageAssets, type ImageAssets } from "../../images";
 import { simpleImageAssets } from "../../images/simple-theme";
 import { generateMap } from "@shared/map/map";
-import { defaultMapConfig, type MapConfig } from "@shared/map/map";
 import { createRandom } from "@shared/utils/random";
 import { createPlayer } from "@shared/player";
 import type { Tile as SharedTile } from "@shared/map/tile";
 import type { Coordinate } from "../../types/coordinate";
 import * as hex from "@shared/map/hex";
-import "./sandbox.css";
 
 // ============================================
 // TILE CREATION FROM MAP DATA
@@ -371,134 +370,133 @@ export const OverworldSandbox = () => {
     themeRef.current = useSimpleTheme ? simpleImageAssets as ImageAssets : defaultImageAssets;
   }, [useSimpleTheme]);
 
+  const SectionLabel = ({ children }: { readonly children: React.ReactNode }) => (
+    <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wide" mb="1">{children}</Text>
+  );
+
+  const ToolButton = ({
+    active,
+    onClick,
+    children,
+  }: {
+    readonly active: boolean;
+    readonly onClick: () => void;
+    readonly children: React.ReactNode;
+  }) => (
+    <Button
+      size="xs"
+      variant={active ? "solid" : "outline"}
+      w="100%"
+      justifyContent="flex-start"
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  );
+
   return (
-    <div className="sandbox-page">
-      <div className="sandbox-canvas-area" ref={wrapperRef}>
-        <canvas ref={canvasRef} width="800" height="600" />
-      </div>
+    <Flex h="100%" bg="bg" fontFamily="mono">
+      <Box flex="1" overflow="hidden" ref={wrapperRef}>
+        <canvas ref={canvasRef} width="800" height="600" style={{ display: "block", width: "100%", height: "100%" }} />
+      </Box>
 
-      <div className="sandbox-controls">
-        <h2>Sandbox</h2>
+      <VStack
+        w="220px"
+        p="4"
+        borderLeft="1px solid"
+        borderColor="border"
+        overflow="auto"
+        flexShrink={0}
+        align="stretch"
+        gap="3"
+      >
+        <Heading size="md">Overworld</Heading>
 
-        <div className="sandbox-section">
-          <h3>Map</h3>
-          <label className="sandbox-label">
-            Seed
-            <div className="sandbox-row">
-              <input
-                type="text"
-                value={seed}
-                onChange={(event) => setSeed(event.target.value)}
-                className="sandbox-input"
-              />
-              <button onClick={randomizeSeed} className="sandbox-btn">Rnd</button>
-            </div>
-          </label>
-          <label className="sandbox-label">
-            Size: {size}
-            <input
-              type="range"
-              min={5}
-              max={30}
-              value={size}
-              onChange={(event) => setSize(Number(event.target.value))}
-              className="sandbox-slider"
+        <Box>
+          <SectionLabel>Map</SectionLabel>
+          <Text fontSize="xs" color="fg.subtle" mb="1">Seed</Text>
+          <HStack gap="1" mb="2">
+            <Input
+              size="xs"
+              value={seed}
+              onChange={(event) => setSeed(event.target.value)}
+              fontFamily="mono"
             />
-          </label>
-          <button onClick={handleRegenerate} className="sandbox-btn sandbox-btn-wide">
-            Generate
-          </button>
-        </div>
+            <Button size="xs" variant="outline" onClick={randomizeSeed}>Rnd</Button>
+          </HStack>
+          <Text fontSize="xs" color="fg.subtle" mb="1">Size: {size}</Text>
+          <input
+            type="range"
+            min={5}
+            max={30}
+            value={size}
+            onChange={(event) => setSize(Number(event.target.value))}
+            style={{ width: "100%" }}
+          />
+          <Button size="xs" variant="outline" w="100%" mt="2" onClick={handleRegenerate}>Generate</Button>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Theme</h3>
-          <div className="sandbox-row">
-            <button
-              className={`sandbox-btn ${useSimpleTheme ? "sandbox-btn-active" : ""}`}
-              onClick={() => setUseSimpleTheme(true)}
-            >
-              Simple
-            </button>
-            <button
-              className={`sandbox-btn ${!useSimpleTheme ? "sandbox-btn-active" : ""}`}
-              onClick={() => setUseSimpleTheme(false)}
-            >
-              Sprites
-            </button>
-          </div>
-        </div>
+        <Box>
+          <SectionLabel>Theme</SectionLabel>
+          <HStack gap="1">
+            <Button size="xs" variant={useSimpleTheme ? "solid" : "outline"} onClick={() => setUseSimpleTheme(true)}>Simple</Button>
+            <Button size="xs" variant={!useSimpleTheme ? "solid" : "outline"} onClick={() => setUseSimpleTheme(false)}>Sprites</Button>
+          </HStack>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Owner</h3>
-          <div className="sandbox-row">
-            <button
-              className={`sandbox-btn ${owner === "day" ? "sandbox-btn-active-day" : ""}`}
-              onClick={() => setOwner("day")}
-            >
-              Day
-            </button>
-            <button
-              className={`sandbox-btn ${owner === "night" ? "sandbox-btn-active-night" : ""}`}
-              onClick={() => setOwner("night")}
-            >
-              Night
-            </button>
-          </div>
-        </div>
+        <Box>
+          <SectionLabel>Owner</SectionLabel>
+          <HStack gap="1">
+            <Button size="xs" variant={owner === "day" ? "solid" : "outline"} colorPalette="yellow" onClick={() => setOwner("day")}>Day</Button>
+            <Button size="xs" variant={owner === "night" ? "solid" : "outline"} colorPalette="purple" onClick={() => setOwner("night")}>Night</Button>
+          </HStack>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Tools</h3>
-          <button
-            className={`sandbox-btn sandbox-btn-wide ${tool.type === "select" ? "sandbox-btn-active" : ""}`}
-            onClick={() => setTool({ type: "select" })}
-          >
-            Select
-          </button>
-          <button
-            className={`sandbox-btn sandbox-btn-wide ${tool.type === "erase" ? "sandbox-btn-active" : ""}`}
-            onClick={() => setTool({ type: "erase" })}
-          >
-            Erase
-          </button>
-        </div>
+        <Box>
+          <SectionLabel>Tools</SectionLabel>
+          <VStack gap="0.5" align="stretch">
+            <ToolButton active={tool.type === "select"} onClick={() => setTool({ type: "select" })}>Select</ToolButton>
+            <ToolButton active={tool.type === "erase"} onClick={() => setTool({ type: "erase" })}>Erase</ToolButton>
+          </VStack>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Pieces</h3>
-          {PIECE_TOOLS.map((pieceTool) => (
-            <button
-              key={pieceTool.kind}
-              className={`sandbox-btn sandbox-btn-wide ${
-                tool.type === "piece" && tool.kind === pieceTool.kind ? "sandbox-btn-active" : ""
-              }`}
-              onClick={() => setTool({ type: "piece", kind: pieceTool.kind, owner })}
-            >
-              {pieceTool.label}
-            </button>
-          ))}
-        </div>
+        <Box>
+          <SectionLabel>Pieces</SectionLabel>
+          <VStack gap="0.5" align="stretch">
+            {PIECE_TOOLS.map((pieceTool) => (
+              <ToolButton
+                key={pieceTool.kind}
+                active={tool.type === "piece" && tool.kind === pieceTool.kind}
+                onClick={() => setTool({ type: "piece", kind: pieceTool.kind, owner })}
+              >
+                {pieceTool.label}
+              </ToolButton>
+            ))}
+          </VStack>
+        </Box>
 
-        <div className="sandbox-section">
-          <h3>Buildings</h3>
-          {BUILDING_TOOLS.map((buildingTool) => (
-            <button
-              key={buildingTool.buildingType}
-              className={`sandbox-btn sandbox-btn-wide ${
-                tool.type === "building" && tool.buildingType === buildingTool.buildingType ? "sandbox-btn-active" : ""
-              }`}
-              onClick={() => setTool({ type: "building", buildingType: buildingTool.buildingType, owner })}
-            >
-              {buildingTool.label}
-            </button>
-          ))}
-        </div>
+        <Box>
+          <SectionLabel>Buildings</SectionLabel>
+          <VStack gap="0.5" align="stretch">
+            {BUILDING_TOOLS.map((buildingTool) => (
+              <ToolButton
+                key={buildingTool.buildingType}
+                active={tool.type === "building" && tool.buildingType === buildingTool.buildingType}
+                onClick={() => setTool({ type: "building", buildingType: buildingTool.buildingType, owner })}
+              >
+                {buildingTool.label}
+              </ToolButton>
+            ))}
+          </VStack>
+        </Box>
 
         {selectedInfo !== "" && (
-          <div className="sandbox-section">
-            <h3>Selected</h3>
-            <div className="sandbox-info">{selectedInfo}</div>
-          </div>
+          <Box>
+            <SectionLabel>Selected</SectionLabel>
+            <Text fontSize="2xs" color="fg.subtle" wordBreak="break-all">{selectedInfo}</Text>
+          </Box>
         )}
-      </div>
-    </div>
+      </VStack>
+    </Flex>
   );
 };
