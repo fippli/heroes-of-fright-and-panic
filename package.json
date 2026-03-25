@@ -33,6 +33,8 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.34.0",
+    "@emotion/react": "^11.14.0",
     "@supabase/supabase-js": "^2.99.1",
     "marked": "^17.0.5",
     "mermaid": "^11.13.0",
