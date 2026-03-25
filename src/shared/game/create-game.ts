@@ -7,6 +7,7 @@ import { createPlayer } from "@shared/player/index.ts";
 import { createResourceMap } from "@shared/player/resource-map.ts";
 import { replaceTile, findNeighborTiles } from "@shared/tile/index.ts";
 import { createRandom } from "@shared/utils/random.ts";
+import { hasWalkablePath } from "@shared/movement/index.ts";
 
 type CreateGameParams = {
   readonly boardSize: number;
@@ -16,6 +17,86 @@ type CreateGameParams = {
   readonly inviteEmail: string | null;
   readonly seed?: string | number;
   readonly mapConfig?: MapConfig;
+};
+
+const MAX_GENERATION_ATTEMPTS = 10;
+
+type GeneratedBoard = {
+  readonly tiles: ReadonlyArray<Tile>;
+  readonly dayKingTile: Tile;
+  readonly nightKingTile: Tile;
+  readonly dayPeasantTile: Tile;
+  readonly nightPeasantTile: Tile;
+};
+
+const generateBoard = (
+  boardSize: number,
+  seed: string | number | undefined,
+  mapConfig: MapConfig,
+): GeneratedBoard => {
+  const seedStr = seed !== undefined ? String(seed) : "default";
+
+  const attempt = (attemptIndex: number): GeneratedBoard => {
+    const attemptSeed = attemptIndex === 0 ? seedStr : `${seedStr}-retry${attemptIndex}`;
+    const random = createRandom(attemptSeed);
+    const generatedTiles = GameMap.generate(boardSize, random, mapConfig) as Tile[];
+
+    const walkableTiles = generatedTiles.filter(
+      (tile) =>
+        tile.landscape?.type === LandscapeType.grass ||
+        tile.landscape?.type === LandscapeType.sand,
+    );
+
+    const fallbackTile = generatedTiles.at(
+      Math.floor(generatedTiles.length / 2),
+    ) as Tile;
+    const startCandidates = walkableTiles.length > 0 ? walkableTiles : [fallbackTile];
+
+    const maxRow = boardSize - 1;
+    const maxCol = boardSize - 1;
+
+    const dayKingTile = startCandidates.reduce((closest, tile) => {
+      const distance = Math.sqrt(
+        Math.pow(maxRow - tile.row, 2) + Math.pow(tile.column, 2),
+      );
+      const closestDistance = Math.sqrt(
+        Math.pow(maxRow - closest.row, 2) + Math.pow(closest.column, 2),
+      );
+      return distance < closestDistance ? tile : closest;
+    }, startCandidates[0]);
+
+    const nightKingTile = startCandidates.reduce((closest, tile) => {
+      const distance = Math.sqrt(
+        Math.pow(tile.row, 2) + Math.pow(maxCol - tile.column, 2),
+      );
+      const closestDistance = Math.sqrt(
+        Math.pow(closest.row, 2) + Math.pow(maxCol - closest.column, 2),
+      );
+      return distance < closestDistance ? tile : closest;
+    }, startCandidates[0]);
+
+    const tilesWithDayClearing = clearStartingArea(dayKingTile, generatedTiles);
+    const tilesWithBothClearings = clearStartingArea(nightKingTile, tilesWithDayClearing);
+
+    const connected = hasWalkablePath(tilesWithBothClearings, dayKingTile, nightKingTile);
+
+    if (!connected && attemptIndex < MAX_GENERATION_ATTEMPTS - 1) {
+      return attempt(attemptIndex + 1);
+    }
+
+    const dayPeasantTile = findAdjacentGrass(dayKingTile, tilesWithBothClearings);
+    const nightPeasantTile = findAdjacentGrass(nightKingTile, tilesWithBothClearings);
+
+    return {
+      tiles: tilesWithBothClearings,
+      dayKingTile,
+      nightKingTile,
+      dayPeasantTile,
+      nightPeasantTile,
+    };
+  };
+
+  return attempt(0);
 };
 
 export const createGame = (params: CreateGameParams) => {
@@ -29,58 +110,13 @@ export const createGame = (params: CreateGameParams) => {
   });
 
   const mapConfig = params.mapConfig ?? defaultMapConfig;
-  const random = createRandom(params.seed);
-  const generatedTiles = GameMap.generate(params.boardSize, random, mapConfig) as Tile[];
+  const board = generateBoard(params.boardSize, params.seed, mapConfig);
 
-  const walkableTiles = generatedTiles.filter(
-    (tile) =>
-      tile.landscape?.type === LandscapeType.grass ||
-      tile.landscape?.type === LandscapeType.sand,
-  );
-
-  // Fallback: if no walkable tiles exist (degenerate map), use the center tile
-  const fallbackTile = generatedTiles.at(
-    Math.floor(generatedTiles.length / 2),
-  ) as Tile;
-  const startCandidates = walkableTiles.length > 0 ? walkableTiles : [fallbackTile];
-
-  const maxRow = params.boardSize - 1;
-  const maxCol = params.boardSize - 1;
-
-  // Day player starts near bottom-left
-  const dayKingTile = startCandidates.reduce((closest, tile) => {
-    const distance = Math.sqrt(
-      Math.pow(maxRow - tile.row, 2) + Math.pow(tile.column, 2),
-    );
-    const closestDistance = Math.sqrt(
-      Math.pow(maxRow - closest.row, 2) + Math.pow(closest.column, 2),
-    );
-    return distance < closestDistance ? tile : closest;
-  }, startCandidates[0]);
-
-  // Clear a starting area around each king (convert trees/mountains to grass)
-  const tilesWithDayClearing = clearStartingArea(dayKingTile, generatedTiles);
-
-  // Night player starts near top-right
-  const nightKingTile = startCandidates.reduce((closest, tile) => {
-    const distance = Math.sqrt(
-      Math.pow(tile.row, 2) + Math.pow(maxCol - tile.column, 2),
-    );
-    const closestDistance = Math.sqrt(
-      Math.pow(closest.row, 2) + Math.pow(maxCol - closest.column, 2),
-    );
-    return distance < closestDistance ? tile : closest;
-  }, startCandidates[0]);
-
-  const tilesWithBothClearings = clearStartingArea(nightKingTile, tilesWithDayClearing);
-
-  // Find adjacent grass tiles for peasants (now guaranteed to exist)
-  const dayPeasantTile = findAdjacentGrass(dayKingTile, tilesWithBothClearings);
-  const nightPeasantTile = findAdjacentGrass(nightKingTile, tilesWithBothClearings);
+  const { dayKingTile, nightKingTile, dayPeasantTile, nightPeasantTile } = board;
 
   // Place pieces
   const tilesWithDayKing = replaceTile(
-    tilesWithBothClearings,
+    board.tiles,
     { row: dayKingTile.row, column: dayKingTile.column, piece: createKing("day") },
   );
 

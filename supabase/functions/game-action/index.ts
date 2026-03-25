@@ -8,6 +8,8 @@ import type { Game, GameRow } from "@shared/game/types.ts";
 import type { GameAction } from "@shared/actions/index.ts";
 import { processAction } from "@shared/game/actions.ts";
 import { getFilteredGameState } from "@shared/game/engine.ts";
+import { generateAllActions, pickAction } from "@shared/ai/index.ts";
+import { createRandom } from "@shared/utils/random.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -122,8 +124,64 @@ Deno.serve(async (request) => {
     }
   }
 
+  // If the opponent is AI, run AI turns until the phase switches back
+  const AI_EMAIL = "ai@bot";
+  const opponentEmail = action.player === "day"
+    ? updatedGame.nightPlayerEmail
+    : updatedGame.dayPlayerEmail;
+  const opponentIsAi = opponentEmail === AI_EMAIL;
+
+  const afterAi = (() => {
+    if (!opponentIsAi || !result.success || updatedGame.gameOver === true) {
+      return updatedGame;
+    }
+
+    const aiPlayer = action.player === "day" ? "night" as const : "day" as const;
+    const random = createRandom(Date.now());
+    const MAX_AI_ACTIONS = 50;
+
+    const runAiTurns = (currentGame: Game, remaining: number): Game => {
+      if (remaining <= 0) return currentGame;
+      if (currentGame.gameOver === true) return currentGame;
+      if (currentGame.currentPlayer !== aiPlayer) return currentGame;
+
+      const actions = generateAllActions(currentGame, aiPlayer);
+      const aiAction = pickAction(actions, random);
+      if (aiAction === undefined) return currentGame;
+
+      const { result: aiResult, updatedGame: nextGame } = processAction({ game: currentGame, action: aiAction });
+      if (!aiResult.success) return runAiTurns(currentGame, remaining - 1);
+
+      return runAiTurns(nextGame, remaining - 1);
+    };
+
+    return runAiTurns(updatedGame, MAX_AI_ACTIONS);
+  })();
+
+  // Persist AI turns if they happened
+  if (opponentIsAi && result.success && afterAi !== updatedGame) {
+    const { error: aiUpdateError } = await supabase
+      .from("games")
+      .update(gameToRow({
+        tiles: afterAi.tiles,
+        dayPlayer: afterAi.dayPlayer,
+        nightPlayer: afterAi.nightPlayer,
+        currentPlayer: afterAi.currentPlayer,
+        clock: afterAi.clock,
+        updatedAt: new Date(),
+        gameOver: afterAi.gameOver ?? false,
+        winner: afterAi.winner ?? null,
+      }))
+      .eq("id", gameId);
+
+    if (aiUpdateError !== null) {
+      console.error("Error updating game after AI turns:", aiUpdateError);
+    }
+  }
+
   // Return filtered game state for the player who made the action
-  const filteredGame = getFilteredGameState(updatedGame, action.player);
+  const finalGame = opponentIsAi ? afterAi : updatedGame;
+  const filteredGame = getFilteredGameState(finalGame, action.player);
 
   return new Response(
     JSON.stringify({

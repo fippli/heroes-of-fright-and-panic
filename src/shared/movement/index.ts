@@ -9,6 +9,7 @@
 
 import type { TilePosition } from "@shared/actions/index.ts";
 import { isBuildingWalkableBy } from "@shared/building/index.ts";
+import { LandscapeType } from "@shared/map/landscape.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import { findTile, findNeighborTiles } from "@shared/tile/index.ts";
 import type { PlayerType, Piece } from "@shared/piece/index.ts";
@@ -209,4 +210,55 @@ export const executeMove = (
         ? { ...tile, piece: movedPiece, steed: undefined }
         : tile,
     );
+};
+
+// ============================================
+// CONNECTIVITY
+// ============================================
+
+const BASE_WALKABLE_TYPES: ReadonlyArray<LandscapeType> = [
+  LandscapeType.grass,
+  LandscapeType.sand,
+  LandscapeType.farm,
+];
+
+/**
+ * Check if a walkable path exists between two positions on the map.
+ * Uses BFS on base walkable terrain (grass, sand, farm) — does not
+ * require equipment or steeds. Used to validate map connectivity
+ * between starting positions.
+ */
+export const hasWalkablePath = (
+  tiles: ReadonlyArray<Tile>,
+  from: TilePosition,
+  to: TilePosition,
+): boolean => {
+  const visited = new Set<string>();
+  visited.add(`${from.row},${from.column}`);
+
+  const search = (frontier: ReadonlyArray<TilePosition>): boolean => {
+    if (frontier.length === 0) return false;
+
+    const reached = frontier.some(
+      (position) => position.row === to.row && position.column === to.column,
+    );
+    if (reached) return true;
+
+    const nextFrontier = frontier.flatMap((position) =>
+      findNeighborTiles(tiles, position)
+        .filter((neighbor) => {
+          const key = `${neighbor.row},${neighbor.column}`;
+          if (visited.has(key)) return false;
+          if (neighbor.landscape === null) return false;
+          if (!BASE_WALKABLE_TYPES.includes(neighbor.landscape.type)) return false;
+          visited.add(key);
+          return true;
+        })
+        .map((neighbor) => ({ row: neighbor.row, column: neighbor.column })),
+    );
+
+    return search(nextFrontier);
+  };
+
+  return search([from]);
 };

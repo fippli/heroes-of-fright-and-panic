@@ -29,8 +29,11 @@ Deno.serve(async (request) => {
     const boardSize = body.size ?? 15;
     const name = body.name ?? `Game ${new Date().toISOString()}`;
     const alliance = body.alliance ?? "day";
-    const inviteEmail = body.inviteEmail ?? null;
+    const aiOpponent = body.aiOpponent === true;
+    const AI_EMAIL = "ai@bot";
+    const inviteEmail = aiOpponent ? AI_EMAIL : (body.inviteEmail ?? null);
     const themeId = body.themeId ?? null;
+    const mapConfig = body.mapConfig ?? undefined;
 
     const gameData = createGame({
       boardSize,
@@ -38,7 +41,12 @@ Deno.serve(async (request) => {
       alliance,
       creatorEmail: user.email,
       inviteEmail,
+      mapConfig,
     });
+
+    // For AI opponent, set the opponent's email slot directly
+    const dayPlayerEmail = alliance === "day" ? user.email : (aiOpponent ? AI_EMAIL : inviteEmail);
+    const nightPlayerEmail = alliance === "night" ? user.email : (aiOpponent ? AI_EMAIL : inviteEmail);
 
     const supabase = createAdminClient();
     const { data: newGame, error } = await supabase
@@ -52,8 +60,8 @@ Deno.serve(async (request) => {
         current_player: gameData.currentPlayer,
         clock: gameData.clock,
         creator_email: gameData.creatorEmail,
-        day_player_email: gameData.dayPlayerEmail,
-        night_player_email: gameData.nightPlayerEmail,
+        day_player_email: dayPlayerEmail,
+        night_player_email: nightPlayerEmail,
         day_player_last_move: null,
         night_player_last_move: null,
         invited_email: gameData.invitedEmail,
