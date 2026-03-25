@@ -14,7 +14,7 @@ import type {
   AttackAction,
   GameAction,
 } from "../actions/index.ts";
-import { buildingCostOf, createBuilding, createCastleBuilding, isBuildingWalkableBy, BuildingType } from "../building/index.ts";
+import { createBuilding, createCastleBuilding, BuildingType } from "../building/index.ts";
 import { resolveCombat } from "../combat/index.ts";
 import { createEquipment, EquipmentType } from "../equipment/index.ts";
 import * as hex from "../map/hex.ts";
@@ -24,34 +24,44 @@ import type { PlayerType, Piece } from "../piece/index.ts";
 import {
   PieceKind,
   createPeasant,
-  createKing,
   createPriest,
   createArchAngel,
-  peasantSpawnCost,
-  priestTrainCost,
-  archAngelSummonCost,
-  getPieceMove,
   getPieceView,
   getPieceAttackRange,
-  getWalkableLandscape,
   pieceHasEquipment,
   pieceWithEquipment,
-  pieceWithSteed,
   pieceWithHealing,
 } from "../piece/index.ts";
-import { createPlayer, playerCollect, playerCanAfford, playerPay, playerWithResearch, type Player } from "../player/index.ts";
-import { createResourceMap } from "../player/resource-map.ts";
-import { calculateProduction, countPrayingPriests } from "../production/index.ts";
-import { canResearch, applyResearch, researchCostOf, ResearchType, SPEED_LEVELS } from "../research/index.ts";
+import { createPlayer, playerWithResearch, type Player } from "../player/index.ts";
+import { canResearch, applyResearch, SPEED_LEVELS } from "../research/index.ts";
 import { createSteed, SteedType } from "../steed/index.ts";
 import type { Game, GameClock } from "./types.ts";
+import { validateMove, executeMove } from "../movement/index.ts";
+import {
+  canAffordCost,
+  payForCost,
+  costOfBuilding,
+  costOfEquipment,
+  costOfSteed,
+  costOfSpawnPeasant,
+  costOfTrainPriest,
+  costOfSummonArchAngel,
+  costOfResearch,
+  costOfHeal,
+  countPrayingPriests,
+  triggerProduction,
+} from "../resource/index.ts";
 
 const ARCH_ANGEL_PRIEST_REQUIREMENT = 10;
-const PHASE_DURATION_HOURS = 12;
 
 /**
- * Pure game engine. Every method returns a new Game state.
+ * Pure game engine. Every function returns a new Game state.
  * No mutation of the input game object.
+ *
+ * Delegates to:
+ * - movement engine for move validation and execution
+ * - resource engine for cost checks, payments, and production
+ * - combat module for attack resolution
  */
 
 // ============================================
@@ -73,14 +83,12 @@ const minutesPerAction = (game: Game, playerType: PlayerType): number => {
 
 const advanceClock = (game: Game, playerType: PlayerType): Game => {
   const minutes = minutesPerAction(game, playerType);
-  const hoursToAdvance = minutes / 60;
   const newTime = (game.clock.time * 60 + minutes) / 60;
   const wrappedTime = newTime % 24;
 
   const oldIsDay = isDay(game.clock.time);
   const newIsDay = isDay(wrappedTime);
 
-  // Check for phase transitions
   const crossedDawn = !oldIsDay && newIsDay;
   const crossedDusk = oldIsDay && !newIsDay;
 
@@ -96,7 +104,6 @@ const advanceClock = (game: Game, playerType: PlayerType): Game => {
     currentPlayer: activePlayer(wrappedTime),
   };
 
-  // Trigger production on phase transition
   if (crossedDawn) {
     return triggerProduction(afterClock, "day");
   }
@@ -107,15 +114,8 @@ const advanceClock = (game: Game, playerType: PlayerType): Game => {
   return afterClock;
 };
 
-const triggerProduction = (game: Game, playerType: PlayerType): Game => {
-  const player = getPlayer(game, playerType);
-  const production = calculateProduction(playerType, game.tiles, player.research);
-  const updatedPlayer = playerCollect(player,production);
-  return updatePlayer(game, playerType, updatedPlayer);
-};
-
 // ============================================
-// PLAYER UTILITIES
+// PLAYER & TILE UTILITIES
 // ============================================
 
 const getPlayer = (game: Game, playerType: PlayerType): Player =>
@@ -129,10 +129,6 @@ const updatePlayer = (
   playerType === "day"
     ? { ...game, dayPlayer: player }
     : { ...game, nightPlayer: player };
-
-// ============================================
-// TILE UTILITIES
-// ============================================
 
 const findTile = (
   tiles: ReadonlyArray<Tile>,
@@ -212,122 +208,14 @@ export const handleMove = (
     return { game, result: turnError };
   }
 
-  const fromTile = findTile(game.tiles, action.from);
-  const toTile = findTile(game.tiles, action.to);
-
-  if (fromTile === undefined || toTile === undefined) {
-    return { game, result: { success: false, error: "Invalid tile position" } };
+  const validation = validateMove(game.tiles, action.from, action.to, action.player);
+  if (!validation.valid) {
+    return { game, result: { success: false, error: validation.error } };
   }
 
-  if (fromTile.piece === null || fromTile.piece.owner !== action.player) {
-    return { game, result: { success: false, error: "No piece to move or not your piece" } };
-  }
-
-  if (toTile.piece !== null) {
-    return { game, result: { success: false, error: "Target tile is occupied" } };
-  }
-
-  // Check walkable terrain
-  if (
-    toTile.landscape === null ||
-    !getWalkableLandscape(fromTile.piece).includes(toTile.landscape.type)
-  ) {
-    return { game, result: { success: false, error: "Cannot walk on this terrain" } };
-  }
-
-  // Check building walkability
-  if (toTile.building !== null && !isBuildingWalkableBy(toTile.building, action.player)) {
-    return { game, result: { success: false, error: "Cannot enter this building" } };
-  }
-
-  // Check move range (path must be clear and within range)
-  const distance = findDistance(game.tiles, action.from, action.to, fromTile.piece);
-  if (distance === null || distance > getPieceMove(fromTile.piece)) {
-    return { game, result: { success: false, error: "Target is out of move range" } };
-  }
-
-  // Handle mounting a steed
-  const movedPiece = (() => {
-    if (
-      toTile.piece === null &&
-      toTile.steed !== undefined &&
-      toTile.steed !== null &&
-      fromTile.piece.canMountSteed &&
-      fromTile.piece.steed === null
-    ) {
-      return pieceWithSteed(fromTile.piece, toTile.steed);
-    }
-    return fromTile.piece;
-  })();
-
-  const updatedTiles = replaceTile(
-    replaceTile(game.tiles, { ...fromTile, piece: null }),
-    { ...toTile, piece: movedPiece, steed: undefined },
-  );
-
+  const updatedTiles = executeMove(game.tiles, action.from, action.to);
   const afterMove = advanceClock({ ...game, tiles: updatedTiles }, action.player);
   return { game: afterMove, result: { success: true, message: "Piece moved" } };
-};
-
-/**
- * Simple BFS distance for movement, respecting walkable terrain.
- * Returns null if no path exists.
- */
-const findDistance = (
-  tiles: ReadonlyArray<Tile>,
-  from: TilePosition,
-  to: TilePosition,
-  piece: Piece,
-): number | null => {
-  if (from.row === to.row && from.column === to.column) {
-    return 0;
-  }
-
-  const visited = new Set<string>();
-  visited.add(`${from.row},${from.column}`);
-  const frontier: { position: TilePosition; distance: number }[] = [
-    { position: from, distance: 0 },
-  ];
-
-  // eslint-disable-next-line no-constant-condition
-  while (frontier.length > 0) {
-    const current = frontier.shift()!;
-    if (current.distance >= getPieceMove(piece)) {
-      continue;
-    }
-
-    const neighbors = getNeighborTiles(tiles, current.position);
-    const reachableNeighbor = neighbors.find(
-      (neighbor) =>
-        neighbor.row === to.row && neighbor.column === to.column,
-    );
-    if (reachableNeighbor !== undefined) {
-      return current.distance + 1;
-    }
-
-    neighbors.forEach((neighbor) => {
-      const key = `${neighbor.row},${neighbor.column}`;
-      if (visited.has(key)) {
-        return;
-      }
-      if (neighbor.piece !== null) {
-        return; // Can't pass through occupied tiles
-      }
-      if (
-        neighbor.landscape === null ||
-        !getWalkableLandscape(piece).includes(neighbor.landscape.type)
-      ) {
-        return;
-      }
-      visited.add(key);
-      frontier.push({
-        position: { row: neighbor.row, column: neighbor.column },
-        distance: current.distance + 1,
-      });
-    });
-  }
-
-  return null;
 };
 
 export const handleBuild = (
@@ -352,29 +240,24 @@ export const handleBuild = (
     return { game, result: { success: false, error: "Tile already has a building" } };
   }
 
-  // Must be adjacent to one of your units
   const neighbors = getNeighborTiles(game.tiles, action.position);
   const hasAdjacentUnit = neighbors.some(
     (neighbor) => neighbor.piece !== null && neighbor.piece.owner === action.player,
   );
   if (!hasAdjacentUnit) {
-    return {
-      game,
-      result: { success: false, error: "Must build adjacent to one of your units" },
-    };
+    return { game, result: { success: false, error: "Must build adjacent to one of your units" } };
   }
 
   const player = getPlayer(game, action.player);
-  const cost = buildingCostOf(action.buildingType);
+  const cost = costOfBuilding(action.buildingType);
 
-  if (!playerCanAfford(player,cost)) {
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Cannot afford this building" } };
   }
 
-  const updatedPlayer = playerPay(player,cost);
+  const updatedPlayer = payForCost(player, cost);
   const building = createBuilding(action.buildingType, action.player);
 
-  // When a house is built, adjacent grass tiles convert to farm
   const tilesAfterBuild = (() => {
     const withBuilding = replaceTile(game.tiles, { ...tile, building });
     if (action.buildingType === BuildingType.house) {
@@ -435,13 +318,13 @@ export const handleSpawnPeasant = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = peasantSpawnCost();
+  const cost = costOfSpawnPeasant();
 
-  if (!playerCanAfford(player,cost)) {
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Cannot afford peasant" } };
   }
 
-  const updatedPlayer = playerPay(player,cost);
+  const updatedPlayer = payForCost(player, cost);
   const peasant = createPeasant(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: peasant });
 
@@ -481,11 +364,13 @@ export const handleCraftEquipment = (
   }
 
   const player = getPlayer(game, action.player);
-  if (!playerCanAfford(player,equipment.cost)) {
+  const cost = costOfEquipment(action.equipmentType);
+
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Cannot afford this equipment" } };
   }
 
-  const updatedPlayer = playerPay(player,equipment.cost);
+  const updatedPlayer = payForCost(player, cost);
   const equippedPiece = pieceWithEquipment(tile.piece, equipment);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: equippedPiece });
 
@@ -493,10 +378,7 @@ export const handleCraftEquipment = (
     updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
-  return {
-    game: afterCraft,
-    result: { success: true, message: `Equipped ${action.equipmentType}` },
-  };
+  return { game: afterCraft, result: { success: true, message: `Equipped ${action.equipmentType}` } };
 };
 
 export const handleBuySteed = (
@@ -527,7 +409,6 @@ export const handleBuySteed = (
     return { game, result: { success: false, error: "Target must be adjacent to house" } };
   }
 
-  // Boats must be placed on water
   if (action.steedType === SteedType.boat) {
     if (targetTile.landscape?.type !== LandscapeType.water) {
       return { game, result: { success: false, error: "Boat must be placed on water" } };
@@ -540,13 +421,13 @@ export const handleBuySteed = (
 
   const steed = createSteed(action.steedType);
   const player = getPlayer(game, action.player);
+  const cost = costOfSteed(action.steedType);
 
-  if (!playerCanAfford(player,steed.cost)) {
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Cannot afford steed" } };
   }
 
-  const updatedPlayer = playerPay(player,steed.cost);
-  // Place steed on the target tile (as a steed field, not a piece)
+  const updatedPlayer = payForCost(player, cost);
   const updatedTiles = replaceTile(game.tiles, {
     ...targetTile,
     steed,
@@ -556,10 +437,7 @@ export const handleBuySteed = (
     updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
-  return {
-    game: afterBuy,
-    result: { success: true, message: `Placed ${action.steedType}` },
-  };
+  return { game: afterBuy, result: { success: true, message: `Placed ${action.steedType}` } };
 };
 
 export const handleTrainPriest = (
@@ -589,13 +467,13 @@ export const handleTrainPriest = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = priestTrainCost();
+  const cost = costOfTrainPriest();
 
-  if (!playerCanAfford(player,cost)) {
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Cannot afford priest" } };
   }
 
-  const updatedPlayer = playerPay(player,cost);
+  const updatedPlayer = payForCost(player, cost);
   const priest = createPriest(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: priest });
 
@@ -643,13 +521,13 @@ export const handleHeal = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = createResourceMap({ faith: 1 });
+  const cost = costOfHeal();
 
-  if (!playerCanAfford(player,cost)) {
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Not enough faith" } };
   }
 
-  const updatedPlayer = playerPay(player,cost);
+  const updatedPlayer = payForCost(player, cost);
   const healedPiece = pieceWithHealing(targetTile.piece, 1);
   const updatedTiles = replaceTile(game.tiles, { ...targetTile, piece: healedPiece });
 
@@ -688,14 +566,14 @@ export const handleResearch = (
     return { game, result: { success: false, error: "Cannot research this" } };
   }
 
-  const cost = researchCostOf(action.researchType);
+  const cost = costOfResearch(action.researchType);
 
-  if (!playerCanAfford(player,cost)) {
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Cannot afford research" } };
   }
 
   const updatedPlayer = playerWithResearch(
-    playerPay(player, cost),
+    payForCost(player, cost),
     applyResearch(player.research, action.researchType),
   );
 
@@ -703,10 +581,7 @@ export const handleResearch = (
     updatePlayer(game, action.player, updatedPlayer),
     action.player,
   );
-  return {
-    game: afterResearch,
-    result: { success: true, message: `Researched ${action.researchType}` },
-  };
+  return { game: afterResearch, result: { success: true, message: `Researched ${action.researchType}` } };
 };
 
 export const handleEnterTower = (
@@ -745,7 +620,6 @@ export const handleEnterTower = (
     return { game, result: { success: false, error: "King must be adjacent to tower" } };
   }
 
-  // Transform tower into castle with king inside
   const castle = createCastleBuilding(action.player);
   const king = kingTile.piece;
   const updatedTiles = replaceTile(
@@ -795,13 +669,13 @@ export const handleSummonArchAngel = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = archAngelSummonCost();
+  const cost = costOfSummonArchAngel();
 
-  if (!playerCanAfford(player,cost)) {
+  if (!canAffordCost(player, cost)) {
     return { game, result: { success: false, error: "Not enough faith" } };
   }
 
-  const updatedPlayer = playerPay(player,cost);
+  const updatedPlayer = payForCost(player, cost);
   const archAngel = createArchAngel(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: archAngel });
 
@@ -834,19 +708,17 @@ export const handleAttack = (
 
   const attacker = attackerTile.piece;
 
-  // Determine attack range (bow in tower gets tower range)
   const effectiveRange = (() => {
     if (
       attackerTile.building !== null &&
       attackerTile.building.type === BuildingType.tower &&
       pieceHasEquipment(attacker, EquipmentType.bow)
     ) {
-      return attackerTile.building.viewRange; // Tower range (4)
+      return attackerTile.building.viewRange;
     }
     return getPieceAttackRange(attacker);
   })();
 
-  // Check range
   const tilesInRange = getTilesInRange(game.tiles, action.attackerPosition, effectiveRange);
   const inRange = tilesInRange.some(
     (pos) => pos.row === action.targetPosition.row && pos.column === action.targetPosition.column,
@@ -856,8 +728,6 @@ export const handleAttack = (
     return { game, result: { success: false, error: "Target is out of range" } };
   }
 
-  // Determine target: building first (pieces inside buildings are protected),
-  // then piece if no enemy building on the tile.
   if (targetTile.building !== null && targetTile.building.owner !== action.player) {
     const combatResult = resolveCombat(attacker, {
       kind: "building",
@@ -869,7 +739,6 @@ export const handleAttack = (
         ? {
             ...targetTile,
             building: null,
-            // If castle destroyed, king inside dies
             piece:
               targetTile.building.type === BuildingType.castle
                 ? null
@@ -969,18 +838,15 @@ export const getVisibleTiles = (
   const visible = new Set<string>();
 
   game.tiles.forEach((tile) => {
-    // Pieces reveal tiles within their view range
     if (tile.piece !== null && tile.piece.owner === playerType) {
       const tilesInRange = getTilesInRange(game.tiles, tile, getPieceView(tile.piece));
       tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
     }
 
-    // Buildings reveal tiles within their view range
     if (tile.building !== null && tile.building.owner === playerType) {
       const tilesInRange = getTilesInRange(game.tiles, tile, tile.building.viewRange);
       tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
 
-      // Queen research: all tiles adjacent to buildings become visible
       if (player.research.hasQueen) {
         const neighbors = getNeighborTiles(game.tiles, tile);
         neighbors.forEach((neighbor) =>
