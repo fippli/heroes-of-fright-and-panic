@@ -6,6 +6,7 @@ import { Tile } from "../../core/Tile";
 import { Piece, PieceKind } from "../../core/Piece";
 import { Building, BuildingType } from "../../core/Building";
 import { defaultImageAssets, type ImageAssets } from "../../images";
+import { simpleImageAssets } from "../../images/simple-theme";
 import { generateMap } from "@shared/map/map";
 import { defaultMapConfig, type MapConfig } from "@shared/map/map";
 import { createRandom } from "@shared/utils/random";
@@ -255,14 +256,15 @@ export const SandboxPage = () => {
   const stateRef = useRef<SandboxState>({ tiles: [], selectedTile: null });
   const canvasInstanceRef = useRef<Canvas | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const imageAssets = defaultImageAssets;
 
   const [seed, setSeed] = useState("sandbox");
   const [size, setSize] = useState(15);
   const [tool, setTool] = useState<PlacementTool>({ type: "select" });
   const [owner, setOwner] = useState<"day" | "night">("day");
   const [selectedInfo, setSelectedInfo] = useState<string>("");
+  const [useSimpleTheme, setUseSimpleTheme] = useState(true);
   const toolRef = useRef<PlacementTool>(tool);
+  const themeRef = useRef<ImageAssets>(useSimpleTheme ? simpleImageAssets as ImageAssets : defaultImageAssets);
 
   const generateAndLoad = () => {
     const random = createRandom(seed);
@@ -285,7 +287,7 @@ export const SandboxPage = () => {
 
       const state = stateRef.current;
       state.tiles.forEach((tile) => {
-        tile.render(canvas.ctx, imageAssets);
+        tile.render(canvas.ctx, themeRef.current);
       });
 
       // Render selection highlight
@@ -333,7 +335,7 @@ export const SandboxPage = () => {
       );
       if (clickedTile === undefined) return;
 
-      stateRef.current = applyTool(stateRef.current, clickedTile, toolRef.current, imageAssets);
+      stateRef.current = applyTool(stateRef.current, clickedTile, toolRef.current, themeRef.current);
 
       const tileInfo = [
         `(${clickedTile.row}, ${clickedTile.column})`,
@@ -360,10 +362,14 @@ export const SandboxPage = () => {
     setSeed(Math.random().toString(36).slice(2, 10));
   };
 
-  // Keep ref in sync with state so the click handler reads latest tool
+  // Keep refs in sync with state so the click handler reads latest values
   useEffect(() => {
     toolRef.current = tool;
   }, [tool]);
+
+  useEffect(() => {
+    themeRef.current = useSimpleTheme ? simpleImageAssets as ImageAssets : defaultImageAssets;
+  }, [useSimpleTheme]);
 
   return (
     <div className="sandbox-page">
@@ -402,6 +408,24 @@ export const SandboxPage = () => {
           <button onClick={handleRegenerate} className="sandbox-btn sandbox-btn-wide">
             Generate
           </button>
+        </div>
+
+        <div className="sandbox-section">
+          <h3>Theme</h3>
+          <div className="sandbox-row">
+            <button
+              className={`sandbox-btn ${useSimpleTheme ? "sandbox-btn-active" : ""}`}
+              onClick={() => setUseSimpleTheme(true)}
+            >
+              Simple
+            </button>
+            <button
+              className={`sandbox-btn ${!useSimpleTheme ? "sandbox-btn-active" : ""}`}
+              onClick={() => setUseSimpleTheme(false)}
+            >
+              Sprites
+            </button>
+          </div>
         </div>
 
         <div className="sandbox-section">
