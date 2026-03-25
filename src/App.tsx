@@ -16,6 +16,7 @@ import { ThemeEditorPage } from "./pages/admin/ThemeEditorPage";
 import { SettingsPage } from "./pages/admin/SettingsPage";
 import { DevPage } from "./pages/dev/DevPage";
 import { MapPage } from "./pages/map/MapPage";
+import { SandboxPage } from "./pages/sandbox/SandboxPage";
 
 export const App = () => {
   return (
@@ -38,6 +39,7 @@ export const App = () => {
       <Route path="/admin/settings" element={<SettingsPage />} />
       <Route path="/dev" element={<DevPage />} />
       <Route path="/map" element={<MapPage />} />
+      <Route path="/sandbox" element={<SandboxPage />} />
     </Routes>
   );
 };
