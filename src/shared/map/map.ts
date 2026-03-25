@@ -35,62 +35,54 @@ export const defaultMapConfig: MapConfig = {
 // TERRAIN THRESHOLDS
 // ============================================
 
-// Fixed thresholds for water and sand (not configurable)
-const DEEP_WATER_THRESHOLD = 0.30;
+// Elevation thresholds for water/land boundary
+const WATER_THRESHOLD = 0.30;
 const SAND_THRESHOLD = 0.38;
 
-// Noise scale controls feature size (lower = larger features)
+// Noise scales — lower = larger features
 const ELEVATION_SCALE = 0.12;
-const VEGETATION_SCALE = 0.25;
+const FOREST_SCALE = 0.18;
+const MOUNTAIN_SCALE = 0.15;
+
+// ============================================
+// LANDSCAPE FROM INDEPENDENT NOISE LAYERS
+// ============================================
 
 /**
- * Compute dynamic thresholds from forest and mountain density.
+ * Determine terrain from three independent noise values.
  *
- * The land band (0.38 – 1.0) is divided into grass, forest, and mountain zones.
- * forestDensity shifts where trees start (lower = more trees).
- * mountainDensity shifts where mountains start (lower = more mountains).
+ * Elevation controls water vs land (shaped by island mask).
+ * Forest noise and mountain noise independently determine where
+ * trees and mountains appear within the land area. This allows
+ * forests and mountain ranges to cluster anywhere on the island,
+ * not just at the center.
+ *
+ * Mountains take priority over forests when both are high.
  */
-const computeThresholds = (config: MapConfig) => {
-  // grassEnd: where pure grass stops and forest mixing begins
-  // Range: 0.40 (density=1, almost all forest) to 0.90 (density=0, almost no forest)
-  const grassEnd = 0.40 + (1 - config.forestDensity) * 0.50;
-
-  // mountainStart: where mountains begin
-  // Range: 0.60 (density=1, lots of mountains) to 0.98 (density=0, almost none)
-  const mountainStart = 0.60 + (1 - config.mountainDensity) * 0.38;
-
-  // treeEnd must not exceed mountainStart
-  const treeEnd = Math.min(grassEnd + 0.20, mountainStart);
-
-  return {
-    grassEnd,
-    treeEnd,
-    mountainStart,
-  };
-};
-
-// ============================================
-// LANDSCAPE FROM ELEVATION
-// ============================================
-
-const landscapeFromElevation = (
+const landscapeFromNoise = (
   elevation: number,
-  vegetation: number,
+  forestNoise: number,
+  mountainNoise: number,
   config: MapConfig,
 ): Landscape => {
-  if (elevation < DEEP_WATER_THRESHOLD) return water();
+  if (elevation < WATER_THRESHOLD) return water();
   if (elevation < SAND_THRESHOLD) return sand();
 
-  const { grassEnd, treeEnd, mountainStart } = computeThresholds(config);
+  // Forest threshold: higher density → lower threshold → more tiles become forest
+  // Range: 0.20 (density=1) to 0.80 (density=0)
+  const forestThreshold = 0.20 + (1 - config.forestDensity) * 0.60;
 
-  if (elevation < grassEnd) return grass();
-  if (elevation < treeEnd) {
-    // Mixed zone: vegetation noise determines tree placement
-    const treeChance = (elevation - grassEnd) / (treeEnd - grassEnd);
-    return vegetation < treeChance ? tree() : grass();
-  }
-  if (elevation < mountainStart) return tree();
-  return mountain();
+  // Mountain threshold: higher density → lower threshold → more tiles become mountain
+  // Range: 0.40 (density=1) to 0.85 (density=0)
+  const mountainThreshold = 0.40 + (1 - config.mountainDensity) * 0.45;
+
+  // Mountains take priority where mountain noise is high enough
+  if (mountainNoise > mountainThreshold) return mountain();
+
+  // Forests where forest noise exceeds threshold
+  if (forestNoise > forestThreshold) return tree();
+
+  return grass();
 };
 
 // ============================================
@@ -186,13 +178,17 @@ export const generateMap = (
   random: RandomFunction = Math.random,
   config: MapConfig = defaultMapConfig,
 ): ReadonlyArray<Tile> => {
+  // Three independent noise layers, each with different octave counts
+  // for varied feature sizes
   const elevationNoise = createNoise(random, 4, 2.0, 0.5);
-  const vegetationNoise = createNoise(random, 2, 2.0, 0.5);
+  const forestNoise = createNoise(random, 3, 2.0, 0.5);
+  const mountainNoise = createNoise(random, 2, 2.0, 0.5);
 
   const tiles = Array.from({ length: size * size }, (_, tileNumber) => {
     const column = tileNumber % size;
     const row = Math.floor(tileNumber / size);
 
+    // Elevation: controls water vs land boundary
     const rawElevation = elevationNoise(
       column * ELEVATION_SCALE,
       row * ELEVATION_SCALE,
@@ -200,12 +196,17 @@ export const generateMap = (
     const mask = islandMask(row, column, size, config.waterLevel);
     const elevation = rawElevation * mask;
 
-    const vegetation = vegetationNoise(
-      column * VEGETATION_SCALE,
-      row * VEGETATION_SCALE,
+    // Forest and mountain: independent layers that can cluster anywhere on land
+    const forest = forestNoise(
+      column * FOREST_SCALE,
+      row * FOREST_SCALE,
+    );
+    const mountains = mountainNoise(
+      column * MOUNTAIN_SCALE,
+      row * MOUNTAIN_SCALE,
     );
 
-    const landscape = landscapeFromElevation(elevation, vegetation, config);
+    const landscape = landscapeFromNoise(elevation, forest, mountains, config);
 
     return { column, row, landscape, piece: null, building: null, steed: null } as Tile;
   });
