@@ -17,10 +17,9 @@ import type {
 import { createBuilding, createCastleBuilding, BuildingType } from "../building/index.ts";
 import { resolveCombat } from "../combat/index.ts";
 import { createEquipment, EquipmentType } from "../equipment/index.ts";
-import * as hex from "../map/hex.ts";
 import { LandscapeType, farm as farmLandscape, unexplored as unexploredLandscape } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
-import type { PlayerType, Piece } from "../piece/index.ts";
+import type { PlayerType } from "../piece/index.ts";
 import {
   PieceKind,
   createPeasant,
@@ -32,10 +31,12 @@ import {
   pieceWithEquipment,
   pieceWithHealing,
 } from "../piece/index.ts";
-import { createPlayer, playerWithResearch, type Player } from "../player/index.ts";
+import { createPlayer, playerWithResearch } from "../player/index.ts";
 import { canResearch, applyResearch, SPEED_LEVELS } from "../research/index.ts";
 import { createSteed, SteedType } from "../steed/index.ts";
+import { findTile, replaceTile, findNeighborTiles, areNeighbors, findTilesInRange } from "../tile/index.ts";
 import type { Game, GameClock } from "./types.ts";
+import { getPlayer, withPlayer } from "./state.ts";
 import { validateMove, executeMove } from "../movement/index.ts";
 import {
   canAffordCost,
@@ -115,73 +116,6 @@ const advanceClock = (game: Game, playerType: PlayerType): Game => {
 };
 
 // ============================================
-// PLAYER & TILE UTILITIES
-// ============================================
-
-const getPlayer = (game: Game, playerType: PlayerType): Player =>
-  playerType === "day" ? game.dayPlayer : game.nightPlayer;
-
-const updatePlayer = (
-  game: Game,
-  playerType: PlayerType,
-  player: Player,
-): Game =>
-  playerType === "day"
-    ? { ...game, dayPlayer: player }
-    : { ...game, nightPlayer: player };
-
-const findTile = (
-  tiles: ReadonlyArray<Tile>,
-  position: TilePosition,
-): Tile | undefined =>
-  tiles.find(
-    (tile) => tile.row === position.row && tile.column === position.column,
-  );
-
-const replaceTile = (
-  tiles: ReadonlyArray<Tile>,
-  newTile: Tile,
-): ReadonlyArray<Tile> =>
-  tiles.map((tile) =>
-    tile.row === newTile.row && tile.column === newTile.column ? newTile : tile,
-  );
-
-const getNeighborTiles = (
-  tiles: ReadonlyArray<Tile>,
-  position: TilePosition,
-): Tile[] => hex.findNeighbors(position, tiles as Tile[]);
-
-const getTilesInRange = (
-  tiles: ReadonlyArray<Tile>,
-  center: TilePosition,
-  range: number,
-): ReadonlyArray<TilePosition> =>
-  Array.from({ length: range }, (_, index) => index).reduce<{
-    result: TilePosition[];
-    currentLayer: TilePosition[];
-  }>(
-    (acc, _) => {
-      const nextLayer = acc.currentLayer.flatMap((pos) =>
-        getNeighborTiles(tiles, pos)
-          .filter(
-            (neighbor) =>
-              !acc.result.some(
-                (existing) =>
-                  existing.row === neighbor.row &&
-                  existing.column === neighbor.column,
-              ),
-          )
-          .map((neighbor) => ({ row: neighbor.row, column: neighbor.column })),
-      );
-      return {
-        result: [...acc.result, ...nextLayer],
-        currentLayer: nextLayer,
-      };
-    },
-    { result: [center], currentLayer: [center] },
-  ).result;
-
-// ============================================
 // TURN VALIDATION
 // ============================================
 
@@ -240,7 +174,7 @@ export const handleBuild = (
     return { game, result: { success: false, error: "Tile already has a building" } };
   }
 
-  const neighbors = getNeighborTiles(game.tiles, action.position);
+  const neighbors = findNeighborTiles(game.tiles, action.position);
   const hasAdjacentUnit = neighbors.some(
     (neighbor) => neighbor.piece !== null && neighbor.piece.owner === action.player,
   );
@@ -267,7 +201,7 @@ export const handleBuild = (
   })();
 
   const afterBuild = advanceClock(
-    updatePlayer({ ...game, tiles: tilesAfterBuild }, action.player, updatedPlayer),
+    withPlayer({ ...game, tiles: tilesAfterBuild }, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterBuild, result: { success: true, message: `Built ${action.buildingType}` } };
@@ -277,7 +211,7 @@ const convertAdjacentGrassToFarm = (
   tiles: ReadonlyArray<Tile>,
   housePosition: TilePosition,
 ): ReadonlyArray<Tile> => {
-  const neighbors = getNeighborTiles(tiles, housePosition);
+  const neighbors = findNeighborTiles(tiles, housePosition);
   return neighbors
     .filter(
       (neighbor) =>
@@ -329,7 +263,7 @@ export const handleSpawnPeasant = (
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: peasant });
 
   const afterSpawn = advanceClock(
-    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterSpawn, result: { success: true, message: "Spawned peasant" } };
@@ -375,7 +309,7 @@ export const handleCraftEquipment = (
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: equippedPiece });
 
   const afterCraft = advanceClock(
-    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterCraft, result: { success: true, message: `Equipped ${action.equipmentType}` } };
@@ -405,7 +339,7 @@ export const handleBuySteed = (
     return { game, result: { success: false, error: "Must buy steed from your house" } };
   }
 
-  if (!hex.isNeighborTo(targetTile, houseTile)) {
+  if (!areNeighbors(targetTile, houseTile)) {
     return { game, result: { success: false, error: "Target must be adjacent to house" } };
   }
 
@@ -434,7 +368,7 @@ export const handleBuySteed = (
   } as Tile);
 
   const afterBuy = advanceClock(
-    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterBuy, result: { success: true, message: `Placed ${action.steedType}` } };
@@ -478,7 +412,7 @@ export const handleTrainPriest = (
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: priest });
 
   const afterTrain = advanceClock(
-    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterTrain, result: { success: true, message: "Trained priest" } };
@@ -512,7 +446,7 @@ export const handleHeal = (
     return { game, result: { success: false, error: "No friendly piece to heal" } };
   }
 
-  if (!hex.isNeighborTo(priestTile, targetTile)) {
+  if (!areNeighbors(priestTile, targetTile)) {
     return { game, result: { success: false, error: "Target must be adjacent to priest" } };
   }
 
@@ -532,7 +466,7 @@ export const handleHeal = (
   const updatedTiles = replaceTile(game.tiles, { ...targetTile, piece: healedPiece });
 
   const afterHeal = advanceClock(
-    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterHeal, result: { success: true, message: "Healed 1 heart" } };
@@ -578,7 +512,7 @@ export const handleResearch = (
   );
 
   const afterResearch = advanceClock(
-    updatePlayer(game, action.player, updatedPlayer),
+    withPlayer(game, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterResearch, result: { success: true, message: `Researched ${action.researchType}` } };
@@ -616,7 +550,7 @@ export const handleEnterTower = (
     return { game, result: { success: false, error: "No tower or not your tower" } };
   }
 
-  if (!hex.isNeighborTo(kingTile, towerTile)) {
+  if (!areNeighbors(kingTile, towerTile)) {
     return { game, result: { success: false, error: "King must be adjacent to tower" } };
   }
 
@@ -680,7 +614,7 @@ export const handleSummonArchAngel = (
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: archAngel });
 
   const afterSummon = advanceClock(
-    updatePlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     action.player,
   );
   return { game: afterSummon, result: { success: true, message: "Summoned arch angel" } };
@@ -719,7 +653,7 @@ export const handleAttack = (
     return getPieceAttackRange(attacker);
   })();
 
-  const tilesInRange = getTilesInRange(game.tiles, action.attackerPosition, effectiveRange);
+  const tilesInRange = findTilesInRange(game.tiles, action.attackerPosition, effectiveRange);
   const inRange = tilesInRange.some(
     (pos) => pos.row === action.targetPosition.row && pos.column === action.targetPosition.column,
   );
@@ -839,16 +773,16 @@ export const getVisibleTiles = (
 
   game.tiles.forEach((tile) => {
     if (tile.piece !== null && tile.piece.owner === playerType) {
-      const tilesInRange = getTilesInRange(game.tiles, tile, getPieceView(tile.piece));
+      const tilesInRange = findTilesInRange(game.tiles, tile, getPieceView(tile.piece));
       tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
     }
 
     if (tile.building !== null && tile.building.owner === playerType) {
-      const tilesInRange = getTilesInRange(game.tiles, tile, tile.building.viewRange);
+      const tilesInRange = findTilesInRange(game.tiles, tile, tile.building.viewRange);
       tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
 
       if (player.research.hasQueen) {
-        const neighbors = getNeighborTiles(game.tiles, tile);
+        const neighbors = findNeighborTiles(game.tiles, tile);
         neighbors.forEach((neighbor) =>
           visible.add(`${neighbor.row},${neighbor.column}`),
         );

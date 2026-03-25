@@ -1,4 +1,3 @@
-import * as hex from "@shared/map/hex.ts";
 import { LandscapeType, grass as grassLandscape } from "@shared/map/landscape.ts";
 import { GameMap, defaultMapConfig, type MapConfig } from "@shared/map/map.ts";
 import type { Tile } from "@shared/map/tile.ts";
@@ -6,6 +5,7 @@ import type { PlayerType } from "@shared/piece/index.ts";
 import { createKing, createPeasant } from "@shared/piece/index.ts";
 import { createPlayer } from "@shared/player/index.ts";
 import { createResourceMap } from "@shared/player/resource-map.ts";
+import { replaceTile, findNeighborTiles } from "@shared/tile/index.ts";
 import { createRandom } from "@shared/utils/random.ts";
 
 type CreateGameParams = {
@@ -79,37 +79,37 @@ export const createGame = (params: CreateGameParams) => {
   const nightPeasantTile = findAdjacentGrass(nightKingTile, tilesWithBothClearings);
 
   // Place pieces
-  const tilesWithDayKing = GameMap.replaceTile(
-    { row: dayKingTile.row, column: dayKingTile.column, piece: createKing("day") },
+  const tilesWithDayKing = replaceTile(
     tilesWithBothClearings,
-  ) as Tile[];
+    { row: dayKingTile.row, column: dayKingTile.column, piece: createKing("day") },
+  );
 
-  const tilesWithDayPeasant = GameMap.replaceTile(
+  const tilesWithDayPeasant = replaceTile(
+    tilesWithDayKing,
     {
       row: dayPeasantTile.row,
       column: dayPeasantTile.column,
       piece: createPeasant("day"),
     },
-    tilesWithDayKing,
-  ) as Tile[];
+  );
 
-  const tilesWithNightKing = GameMap.replaceTile(
+  const tilesWithNightKing = replaceTile(
+    tilesWithDayPeasant,
     {
       row: nightKingTile.row,
       column: nightKingTile.column,
       piece: createKing("night"),
     },
-    tilesWithDayPeasant,
-  ) as Tile[];
+  );
 
-  const tiles = GameMap.replaceTile(
+  const tiles = replaceTile(
+    tilesWithNightKing,
     {
       row: nightPeasantTile.row,
       column: nightPeasantTile.column,
       piece: createPeasant("night"),
     },
-    tilesWithNightKing,
-  ) as Tile[];
+  );
 
   const dayPlayerEmail =
     params.alliance === "day"
@@ -147,7 +147,7 @@ const clearStartingArea = (
   center: Tile,
   tiles: ReadonlyArray<Tile>,
 ): Tile[] => {
-  const neighbors = hex.findNeighbors(center, tiles as Tile[]);
+  const neighbors = findNeighborTiles(tiles, center);
   return neighbors.reduce<Tile[]>(
     (acc, neighbor) => {
       const shouldClear =
@@ -155,9 +155,9 @@ const clearStartingArea = (
         neighbor.landscape !== undefined &&
         CLEARABLE_TYPES.includes(neighbor.landscape.type);
       return shouldClear
-        ? GameMap.replaceTile(
-            { row: neighbor.row, column: neighbor.column, landscape: grassLandscape() },
+        ? replaceTile(
             acc,
+            { row: neighbor.row, column: neighbor.column, landscape: grassLandscape() },
           ) as Tile[]
         : acc;
     },
@@ -169,7 +169,7 @@ const findAdjacentGrass = (
   tile: Tile,
   tiles: ReadonlyArray<Tile>,
 ): Tile => {
-  const neighbors = hex.findNeighbors(tile, tiles as Tile[]);
+  const neighbors = findNeighborTiles(tiles, tile);
   const grassNeighbor = neighbors.find(
     (neighbor) =>
       neighbor.landscape?.type === LandscapeType.grass &&

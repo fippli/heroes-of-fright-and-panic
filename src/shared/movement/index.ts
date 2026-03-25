@@ -9,8 +9,8 @@
 
 import type { TilePosition } from "@shared/actions/index.ts";
 import { isBuildingWalkableBy } from "@shared/building/index.ts";
-import * as hex from "@shared/map/hex.ts";
 import type { Tile } from "@shared/map/tile.ts";
+import { findTile, findNeighborTiles } from "@shared/tile/index.ts";
 import type { PlayerType, Piece } from "@shared/piece/index.ts";
 import {
   getPieceMove,
@@ -84,7 +84,7 @@ export const findDistance = (
       return search(rest);
     }
 
-    const neighbors = hex.findNeighbors(current.position, tiles as Tile[]);
+    const neighbors = findNeighborTiles(tiles, current.position);
 
     const reachableNeighbor = neighbors.find(
       (neighbor) =>
@@ -137,12 +137,8 @@ export const validateMove = (
   to: TilePosition,
   player: PlayerType,
 ): MoveValidation => {
-  const fromTile = tiles.find(
-    (tile) => tile.row === from.row && tile.column === from.column,
-  );
-  const toTile = tiles.find(
-    (tile) => tile.row === to.row && tile.column === to.column,
-  );
+  const fromTile = findTile(tiles, from);
+  const toTile = findTile(tiles, to);
 
   if (fromTile === undefined || toTile === undefined) {
     return { valid: false, error: "Invalid tile position" };
@@ -182,12 +178,8 @@ export const executeMove = (
   from: TilePosition,
   to: TilePosition,
 ): ReadonlyArray<Tile> => {
-  const fromTile = tiles.find(
-    (tile) => tile.row === from.row && tile.column === from.column,
-  );
-  const toTile = tiles.find(
-    (tile) => tile.row === to.row && tile.column === to.column,
-  );
+  const fromTile = findTile(tiles, from);
+  const toTile = findTile(tiles, to);
 
   if (fromTile === undefined || toTile === undefined || fromTile.piece === null) {
     return tiles;

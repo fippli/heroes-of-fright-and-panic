@@ -1,4 +1,3 @@
-import * as hex from "./hex.ts";
 import {
   grass,
   water,
@@ -11,6 +10,7 @@ import {
 import type { RandomFunction } from "@shared/utils/random.ts";
 import { createNoise, type NoiseFunction } from "@shared/utils/noise.ts";
 import type { Tile, TilePosition } from "./tile.ts";
+import { findNeighborTiles } from "@shared/tile/index.ts";
 
 // ============================================
 // MAP CONFIGURATION
@@ -151,7 +151,7 @@ const islandMask = (
 const cleanupSand = (tiles: ReadonlyArray<Tile>): Tile[] =>
   tiles.map((tile) => {
     if (tile.landscape?.type !== LandscapeType.sand) return tile as Tile;
-    const neighbors = hex.findNeighbors(tile, tiles as Tile[]);
+    const neighbors = findNeighborTiles(tiles, tile);
     const hasWaterNeighbor = neighbors.some(
       (neighbor) => neighbor.landscape?.type === LandscapeType.water,
     );
@@ -164,7 +164,7 @@ const cleanupSand = (tiles: ReadonlyArray<Tile>): Tile[] =>
 const createBeaches = (tiles: ReadonlyArray<Tile>): Tile[] =>
   tiles.map((tile) => {
     if (tile.landscape?.type !== LandscapeType.water) return tile as Tile;
-    const neighbors = hex.findNeighbors(tile, tiles as Tile[]);
+    const neighbors = findNeighborTiles(tiles, tile);
     const hasLandNeighbor = neighbors.some(
       (neighbor) =>
         neighbor.landscape !== null &&
@@ -178,59 +178,46 @@ const createBeaches = (tiles: ReadonlyArray<Tile>): Tile[] =>
 // GENERATION
 // ============================================
 
-export class GameMap {
-  static generate(
-    size: number,
-    random: RandomFunction = Math.random,
-    config: MapConfig = defaultMapConfig,
-  ) {
-    const elevationNoise = createNoise(random, 4, 2.0, 0.5);
-    const vegetationNoise = createNoise(random, 2, 2.0, 0.5);
+/**
+ * Generate a map of the given size using noise-based terrain.
+ */
+export const generateMap = (
+  size: number,
+  random: RandomFunction = Math.random,
+  config: MapConfig = defaultMapConfig,
+): ReadonlyArray<Tile> => {
+  const elevationNoise = createNoise(random, 4, 2.0, 0.5);
+  const vegetationNoise = createNoise(random, 2, 2.0, 0.5);
 
-    const tiles = Array.from({ length: size * size }, (_, tileNumber) => {
-      const column = tileNumber % size;
-      const row = Math.floor(tileNumber / size);
+  const tiles = Array.from({ length: size * size }, (_, tileNumber) => {
+    const column = tileNumber % size;
+    const row = Math.floor(tileNumber / size);
 
-      const rawElevation = elevationNoise(
-        column * ELEVATION_SCALE,
-        row * ELEVATION_SCALE,
-      );
-      const mask = islandMask(row, column, size, config.waterLevel);
-      // Multiplicative blend: mask=0 forces deep water, mask=1 uses full noise
-      const elevation = rawElevation * mask;
+    const rawElevation = elevationNoise(
+      column * ELEVATION_SCALE,
+      row * ELEVATION_SCALE,
+    );
+    const mask = islandMask(row, column, size, config.waterLevel);
+    const elevation = rawElevation * mask;
 
-      const vegetation = vegetationNoise(
-        column * VEGETATION_SCALE,
-        row * VEGETATION_SCALE,
-      );
+    const vegetation = vegetationNoise(
+      column * VEGETATION_SCALE,
+      row * VEGETATION_SCALE,
+    );
 
-      const landscape = landscapeFromElevation(elevation, vegetation, config);
+    const landscape = landscapeFromElevation(elevation, vegetation, config);
 
-      return { column, row, landscape, piece: null, building: null, steed: null } as Tile;
-    });
+    return { column, row, landscape, piece: null, building: null, steed: null } as Tile;
+  });
 
-    // Post-process: beaches then sand cleanup
-    const withBeaches = createBeaches(tiles);
-    const cleaned = cleanupSand(withBeaches);
+  const withBeaches = createBeaches(tiles);
+  return cleanupSand(withBeaches);
+};
 
-    return cleaned;
-  }
-
-  static findTile(tile: Tile, tiles: Tile[]) {
-    return tiles.find((compare: Tile) => hex.isSamePosition(tile, compare));
-  }
-
-  static replaceTile(tile: TilePosition & Partial<Tile>, tiles: Tile[]) {
-    return tiles.map((compare: Tile) =>
-      hex.isSamePosition(compare, tile) ? { ...compare, ...tile } : compare,
-    ) as Tile[];
-  }
-
-  static isNeighborTo(tile: TilePosition, compareTile: TilePosition) {
-    return hex.isNeighborTo(tile, compareTile);
-  }
-
-  static findNeighbors(tile: Tile, tiles: Tile[]) {
-    return hex.findNeighbors(tile, tiles);
-  }
-}
+/**
+ * @deprecated Use generateMap instead. Kept for backward compatibility
+ * with edge functions that import GameMap.generate.
+ */
+export const GameMap = {
+  generate: generateMap,
+};

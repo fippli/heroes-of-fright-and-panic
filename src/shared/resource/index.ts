@@ -8,9 +8,9 @@
 
 import { BuildingType, buildingCostOf } from "@shared/building/index.ts";
 import { createEquipment, type EquipmentType } from "@shared/equipment/index.ts";
-import * as hex from "@shared/map/hex.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
 import type { Tile } from "@shared/map/tile.ts";
+import { findNeighborTiles } from "@shared/tile/index.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
 import {
   PieceKind,
@@ -33,6 +33,7 @@ import { researchCostOf, type ResearchType } from "@shared/research/index.ts";
 import type { Research } from "@shared/research/index.ts";
 import { createSteed, type SteedType } from "@shared/steed/index.ts";
 import type { Game } from "@shared/game/types.ts";
+import { getPlayer, withPlayer } from "@shared/game/state.ts";
 
 // ============================================
 // COST LOOKUPS
@@ -111,7 +112,7 @@ const calculateHouseProduction = (
   const producedTileKeys = new Set<string>();
 
   return housesWithPeasants.reduce((total, houseTile) => {
-    const neighbors = hex.findNeighbors(houseTile, tiles as Tile[]);
+    const neighbors = findNeighborTiles(tiles, houseTile);
     return neighbors.reduce((acc, neighbor) => {
       const tileKey = `${neighbor.row},${neighbor.column}`;
       if (producedTileKeys.has(tileKey)) {
@@ -180,7 +181,7 @@ const calculateFishingProduction = (
   );
 
   const fishingBoats = boatTilesWithPeasants.filter((boatTile) => {
-    const neighbors = hex.findNeighbors(boatTile, tiles as Tile[]);
+    const neighbors = findNeighborTiles(tiles, boatTile);
     return neighbors.every(
       (neighbor) => neighbor.landscape?.type === LandscapeType.water,
     );
@@ -213,10 +214,8 @@ export const countPrayingPriests = (
  * Apply production for a player — called at dawn (day) or dusk (night).
  */
 export const triggerProduction = (game: Game, playerType: PlayerType): Game => {
-  const player = playerType === "day" ? game.dayPlayer : game.nightPlayer;
+  const player = getPlayer(game, playerType);
   const production = calculateProduction(playerType, game.tiles, player.research);
   const updatedPlayer = collectResources(player, production);
-  return playerType === "day"
-    ? { ...game, dayPlayer: updatedPlayer }
-    : { ...game, nightPlayer: updatedPlayer };
+  return withPlayer(game, playerType, updatedPlayer);
 };

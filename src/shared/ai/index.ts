@@ -20,7 +20,7 @@ import {
 } from "@shared/piece/index.ts";
 import { canAfford } from "@shared/player/resource-map.ts";
 import { buildingCostOf } from "@shared/building/index.ts";
-import * as hex from "@shared/map/hex.ts";
+import { findTile, findNeighborTiles, findTilesInRange } from "@shared/tile/index.ts";
 import type { RandomFunction } from "@shared/utils/random.ts";
 
 // ============================================
@@ -29,40 +29,6 @@ import type { RandomFunction } from "@shared/utils/random.ts";
 
 const getPlayer = (game: Game, playerType: PlayerType) =>
   playerType === "day" ? game.dayPlayer : game.nightPlayer;
-
-const findNeighbors = (position: TilePosition, tiles: ReadonlyArray<Tile>): ReadonlyArray<Tile> =>
-  hex.findNeighbors(position, tiles as Tile[]);
-
-const findTile = (tiles: ReadonlyArray<Tile>, position: TilePosition): Tile | undefined =>
-  tiles.find((tile) => tile.row === position.row && tile.column === position.column);
-
-const getTilesInRange = (
-  tiles: ReadonlyArray<Tile>,
-  center: TilePosition,
-  range: number,
-): ReadonlyArray<TilePosition> => {
-  const visited = new Set<string>();
-  visited.add(`${center.row},${center.column}`);
-  const result: TilePosition[] = [center];
-  const frontier: TilePosition[] = [center];
-
-  Array.from({ length: range }, () => {
-    const nextFrontier: TilePosition[] = [];
-    frontier.splice(0).forEach((pos) => {
-      findNeighbors(pos, tiles).forEach((neighbor) => {
-        const key = `${neighbor.row},${neighbor.column}`;
-        if (!visited.has(key)) {
-          visited.add(key);
-          result.push({ row: neighbor.row, column: neighbor.column });
-          nextFrontier.push({ row: neighbor.row, column: neighbor.column });
-        }
-      });
-    });
-    frontier.push(...nextFrontier);
-  });
-
-  return result;
-};
 
 // ============================================
 // ACTION GENERATORS
@@ -76,7 +42,7 @@ const generateMoveActions = (game: Game, player: PlayerType): ReadonlyArray<Game
   return myPieces.flatMap((fromTile) => {
     const piece = fromTile.piece!;
     const walkable = getWalkableLandscape(piece);
-    const neighbors = findNeighbors(fromTile, game.tiles);
+    const neighbors = findNeighborTiles(game.tiles, fromTile);
 
     return neighbors
       .filter((neighbor) => {
@@ -108,7 +74,7 @@ const generateBuildActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
 
   const seen = new Set<string>();
   const uniqueGrass = myPiecePositions.flatMap((pieceTile) =>
-    findNeighbors(pieceTile, game.tiles).filter(
+    findNeighborTiles(game.tiles, pieceTile).filter(
       (neighbor) =>
         neighbor.landscape?.type === LandscapeType.grass &&
         neighbor.building === null,
@@ -196,7 +162,7 @@ const generateAttackActions = (game: Game, player: PlayerType): ReadonlyArray<Ga
       return getPieceAttackRange(piece);
     })();
 
-    const tilesInRange = getTilesInRange(game.tiles, attackerTile, effectiveRange);
+    const tilesInRange = findTilesInRange(game.tiles, attackerTile, effectiveRange);
 
     return tilesInRange
       .map((pos) => findTile(game.tiles, pos))
@@ -246,7 +212,7 @@ const generateHealActions = (game: Game, player: PlayerType): ReadonlyArray<Game
   );
 
   return priests.flatMap((priestTile) =>
-    findNeighbors(priestTile, game.tiles)
+    findNeighborTiles(game.tiles, priestTile)
       .filter(
         (neighbor) =>
           neighbor.piece !== null &&
@@ -299,7 +265,7 @@ const generateEnterTowerActions = (game: Game, player: PlayerType): ReadonlyArra
 
   if (kingTile === undefined) return [];
 
-  const adjacentTowers = findNeighbors(kingTile, game.tiles).filter(
+  const adjacentTowers = findNeighborTiles(game.tiles, kingTile).filter(
     (tile) =>
       tile.building !== null &&
       tile.building.type === BuildingType.tower &&
@@ -332,7 +298,7 @@ const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
   if (affordableSteeds.length === 0) return [];
 
   return houses.flatMap((houseTile) =>
-    findNeighbors(houseTile, game.tiles)
+    findNeighborTiles(game.tiles, houseTile)
       .filter((neighbor) => neighbor.piece === null)
       .flatMap((neighbor) =>
         affordableSteeds
