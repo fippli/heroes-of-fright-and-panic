@@ -1,5 +1,0 @@
-- all towers within range of castle gets activated
-- all houses within kingdom activation area produce taxes = gold
-- soildiers upgrade peasant -> knight -> paladin
-  - one hit reduces to knight to peasant
-- soldiers can also upgrade to archer

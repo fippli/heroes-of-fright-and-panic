@@ -17,6 +17,7 @@ import { SettingsPage } from "./pages/admin/SettingsPage";
 import { DevPage } from "./pages/dev/DevPage";
 import { MapPage } from "./pages/map/MapPage";
 import { SandboxPage } from "./pages/sandbox/SandboxPage";
+import { DocsPage } from "./pages/docs/DocsPage";
 
 export const App = () => {
   return (
@@ -40,6 +41,8 @@ export const App = () => {
       <Route path="/dev" element={<DevPage />} />
       <Route path="/map" element={<MapPage />} />
       <Route path="/sandbox" element={<SandboxPage />} />
+      <Route path="/docs" element={<DocsPage />} />
+      <Route path="/docs/:topic" element={<DocsPage />} />
     </Routes>
   );
 };
