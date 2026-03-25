@@ -6,7 +6,7 @@ import {
 import { rowToGame } from "@shared/game/converters.ts";
 import type { GameRow } from "@shared/game/types.ts";
 import type { PlayerType } from "@shared/actions/index.ts";
-import { GameEngine } from "@shared/game/engine.ts";
+import { getFilteredGameState } from "@shared/game/engine.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -53,7 +53,7 @@ Deno.serve(async (request) => {
 
   const game = rowToGame(gameRow as GameRow);
 
-  // Derive player perspective from JWT email instead of trusting a query param
+  // Derive player perspective from JWT email
   const playerType: PlayerType | null =
     game.dayPlayerEmail === user.email
       ? "day"
@@ -62,8 +62,7 @@ Deno.serve(async (request) => {
         : null;
 
   if (playerType !== null) {
-    const engine = new GameEngine(game);
-    const filteredGame = engine.getFilteredGameState(playerType);
+    const filteredGame = getFilteredGameState(game, playerType);
 
     return new Response(
       JSON.stringify({
@@ -78,7 +77,7 @@ Deno.serve(async (request) => {
     );
   }
 
-  // No player match — return full state (spectator/debugging)
+  // No player match — return full state (spectator)
   return new Response(
     JSON.stringify({
       ...game,

@@ -7,7 +7,7 @@ import { rowToGame, gameToRow } from "@shared/game/converters.ts";
 import type { Game, GameRow } from "@shared/game/types.ts";
 import type { GameAction } from "@shared/actions/index.ts";
 import { processAction } from "@shared/game/actions.ts";
-import { GameEngine } from "@shared/game/engine.ts";
+import { getFilteredGameState } from "@shared/game/engine.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -123,8 +123,7 @@ Deno.serve(async (request) => {
   }
 
   // Return filtered game state for the player who made the action
-  const engine = new GameEngine(updatedGame);
-  const filteredGame = engine.getFilteredGameState(action.player);
+  const filteredGame = getFilteredGameState(updatedGame, action.player);
 
   return new Response(
     JSON.stringify({
