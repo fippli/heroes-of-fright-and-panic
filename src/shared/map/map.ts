@@ -32,107 +32,57 @@ export const defaultMapConfig: MapConfig = {
 };
 
 // ============================================
-// TERRAIN
+// TERRAIN THRESHOLDS
 // ============================================
 
-// Elevation threshold for water/land boundary
+// Elevation thresholds for water/land boundary
 const WATER_THRESHOLD = 0.30;
 const SAND_THRESHOLD = 0.38;
 
+// Noise scales — lower = larger features
 const ELEVATION_SCALE = 0.12;
+const FOREST_SCALE = 0.18;
+const MOUNTAIN_SCALE = 0.15;
 
 // ============================================
-// BIOME REGIONS (Catan-style hex clusters)
+// LANDSCAPE FROM INDEPENDENT NOISE LAYERS
 // ============================================
 
-// How many fine tiles across each biome region is (approximate diameter)
-const REGION_SIZE = 5;
-
-type Biome = "grass" | "tree" | "mountain";
-
 /**
- * Convert offset (row, col) to cube coordinates for hex math.
- * Uses odd-r offset layout.
+ * Determine terrain from three independent noise values.
+ *
+ * Elevation controls water vs land (shaped by island mask).
+ * Forest noise and mountain noise independently determine where
+ * trees and mountains appear within the land area. This allows
+ * forests and mountain ranges to cluster anywhere on the island,
+ * not just at the center.
+ *
+ * Mountains take priority over forests when both are high.
  */
-const toCube = (row: number, column: number): { readonly cubeQ: number; readonly cubeR: number; readonly cubeS: number } => {
-  const cubeQ = column - (row - (row & 1)) / 2;
-  const cubeR = row;
-  const cubeS = -cubeQ - cubeR;
-  return { cubeQ, cubeR, cubeS };
-};
-
-/**
- * Round floating-point cube coordinates to the nearest hex center.
- */
-const cubeRound = (
-  fractionalQ: number,
-  fractionalR: number,
-  fractionalS: number,
-): { readonly cubeQ: number; readonly cubeR: number; readonly cubeS: number } => {
-  const roundedQ = Math.round(fractionalQ);
-  const roundedR = Math.round(fractionalR);
-  const roundedS = Math.round(fractionalS);
-
-  const diffQ = Math.abs(roundedQ - fractionalQ);
-  const diffR = Math.abs(roundedR - fractionalR);
-  const diffS = Math.abs(roundedS - fractionalS);
-
-  if (diffQ > diffR && diffQ > diffS) {
-    return { cubeQ: -roundedR - roundedS, cubeR: roundedR, cubeS: roundedS };
-  }
-  if (diffR > diffS) {
-    return { cubeQ: roundedQ, cubeR: -roundedQ - roundedS, cubeS: roundedS };
-  }
-  return { cubeQ: roundedQ, cubeR: roundedR, cubeS: -roundedQ - roundedR };
-};
-
-/**
- * Map a fine tile to its coarse region center in cube coordinates.
- * Tiles within the same region share a biome.
- */
-const regionCenter = (
-  row: number,
-  column: number,
-): { readonly regionQ: number; readonly regionR: number } => {
-  const { cubeQ, cubeR, cubeS } = toCube(row, column);
-  const rounded = cubeRound(
-    cubeQ / REGION_SIZE,
-    cubeR / REGION_SIZE,
-    cubeS / REGION_SIZE,
-  );
-  return { regionQ: rounded.cubeQ, regionR: rounded.cubeR };
-};
-
-/**
- * Determine the biome for a region using noise sampled at the region center.
- * The biome noise value is compared against forest and mountain thresholds.
- */
-const regionBiome = (
-  regionQ: number,
-  regionR: number,
-  biomeNoise: NoiseFunction,
+const landscapeFromNoise = (
+  elevation: number,
+  forestNoise: number,
+  mountainNoise: number,
   config: MapConfig,
-): Biome => {
-  // Sample noise at the region center (scaled to spread values)
-  const noiseValue = biomeNoise(regionQ * 1.7, regionR * 1.7);
+): Landscape => {
+  if (elevation < WATER_THRESHOLD) return water();
+  if (elevation < SAND_THRESHOLD) return sand();
 
-  // Mountain threshold: density 1 → 0.60, density 0 → 0.95
-  const mountainThreshold = 0.60 + (1 - config.mountainDensity) * 0.35;
+  // Forest threshold: higher density → lower threshold → more tiles become forest
+  // Range: 0.20 (density=1) to 0.80 (density=0)
+  const forestThreshold = 0.20 + (1 - config.forestDensity) * 0.60;
 
-  // Forest threshold: density 1 → 0.35, density 0 → 0.80
-  const forestThreshold = 0.35 + (1 - config.forestDensity) * 0.45;
+  // Mountain threshold: higher density → lower threshold → more tiles become mountain
+  // Range: 0.40 (density=1) to 0.85 (density=0)
+  const mountainThreshold = 0.40 + (1 - config.mountainDensity) * 0.45;
 
-  if (noiseValue > mountainThreshold) return "mountain";
-  if (noiseValue > forestThreshold) return "tree";
-  return "grass";
-};
+  // Mountains take priority where mountain noise is high enough
+  if (mountainNoise > mountainThreshold) return mountain();
 
-const biomeToLandscape = (biome: Biome): Landscape => {
-  switch (biome) {
-    case "tree": return tree();
-    case "mountain": return mountain();
-    case "grass": return grass();
-  }
+  // Forests where forest noise exceeds threshold
+  if (forestNoise > forestThreshold) return tree();
+
+  return grass();
 };
 
 // ============================================
@@ -228,26 +178,17 @@ export const generateMap = (
   random: RandomFunction = Math.random,
   config: MapConfig = defaultMapConfig,
 ): ReadonlyArray<Tile> => {
+  // Three independent noise layers, each with different octave counts
+  // for varied feature sizes
   const elevationNoise = createNoise(random, 4, 2.0, 0.5);
-  const biomeNoise = createNoise(random, 2, 2.0, 0.5);
-
-  // Cache region biomes so each region is computed once
-  const regionBiomeCache = new Map<string, Biome>();
-
-  const getRegionBiome = (regionQ: number, regionR: number): Biome => {
-    const key = `${regionQ},${regionR}`;
-    const cached = regionBiomeCache.get(key);
-    if (cached !== undefined) return cached;
-    const biome = regionBiome(regionQ, regionR, biomeNoise, config);
-    regionBiomeCache.set(key, biome);
-    return biome;
-  };
+  const forestNoise = createNoise(random, 3, 2.0, 0.5);
+  const mountainNoise = createNoise(random, 2, 2.0, 0.5);
 
   const tiles = Array.from({ length: size * size }, (_, tileNumber) => {
     const column = tileNumber % size;
     const row = Math.floor(tileNumber / size);
 
-    // Elevation controls water vs land
+    // Elevation: controls water vs land boundary
     const rawElevation = elevationNoise(
       column * ELEVATION_SCALE,
       row * ELEVATION_SCALE,
@@ -255,16 +196,17 @@ export const generateMap = (
     const mask = islandMask(row, column, size, config.waterLevel);
     const elevation = rawElevation * mask;
 
-    // Water and sand from elevation
-    const landscape = (() => {
-      if (elevation < WATER_THRESHOLD) return water();
-      if (elevation < SAND_THRESHOLD) return sand();
+    // Forest and mountain: independent layers that can cluster anywhere on land
+    const forest = forestNoise(
+      column * FOREST_SCALE,
+      row * FOREST_SCALE,
+    );
+    const mountains = mountainNoise(
+      column * MOUNTAIN_SCALE,
+      row * MOUNTAIN_SCALE,
+    );
 
-      // Land tile: get biome from the region this tile belongs to
-      const { regionQ, regionR } = regionCenter(row, column);
-      const biome = getRegionBiome(regionQ, regionR);
-      return biomeToLandscape(biome);
-    })();
+    const landscape = landscapeFromNoise(elevation, forest, mountains, config);
 
     return { column, row, landscape, piece: null, building: null, steed: null } as Tile;
   });
