@@ -12,6 +12,7 @@ import { createRandom } from "@shared/utils/random";
 import { createPlayer } from "@shared/player";
 import type { Tile as SharedTile } from "@shared/map/tile";
 import type { Coordinate } from "../../types/coordinate";
+import * as hex from "@shared/map/hex";
 import "./sandbox.css";
 
 // ============================================
@@ -28,6 +29,93 @@ const createTileFromMapData = (mapTile: SharedTile): Tile =>
         ? new Landscape(mapTile.landscape)
         : undefined,
   });
+
+// ============================================
+// CLIENT-SIDE PATHFINDING
+// ============================================
+
+type PathResult = {
+  readonly path: ReadonlyArray<Tile>;
+  readonly reachable: boolean;
+};
+
+/**
+ * Find shortest walkable path between two tiles using client Tile objects.
+ * Returns the path and whether the destination is within move range.
+ */
+const findClientPath = (
+  tiles: ReadonlyArray<Tile>,
+  fromTile: Tile,
+  toTile: Tile,
+  maxSearchRange: number,
+): PathResult | null => {
+  if (fromTile.row === toTile.row && fromTile.column === toTile.column) {
+    return { path: [], reachable: true };
+  }
+  if (fromTile.piece === undefined) return null;
+
+  const visited = new Map<string, string | null>();
+  const fromKey = `${fromTile.row},${fromTile.column}`;
+  visited.set(fromKey, null);
+
+  type FrontierEntry = { readonly tile: Tile; readonly distance: number };
+  const frontier: FrontierEntry[] = [{ tile: fromTile, distance: 0 }];
+
+  // BFS
+  // Using a while loop here is acceptable per the codebase exception for
+  // oxc/no-accumulating-spread — BFS with a queue can't be expressed
+  // efficiently with array methods.
+  while (frontier.length > 0) {
+    const current = frontier.shift()!;
+    if (current.distance >= maxSearchRange) continue;
+
+    const currentKey = `${current.tile.row},${current.tile.column}`;
+    const neighbors = hex.findNeighbors(current.tile, tiles as Tile[]);
+
+    neighbors.forEach((neighbor) => {
+      const key = `${neighbor.row},${neighbor.column}`;
+      if (visited.has(key)) return;
+
+      // Check if this is the target
+      if (neighbor.row === toTile.row && neighbor.column === toTile.column) {
+        visited.set(key, currentKey);
+        return;
+      }
+
+      // Check walkability
+      if (neighbor.piece !== undefined) return;
+      if (!fromTile.canWalkOn(neighbor)) return;
+
+      visited.set(key, currentKey);
+      frontier.push({ tile: neighbor, distance: current.distance + 1 });
+    });
+  }
+
+  const toKey = `${toTile.row},${toTile.column}`;
+  if (!visited.has(toKey)) return null;
+
+  // Reconstruct path
+  const pathTiles: Tile[] = [];
+  const walk = (key: string): void => {
+    if (key === fromKey) return;
+    const matchingTile = tiles.find((tile) => `${tile.row},${tile.column}` === key);
+    if (matchingTile !== undefined) {
+      pathTiles.push(matchingTile);
+    }
+    const parent = visited.get(key);
+    if (parent !== null && parent !== undefined) {
+      walk(parent);
+    }
+  };
+  walk(toKey);
+  pathTiles.reverse();
+
+  // Piece move range: arch angel = 3, others = 1
+  const moveRange = fromTile.piece?.kind === PieceKind.archAngel ? 3 : 1;
+  const reachable = pathTiles.length <= moveRange;
+
+  return { path: pathTiles, reachable };
+};
 
 // ============================================
 // TOOL TYPES
@@ -205,11 +293,30 @@ export const SandboxPage = () => {
         Hexagon.render(canvas.ctx, state.selectedTile.x, state.selectedTile.y, "#00ffff");
       }
 
-      // Render hover
+      // Render hover + path highlight
       const hoveredTile = state.tiles.find((tile) =>
         tile.isMouseOver(canvas.mousePosition.x, canvas.mousePosition.y),
       );
       if (hoveredTile !== undefined) {
+        // Path highlight: when a piece is selected, show path to hovered tile
+        if (
+          state.selectedTile !== null &&
+          state.selectedTile.piece !== undefined &&
+          (hoveredTile.row !== state.selectedTile.row || hoveredTile.column !== state.selectedTile.column)
+        ) {
+          const pathResult = findClientPath(state.tiles, state.selectedTile, hoveredTile, 30);
+          if (pathResult !== null && pathResult.path.length > 0) {
+            const moveRange = state.selectedTile.piece.kind === PieceKind.archAngel ? 3 : 1;
+            pathResult.path.forEach((pathTile, index) => {
+              const withinRange = index < moveRange;
+              const fillColor = withinRange ? "#00ff0033" : "#ffff0033";
+              const strokeColor = withinRange ? "#00ff0088" : "#ffff0088";
+              Hexagon.renderArea(canvas.ctx, pathTile.x, pathTile.y, fillColor);
+              Hexagon.render(canvas.ctx, pathTile.x, pathTile.y, strokeColor);
+            });
+          }
+        }
+
         hoveredTile.renderHovered(canvas.ctx);
       }
 
