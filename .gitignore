@@ -33,3 +33,4 @@ dist-ssr
 supabase/functions/shared/
 supabase/.temp/
 games/
+screenshots/
