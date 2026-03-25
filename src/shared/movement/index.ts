@@ -120,6 +120,97 @@ export const findDistance = (
   return search(frontier);
 };
 
+/**
+ * Find the shortest walkable path from one tile to another.
+ * Returns the sequence of positions (excluding `from`, including `to`),
+ * or null if no path exists within the piece's movement range.
+ *
+ * When maxRange is provided, it limits the search depth.
+ * Otherwise the piece's move stat is used.
+ */
+export const findPath = (
+  tiles: ReadonlyArray<Tile>,
+  from: TilePosition,
+  to: TilePosition,
+  piece: Piece,
+  maxRange?: number,
+): ReadonlyArray<TilePosition> | null => {
+  if (from.row === to.row && from.column === to.column) {
+    return [];
+  }
+
+  const range = maxRange ?? getPieceMove(piece);
+  const walkable = getWalkableLandscape(piece);
+  const visited = new Map<string, string | null>();
+  const fromKey = `${from.row},${from.column}`;
+  visited.set(fromKey, null);
+
+  const frontier: ReadonlyArray<{ readonly position: TilePosition; readonly distance: number }> = [
+    { position: from, distance: 0 },
+  ];
+
+  const search = (
+    remaining: ReadonlyArray<{ readonly position: TilePosition; readonly distance: number }>,
+  ): ReadonlyArray<TilePosition> | null => {
+    if (remaining.length === 0) return null;
+
+    const [current, ...rest] = remaining;
+    if (current.distance >= range) {
+      return search(rest);
+    }
+
+    const currentKey = `${current.position.row},${current.position.column}`;
+    const neighbors = findNeighborTiles(tiles, current.position);
+
+    // Check if destination is reachable
+    const reachedTarget = neighbors.find(
+      (neighbor) => neighbor.row === to.row && neighbor.column === to.column,
+    );
+    if (reachedTarget !== undefined) {
+      const targetKey = `${to.row},${to.column}`;
+      visited.set(targetKey, currentKey);
+      return reconstructPath(visited, fromKey, targetKey);
+    }
+
+    const newFrontier = neighbors
+      .filter((neighbor) => {
+        const key = `${neighbor.row},${neighbor.column}`;
+        if (visited.has(key)) return false;
+        if (neighbor.piece !== null) return false;
+        if (neighbor.landscape === null || !walkable.includes(neighbor.landscape.type)) return false;
+        visited.set(key, currentKey);
+        return true;
+      })
+      .map((neighbor) => ({
+        position: { row: neighbor.row, column: neighbor.column },
+        distance: current.distance + 1,
+      }));
+
+    return search([...rest, ...newFrontier]);
+  };
+
+  return search(frontier);
+};
+
+const reconstructPath = (
+  parents: Map<string, string | null>,
+  fromKey: string,
+  toKey: string,
+): ReadonlyArray<TilePosition> => {
+  const path: TilePosition[] = [];
+  const walk = (key: string): void => {
+    if (key === fromKey) return;
+    const [rowStr, colStr] = key.split(",");
+    path.push({ row: Number(rowStr), column: Number(colStr) });
+    const parent = parents.get(key);
+    if (parent !== null && parent !== undefined) {
+      walk(parent);
+    }
+  };
+  walk(toKey);
+  return path.reverse();
+};
+
 // ============================================
 // MOVE VALIDATION
 // ============================================
