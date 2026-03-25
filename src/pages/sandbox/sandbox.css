@@ -1,10 +1,80 @@
-.sandbox-page {
+/* ============================================
+   Sandbox Layout (wraps all modes)
+   ============================================ */
+
+.sandbox-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   background: #111;
   color: #ddd;
   font-family: monospace;
   margin: calc(-1 * var(--spacing-2xl));
+}
+
+.sandbox-mode-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #333;
+  background: #0a0a0a;
+  flex-shrink: 0;
+}
+
+.sandbox-mode-link {
+  padding: 10px 20px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #888;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sandbox-mode-link:hover {
+  color: #ccc;
+  text-decoration: none;
+}
+
+.sandbox-mode-link-active {
+  color: #ffc800;
+  border-bottom-color: #ffc800;
+}
+
+.sandbox-mode-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Not implemented placeholder */
+.sandbox-not-implemented {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #555;
+}
+
+.sandbox-not-implemented h2 {
+  font-size: 24px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.sandbox-not-implemented p {
+  font-size: 14px;
+}
+
+/* ============================================
+   Shared sandbox page styles (used by modes)
+   ============================================ */
+
+.sandbox-page {
+  display: flex;
+  height: 100%;
+  background: #111;
+  color: #ddd;
+  font-family: monospace;
 }
 
 .sandbox-canvas-area {
@@ -122,4 +192,74 @@
   font-size: 11px;
   color: #aaa;
   word-break: break-all;
+}
+
+/* ============================================
+   Battle-specific styles
+   ============================================ */
+
+.battle-turn-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.battle-turn-bar-unit {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.battle-turn-bar-unit-active {
+  background: #3a5a3c;
+  color: #eee;
+}
+
+.battle-unit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.battle-unit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  color: #aaa;
+}
+
+.battle-unit-item-active {
+  background: #2a3a2a;
+  color: #eee;
+}
+
+.battle-unit-item-day {
+  border-left: 3px solid #ffc800;
+}
+
+.battle-unit-item-night {
+  border-left: 3px solid #8888ff;
+}
+
+.battle-unit-hearts {
+  color: #e55;
+}
+
+.battle-log {
+  font-size: 10px;
+  color: #666;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.battle-log-entry {
+  padding: 1px 0;
 }

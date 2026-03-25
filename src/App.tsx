@@ -40,7 +40,7 @@ export const App = () => {
       <Route path="/admin/settings" element={<SettingsPage />} />
       <Route path="/dev" element={<DevPage />} />
       <Route path="/map" element={<MapPage />} />
-      <Route path="/sandbox" element={<SandboxPage />} />
+      <Route path="/sandbox/*" element={<SandboxPage />} />
       <Route path="/docs" element={<DocsPage />} />
       <Route path="/docs/:topic" element={<DocsPage />} />
     </Routes>
