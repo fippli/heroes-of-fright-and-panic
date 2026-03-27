@@ -1,6 +1,19 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Flex,
+  HStack,
+  Input,
+  Text,
+  VStack,
+  Link as ChakraLink,
+} from "@chakra-ui/react";
+import { Link } from "react-router-dom";
+import { Field } from "@chakra-ui/react";
 import { SplitLayout } from "../../components/SplitLayout";
+import { ErrorBox } from "../../components/ErrorBox";
 import { useAdmin } from "../../lib/use-admin";
 import { themesApi, type Theme } from "../../lib/theme-api";
 
@@ -71,85 +84,115 @@ export const ThemesPage = () => {
   if (!isAdmin) {
     return (
       <SplitLayout pageTitle="Themes">
-        <p className="message message--error">
-          You do not have admin access.
-        </p>
-        <Link to="/games" className="btn btn--secondary">
-          Back to Games
-        </Link>
+        <ErrorBox>You do not have admin access.</ErrorBox>
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/games">
+            <Button variant="outline" borderColor="brand.contrast" color="brand.contrast" _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}>
+              Back to Games
+            </Button>
+          </Link>
+        </ChakraLink>
       </SplitLayout>
     );
   }
 
   return (
     <SplitLayout pageTitle="Themes">
-      {error !== null && (
-        <div className="message message--error">{error}</div>
-      )}
+      {error !== null && <ErrorBox>{error}</ErrorBox>}
 
-      <form onSubmit={handleCreate}>
-        <div className="form-group">
-          <label htmlFor="theme-name">Name:</label>
-          <input
+      <VStack as="form" onSubmit={handleCreate} gap="4" align="stretch">
+        <Field.Root>
+          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Name</Field.Label>
+          <Input
             type="text"
-            id="theme-name"
             value={themeName}
             onChange={(event) => setThemeName(event.target.value)}
             required
+            bg="white"
+            color="brand.contrast"
+            fontWeight="900"
+            border="none"
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="theme-description">Description:</label>
-          <input
+        </Field.Root>
+        <Field.Root>
+          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Description</Field.Label>
+          <Input
             type="text"
-            id="theme-description"
             value={themeDescription}
             onChange={(event) => setThemeDescription(event.target.value)}
+            bg="white"
+            color="brand.contrast"
+            fontWeight="900"
+            border="none"
           />
-        </div>
-        <div className="row">
-          <button type="submit" disabled={isCreating}>
-            {isCreating ? "Creating..." : "Create Theme"}
-          </button>
-        </div>
-      </form>
+        </Field.Root>
+        <Button
+          type="submit"
+          disabled={isCreating}
+          bg="brand.contrast"
+          color="brand.solid"
+          _hover={{ bg: "#3d3d3b" }}
+        >
+          {isCreating ? "Creating..." : "Create Theme"}
+        </Button>
+      </VStack>
 
-      <div className="theme-list">
+      <VStack gap="2" align="stretch">
         {themes.map((theme) => (
-          <div key={theme.id} className="theme-list__item">
-            <div className="theme-list__info">
-              <strong>{theme.name}</strong>
+          <Flex
+            key={theme.id}
+            justify="space-between"
+            align="center"
+            p="3"
+            border="1px solid"
+            borderColor="brand.contrast"
+            borderRadius="md"
+          >
+            <Box>
+              <Text fontWeight="700" color="brand.contrast" fontSize="sm">
+                {theme.name}
+              </Text>
               {theme.description !== null && theme.description !== "" && (
-                <span className="text-muted"> - {theme.description}</span>
+                <Text color="brand.contrast" opacity={0.6} fontSize="xs">
+                  {theme.description}
+                </Text>
               )}
-            </div>
-            <div className="theme-list__actions">
-              <Link
-                to={`/admin/themes/${theme.id}`}
-                className="btn btn--small"
-              >
-                Edit
-              </Link>
-              <button
-                type="button"
-                className="btn btn--small btn--secondary"
+            </Box>
+            <HStack gap="2">
+              <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+                <Link to={`/admin/themes/${theme.id}`}>
+                  <Button size="sm" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+                    Edit
+                  </Button>
+                </Link>
+              </ChakraLink>
+              <Button
+                size="sm"
+                variant="outline"
+                borderColor="brand.contrast"
+                color="brand.contrast"
+                _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}
                 onClick={() => handleDelete(theme.id)}
               >
                 Delete
-              </button>
-            </div>
-          </div>
+              </Button>
+            </HStack>
+          </Flex>
         ))}
         {themes.length === 0 && (
-          <p className="text-muted">No themes yet. Create one above.</p>
+          <Text color="brand.contrast" opacity={0.6}>No themes yet. Create one above.</Text>
         )}
-      </div>
+      </VStack>
 
-      <div className="row" style={{ marginTop: "2rem" }}>
-        <Link to="/admin" className="btn btn--secondary">
-          Back to Admin
-        </Link>
-      </div>
+      <Box mt="8">
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/admin">
+            <Button variant="outline" borderColor="brand.contrast" color="brand.contrast" _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}>
+              Back to Admin
+            </Button>
+          </Link>
+        </ChakraLink>
+      </Box>
     </SplitLayout>
   );
 };

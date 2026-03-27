@@ -1,7 +1,19 @@
 import { type DragEvent, useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  SimpleGrid,
+  Text,
+  VStack,
+  Link as ChakraLink,
+} from "@chakra-ui/react";
+import { Link } from "react-router-dom";
 import { useAdmin } from "../../lib/use-admin";
 import { themesApi, type ThemeAsset } from "../../lib/theme-api";
+import { ErrorBox } from "../../components/ErrorBox";
 import {
   type Faction,
   FACTIONS,
@@ -111,14 +123,18 @@ export const ThemeEditorPage = () => {
 
   if (!isAdmin || themeId === undefined) {
     return (
-      <div style={{ padding: "2rem" }}>
-        <p className="message message--error">
+      <Box p="8">
+        <ErrorBox>
           {themeId === undefined ? "No theme ID provided." : "No admin access."}
-        </p>
-        <Link to="/admin/themes" className="btn btn--secondary">
-          Back
-        </Link>
-      </div>
+        </ErrorBox>
+        <ChakraLink asChild mt="4" display="inline-block" textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/admin/themes">
+            <Button variant="outline" borderColor="fg" color="fg" _hover={{ bg: "bg.muted" }}>
+              Back
+            </Button>
+          </Link>
+        </ChakraLink>
+      </Box>
     );
   }
 
@@ -136,14 +152,7 @@ export const ThemeEditorPage = () => {
       readonly label: string;
     }[],
   ) => (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-        gap: "var(--spacing-sm)",
-        width: "100%",
-      }}
-    >
+    <SimpleGrid columns={[2, 3, 4]} gap="2" w="100%">
       {slots.map((slot) => {
         const existingAsset = findAsset(slot.category, slot.key);
         const slotKey = `${slot.category}/${slot.key}`;
@@ -151,15 +160,9 @@ export const ThemeEditorPage = () => {
         const isDraggedOver = dragOver === slotKey;
 
         return (
-          <div key={slotKey}>
+          <Box key={slotKey}>
             {existingAsset !== undefined ? (
-              <div
-                style={{
-                  width: "100%",
-                  aspectRatio: "1",
-                  position: "relative",
-                }}
-              >
+              <Box w="100%" aspectRatio="1" position="relative">
                 <img
                   src={themesApi.getPublicUrl(existingAsset.storagePath)}
                   alt={slot.label}
@@ -169,37 +172,34 @@ export const ThemeEditorPage = () => {
                     objectFit: "contain",
                   }}
                 />
-                <button
-                  type="button"
+                <Button
+                  position="absolute"
+                  top="2px"
+                  right="2px"
+                  size="xs"
+                  bg="danger.500"
+                  color="white"
+                  _hover={{ bg: "danger.600" }}
                   onClick={() => handleDeleteAsset(existingAsset.id)}
-                  style={{
-                    position: "absolute",
-                    top: "2px",
-                    right: "2px",
-                    padding: "0 4px",
-                    fontSize: "0.7rem",
-                  }}
                 >
                   x
-                </button>
-              </div>
+                </Button>
+              </Box>
             ) : (
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
-                  aspectRatio: "1",
-                  border: isDraggedOver
-                    ? "2px solid currentColor"
-                    : "2px dashed currentColor",
-                  cursor: "pointer",
-                  fontSize: "1.5rem",
-                  opacity: isUploading ? 0.5 : 1,
-                }}
-                onDrop={(event) => handleDrop(slot.category, slot.key, event)}
-                onDragOver={(event) => {
+              <Flex
+                as="label"
+                align="center"
+                justify="center"
+                w="100%"
+                aspectRatio="1"
+                border={isDraggedOver ? "2px solid" : "2px dashed"}
+                borderColor="brand.contrast"
+                cursor="pointer"
+                fontSize="1.5rem"
+                opacity={isUploading ? 0.5 : 1}
+                color="brand.contrast"
+                onDrop={(event: DragEvent<HTMLLabelElement>) => handleDrop(slot.category, slot.key, event)}
+                onDragOver={(event: DragEvent<HTMLLabelElement>) => {
                   event.preventDefault();
                   setDragOver(slotKey);
                 }}
@@ -218,86 +218,84 @@ export const ThemeEditorPage = () => {
                   }}
                   disabled={isUploading}
                 />
-              </label>
+              </Flex>
             )}
-            <div style={{ fontSize: "0.75rem", textAlign: "center" }}>
+            <Text fontSize="xs" textAlign="center" color="brand.contrast">
               {slot.label}
-            </div>
-          </div>
+            </Text>
+          </Box>
         );
       })}
-    </div>
+    </SimpleGrid>
   );
 
   return (
-    <div className="split-layout">
-      <div
-        className="split-layout__left"
-        style={{ justifyContent: "flex-start", padding: "var(--spacing-2xl)" }}
+    <Flex minH="100vh">
+      <VStack
+        w="250px"
+        p="12"
+        bg="bg"
+        align="stretch"
+        gap="2"
+        justify="flex-start"
       >
-        <nav
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--spacing-sm)",
-            flex: 1,
-          }}
-        >
-          {FACTIONS.map(({ id, label }) => (
-            <Link
-              key={id}
-              to={`/admin/themes/${themeId}/factions/${id}`}
-              style={{
-                textAlign: "left",
-                fontWeight: faction === id ? "900" : "normal",
-                opacity: faction === id ? 1 : 0.6,
-              }}
-            >
+        {FACTIONS.map(({ id, label }) => (
+          <ChakraLink
+            key={id}
+            asChild
+            fontWeight={faction === id ? "900" : "normal"}
+            opacity={faction === id ? 1 : 0.6}
+            color="brand.fg"
+            textDecoration="none"
+            _hover={{ textDecoration: "none", opacity: 1 }}
+          >
+            <Link to={`/admin/themes/${themeId}/factions/${id}`}>
               {label}
             </Link>
-          ))}
-          <Link
-            to="/admin/themes"
-            className="btn btn--secondary"
-            style={{ marginTop: "auto" }}
-          >
-            Back
-          </Link>
-        </nav>
-      </div>
+          </ChakraLink>
+        ))}
+        <Box mt="auto">
+          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+            <Link to="/admin/themes">
+              <Button variant="outline" borderColor="fg" color="fg" _hover={{ bg: "bg.muted" }}>
+                Back
+              </Button>
+            </Link>
+          </ChakraLink>
+        </Box>
+      </VStack>
 
-      <div
-        className="split-layout__right"
-        style={{
-          alignItems: "stretch",
-          justifyContent: "flex-start",
-          gap: "var(--spacing-lg)",
-        }}
+      <Flex
+        flex="1"
+        direction="column"
+        p="12"
+        bg="brand.solid"
+        color="brand.contrast"
+        gap="6"
+        overflowY="auto"
       >
-        {error !== null && (
-          <div className="message message--error">{error}</div>
-        )}
+        {error !== null && <ErrorBox>{error}</ErrorBox>}
 
         {faction === undefined && (
-          <p>Select a faction to edit assets.</p>
+          <Text color="brand.contrast">Select a faction to edit assets.</Text>
         )}
 
         {faction !== undefined && faction !== "landscape" && (
           <>
-            <h3>Pieces</h3>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">Pieces</Heading>
             {renderGrid(pieceSlots)}
-            <h3>Buildings</h3>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">Buildings</Heading>
             {renderGrid(buildingSlots)}
           </>
         )}
 
         {faction === "landscape" && (
           <>
-            <h3>Landscape</h3>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">Landscape</Heading>
             {renderGrid(landscapeSlots)}
           </>
         )}
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 };

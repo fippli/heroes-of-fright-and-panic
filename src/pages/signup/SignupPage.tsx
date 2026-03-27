@@ -1,5 +1,8 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Box, Button, Input, VStack, Link as ChakraLink } from "@chakra-ui/react";
+import { Link } from "react-router-dom";
+import { Field } from "@chakra-ui/react";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
 
@@ -70,46 +73,61 @@ export const SignupPage = () => {
   return (
     <SplitLayout pageTitle="Sign Up">
       {error !== null && (
-        <div className="message message--error">{error}</div>
+        <Box bg="rgba(220, 53, 69, 0.2)" color="#8b0000" border="2px solid" borderColor="danger.500" p="4" borderRadius="md" fontWeight="bold">
+          {error}
+        </Box>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="email">Email address</label>
-          <input
+      <VStack as="form" onSubmit={handleSubmit} gap="4" align="stretch">
+        <Field.Root>
+          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Email address</Field.Label>
+          <Input
             type="email"
-            id="email"
-            name="email"
             placeholder="you@example.com"
             autoComplete="email"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             disabled={isSubmitting}
+            bg="white"
+            color="brand.contrast"
+            fontWeight="900"
+            border="none"
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
+        </Field.Root>
+
+        <Field.Root>
+          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Password</Field.Label>
+          <Input
             type="password"
-            id="password"
-            name="password"
             placeholder="Choose a password"
             autoComplete="new-password"
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             disabled={isSubmitting}
+            bg="white"
+            color="brand.contrast"
+            fontWeight="900"
+            border="none"
           />
-        </div>
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Loading..." : "Sign Up"}
-        </button>
-      </form>
+        </Field.Root>
 
-      <Link to="/signin" className="back-link">
-        Sign in
-      </Link>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          bg="brand.contrast"
+          color="brand.solid"
+          fontWeight="bold"
+          _hover={{ bg: "#3d3d3b" }}
+        >
+          {isSubmitting ? "Loading..." : "Sign Up"}
+        </Button>
+      </VStack>
+
+      <ChakraLink asChild color="brand.contrast" textDecoration="underline" _hover={{ color: "#3d3d3b" }}>
+        <Link to="/signin">Sign in</Link>
+      </ChakraLink>
     </SplitLayout>
   );
 };

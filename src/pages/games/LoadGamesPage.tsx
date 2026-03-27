@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Flex,
+  HStack,
+  Text,
+  VStack,
+  Badge,
+  Link as ChakraLink,
+} from "@chakra-ui/react";
+import { Link } from "react-router-dom";
 import { gamesApi, type Game } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
 import { formatDate } from "../../lib/dom";
 import { SplitLayout } from "../../components/SplitLayout";
+import { ErrorBox } from "../../components/ErrorBox";
 
 type AuthUser = {
   id: string;
@@ -79,14 +91,14 @@ export const LoadGamesPage = () => {
 
   const renderGames = useMemo(() => {
     if (isLoading) {
-      return <div>Loading games...</div>;
+      return <Text color="brand.contrast">Loading games...</Text>;
     }
 
     if (games.length === 0) {
       return (
-        <div className="empty-state">
-          <p>No games yet. Create one to get started!</p>
-        </div>
+        <Text color="brand.contrast" textAlign="center" py="12">
+          No games yet. Create one to get started!
+        </Text>
       );
     }
 
@@ -106,13 +118,13 @@ export const LoadGamesPage = () => {
 
   return (
     <SplitLayout pageTitle="My Games">
-      {pageError !== null && (
-        <div className="message message--error">{pageError}</div>
-      )}
-      <div id="games-list">{renderGames}</div>
-      <Link to="/games" className="back-link">
-        Back to menu
-      </Link>
+      {pageError !== null && <ErrorBox>{pageError}</ErrorBox>}
+      <VStack gap="4" align="stretch">
+        {renderGames}
+      </VStack>
+      <ChakraLink asChild color="brand.contrast" textDecoration="underline" _hover={{ color: "#3d3d3b" }}>
+        <Link to="/games">Back to menu</Link>
+      </ChakraLink>
     </SplitLayout>
   );
 };
@@ -132,8 +144,6 @@ const GameCard = ({ game, userEmail, onDelete }: GameCardProps) => {
         ? "night"
         : null;
   const isCreator = game.creatorEmail === userEmail;
-  const turnClass =
-    game.currentPlayer === "day" ? "turn-badge--day" : "turn-badge--night";
   const turnText = game.currentPlayer === "day" ? "Day" : "Night";
 
   const dayLastMove =
@@ -146,60 +156,75 @@ const GameCard = ({ game, userEmail, onDelete }: GameCardProps) => {
       : "No moves yet";
 
   return (
-    <div className="game-card">
-      <div className="game-card__info">
-        <div className="game-card__header">
-          <span>created: {formatDate(game.createdAt)}</span>
-          <span>
+    <Box
+      border="2px solid"
+      borderColor="brand.contrast"
+      borderRadius="md"
+      p="4"
+      bg="rgba(0, 0, 0, 0.1)"
+    >
+      <VStack gap="2" align="stretch">
+        <HStack gap="3" flexWrap="wrap">
+          <Text fontWeight="700" color="brand.contrast" fontSize="sm">
+            created: {formatDate(game.createdAt)}
+          </Text>
+          <Text fontWeight="700" color="brand.contrast" fontSize="sm">
             {game.size}x{game.size}
-          </span>
-          <span className="game-card__id">{gameId}</span>
-        </div>
+          </Text>
+          <Text fontWeight="700" color="brand.contrast" fontSize="xs" opacity={0.7}>
+            {gameId}
+          </Text>
+        </HStack>
 
-        <div className="game-card__players">
-          <div className="game-card__player">
-            <span className="game-card__player-label">day:</span>
-            <span className="game-card__player-email">
-              {game.dayPlayerEmail ?? "Not assigned"}
-            </span>
-            <span className="game-card__player-move">{dayLastMove}</span>
-          </div>
-          <div className="game-card__player">
-            <span className="game-card__player-label">night:</span>
-            <span className="game-card__player-email">
-              {game.nightPlayerEmail ?? "Not assigned"}
-            </span>
-            <span className="game-card__player-move">{nightLastMove}</span>
-          </div>
-        </div>
+        <VStack gap="1" align="stretch">
+          <HStack gap="2">
+            <Text fontWeight="700" color="brand.contrast" minW="50px" fontSize="sm">day:</Text>
+            <Text color="brand.contrast" flex="1" fontSize="sm">{game.dayPlayerEmail ?? "Not assigned"}</Text>
+            <Text color="brand.contrast" fontSize="xs">{dayLastMove}</Text>
+          </HStack>
+          <HStack gap="2">
+            <Text fontWeight="700" color="brand.contrast" minW="50px" fontSize="sm">night:</Text>
+            <Text color="brand.contrast" flex="1" fontSize="sm">{game.nightPlayerEmail ?? "Not assigned"}</Text>
+            <Text color="brand.contrast" fontSize="xs">{nightLastMove}</Text>
+          </HStack>
+        </VStack>
 
-        <div className="game-card__footer">
-          <div className="game-card__turn">
-            <span className={`turn-badge ${turnClass}`}>
-              {turnText} player's turn
-            </span>
-          </div>
-          <div className="game-card__actions">
+        <Flex justify="space-between" align="center" mt="1">
+          <Badge
+            bg={game.currentPlayer === "day" ? "day.500" : "night.500"}
+            color={game.currentPlayer === "day" ? "brand.contrast" : "white"}
+            px="2"
+            py="1"
+            borderRadius="sm"
+            fontWeight="900"
+            fontSize="xs"
+          >
+            {turnText} player&apos;s turn
+          </Badge>
+          <HStack gap="2">
             {playerType !== null && (
-              <Link
-                to={`/game/${gameId}?player=${playerType}`}
-                className="btn btn--small"
-              >
-                Play
-              </Link>
+              <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+                <Link to={`/game/${gameId}?player=${playerType}`}>
+                  <Button size="sm" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+                    Play
+                  </Button>
+                </Link>
+              </ChakraLink>
             )}
             {isCreator && (
-              <button
-                type="button"
-                className="btn btn--small btn--delete"
+              <Button
+                size="sm"
+                bg="danger.500"
+                color="white"
+                _hover={{ bg: "danger.600" }}
                 onClick={() => onDelete(gameId)}
               >
                 Delete
-              </button>
+              </Button>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </HStack>
+        </Flex>
+      </VStack>
+    </Box>
   );
 };

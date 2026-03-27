@@ -54,6 +54,7 @@ export const DevPage = () => {
     };
   }, []);
 
+  // Game view — sidebar uses CSS classes + id-based DOM manipulation from DevGame
   return (
     <div className="game-body">
       <div id="app">

@@ -1,4 +1,9 @@
-import { createSystem, defineConfig, defineTokens, defineSemanticTokens } from "@chakra-ui/react";
+import {
+  createSystem,
+  defineConfig,
+  defineTokens,
+  defineSemanticTokens,
+} from "@chakra-ui/react";
 
 const config = defineConfig({
   theme: {
@@ -23,28 +28,48 @@ const config = defineConfig({
           700: { value: "#997700" },
         },
         night: {
-          500: { value: "#b090ff" },
-          600: { value: "#8868dd" },
+          400: { value: "#b090ff" },
+          500: { value: "#4a148c" },
+          600: { value: "#6a1b9a" },
           700: { value: "#6040bb" },
         },
+        danger: {
+          500: { value: "#dc3545" },
+          600: { value: "#c82333" },
+        },
+        success: {
+          500: { value: "#28a745" },
+        },
+      },
+      fonts: {
+        heading: { value: "'Alagard', cursive" },
+        body: { value: "'Alagard', cursive" },
       },
     }),
     semanticTokens: defineSemanticTokens({
       colors: {
         bg: {
-          DEFAULT: { value: "#111111" },
+          DEFAULT: { value: "#1d1d1b" },
           subtle: { value: "#1a1a1a" },
           muted: { value: "#222222" },
           surface: { value: "#0a0a0a" },
+          panel: { value: "rgba(255, 255, 255, 0.05)" },
         },
         fg: {
-          DEFAULT: { value: "#dddddd" },
+          DEFAULT: { value: "#fafaf0" },
           muted: { value: "#888888" },
           subtle: { value: "#aaaaaa" },
         },
         border: {
           DEFAULT: { value: "#333333" },
           subtle: { value: "#222222" },
+          brand: { value: "#ffc800" },
+        },
+        brand: {
+          solid: { value: "{colors.brand.500}" },
+          fg: { value: "{colors.brand.500}" },
+          muted: { value: "{colors.brand.200}" },
+          contrast: { value: "#1d1d1b" },
         },
       },
     }),
@@ -53,6 +78,9 @@ const config = defineConfig({
     body: {
       bg: "bg",
       color: "fg",
+      fontFamily: "body",
+      lineHeight: 1.5,
+      minHeight: "100vh",
     },
   },
 });

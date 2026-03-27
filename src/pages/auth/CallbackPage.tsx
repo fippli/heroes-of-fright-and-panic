@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Button, Text, Link as ChakraLink } from "@chakra-ui/react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
+import { ErrorBox } from "../../components/ErrorBox";
 
 export const CallbackPage = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -57,16 +60,20 @@ export const CallbackPage = () => {
 
   return (
     <SplitLayout pageTitle="Signing In">
-      {status === "loading" && <p>Please wait a moment...</p>}
+      {status === "loading" && <Text color="brand.contrast">Please wait a moment...</Text>}
 
-      {status === "success" && <p>Welcome back! Redirecting to your games...</p>}
+      {status === "success" && <Text color="brand.contrast">Welcome back! Redirecting to your games...</Text>}
 
       {status === "error" && (
         <>
-          <div className="message message--error">{errorMessage}</div>
-          <Link to="/signin" className="btn">
-            Try Again
-          </Link>
+          <ErrorBox>{errorMessage}</ErrorBox>
+          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+            <Link to="/signin">
+              <Button bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+                Try Again
+              </Button>
+            </Link>
+          </ChakraLink>
         </>
       )}
     </SplitLayout>

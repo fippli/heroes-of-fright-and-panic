@@ -1,5 +1,7 @@
 import { type FormEvent, useState } from "react";
+import { Box, Button, Input, VStack, Link as ChakraLink } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
+import { Field } from "@chakra-ui/react";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
 
@@ -44,38 +46,50 @@ export const ForgotPasswordPage = () => {
   return (
     <SplitLayout pageTitle="Forgot Password">
       {error !== null && (
-        <div className="message message--error">{error}</div>
+        <Box bg="rgba(220, 53, 69, 0.2)" color="#8b0000" border="2px solid" borderColor="danger.500" p="4" borderRadius="md" fontWeight="bold">
+          {error}
+        </Box>
       )}
 
       {emailSent ? (
-        <div className="message message--success">
+        <Box bg="rgba(40, 167, 69, 0.2)" color="#006400" border="2px solid" borderColor="success.500" p="4" borderRadius="md" fontWeight="bold">
           Check your email for a password reset link.
-        </div>
+        </Box>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email address</label>
-            <input
+        <VStack as="form" onSubmit={handleSubmit} gap="4" align="stretch">
+          <Field.Root>
+            <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Email address</Field.Label>
+            <Input
               type="email"
-              id="email"
-              name="email"
               placeholder="you@example.com"
               autoComplete="email"
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               disabled={isSubmitting}
+              bg="white"
+              color="brand.contrast"
+              fontWeight="900"
+              border="none"
             />
-          </div>
-          <button type="submit" disabled={isSubmitting}>
+          </Field.Root>
+
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            bg="brand.contrast"
+            color="brand.solid"
+            fontWeight="bold"
+            _hover={{ bg: "#3d3d3b" }}
+          >
             {isSubmitting ? "Sending..." : "Send reset link"}
-          </button>
-        </form>
+          </Button>
+        </VStack>
       )}
 
-      <Link to="/signin" className="back-link">
-        Sign in
-      </Link>
+      <ChakraLink asChild color="brand.contrast" textDecoration="underline" _hover={{ color: "#3d3d3b" }}>
+        <Link to="/signin">Sign in</Link>
+      </ChakraLink>
     </SplitLayout>
   );
 };

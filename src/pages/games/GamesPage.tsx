@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Button, VStack, Link as ChakraLink } from "@chakra-ui/react";
+import { Link } from "react-router-dom";
 import { useAdmin } from "../../lib/use-admin";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
@@ -10,7 +12,7 @@ type AuthUser = {
 };
 
 export const GamesPage = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [_user, setUser] = useState<AuthUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
@@ -55,29 +57,48 @@ export const GamesPage = () => {
 
   return (
     <SplitLayout pageTitle="Games">
-      <nav className="main-menu__nav">
-        <Link to="/games/new" className="btn btn--large">
-          New Game
-        </Link>
-        <Link to="/games/list" className="btn btn--large">
-          Load Game
-        </Link>
-        <Link to="/about" className="btn btn--large">
-          About
-        </Link>
-        {isAdmin && (
-          <Link to="/admin" className="btn btn--large">
-            Admin
+      <VStack gap="4" w="100%" align="stretch">
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/games/new">
+            <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+              New Game
+            </Button>
           </Link>
+        </ChakraLink>
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/games/list">
+            <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+              Load Game
+            </Button>
+          </Link>
+        </ChakraLink>
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/about">
+            <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+              About
+            </Button>
+          </Link>
+        </ChakraLink>
+        {isAdmin && (
+          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+            <Link to="/admin">
+              <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+                Admin
+              </Button>
+            </Link>
+          </ChakraLink>
         )}
-        <button
-          type="button"
-          className="btn btn--large btn--secondary"
+        <Button
+          size="lg"
+          variant="outline"
+          borderColor="brand.contrast"
+          color="brand.contrast"
+          _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}
           onClick={() => handleLogout()}
         >
           Sign Out
-        </button>
-      </nav>
+        </Button>
+      </VStack>
     </SplitLayout>
   );
 };

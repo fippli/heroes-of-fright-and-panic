@@ -1,6 +1,20 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  HStack,
+  Input,
+  Text,
+  VStack,
+  Link as ChakraLink,
+} from "@chakra-ui/react";
+import { Link } from "react-router-dom";
+import { Field } from "@chakra-ui/react";
 import { SplitLayout } from "../../components/SplitLayout";
+import { ErrorBox } from "../../components/ErrorBox";
 import { useAdmin } from "../../lib/use-admin";
 import { supabase } from "../../lib/supabase";
 
@@ -59,8 +73,8 @@ export const SettingsPage = () => {
       }
 
       setAdmins((current) =>
-        [...current, { email: trimmedEmail }].toSorted((a, b) =>
-          a.email.localeCompare(b.email),
+        [...current, { email: trimmedEmail }].toSorted((adminA, adminB) =>
+          adminA.email.localeCompare(adminB.email),
         ),
       );
       setNewEmail("");
@@ -105,74 +119,94 @@ export const SettingsPage = () => {
   if (!isAdmin) {
     return (
       <SplitLayout pageTitle="Settings">
-        <p className="message message--error">
-          You do not have admin access.
-        </p>
-        <Link to="/games" className="btn btn--secondary">
-          Back to Games
-        </Link>
+        <ErrorBox>You do not have admin access.</ErrorBox>
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/games">
+            <Button variant="outline" borderColor="brand.contrast" color="brand.contrast" _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}>
+              Back to Games
+            </Button>
+          </Link>
+        </ChakraLink>
       </SplitLayout>
     );
   }
 
   return (
     <SplitLayout pageTitle="Settings">
-      {error !== null && (
-        <div className="message message--error">{error}</div>
-      )}
+      {error !== null && <ErrorBox>{error}</ErrorBox>}
 
-      <h3>Admin Users</h3>
+      <Heading as="h3" fontSize="1.25rem" color="brand.contrast">Admin Users</Heading>
 
-      <form onSubmit={handleAdd}>
-        <div className="form-group">
-          <label htmlFor="admin-email">Email:</label>
-          <input
+      <VStack as="form" onSubmit={handleAdd} gap="4" align="stretch">
+        <Field.Root>
+          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Email</Field.Label>
+          <Input
             type="email"
-            id="admin-email"
             value={newEmail}
             onChange={(event) => setNewEmail(event.target.value)}
             placeholder="email@example.com"
             required
+            bg="white"
+            color="brand.contrast"
+            fontWeight="900"
+            border="none"
           />
-        </div>
-        <div className="row">
-          <button type="submit" disabled={isAdding}>
-            {isAdding ? "Adding..." : "Add Admin"}
-          </button>
-        </div>
-      </form>
+        </Field.Root>
+        <Button
+          type="submit"
+          disabled={isAdding}
+          bg="brand.contrast"
+          color="brand.solid"
+          _hover={{ bg: "#3d3d3b" }}
+        >
+          {isAdding ? "Adding..." : "Add Admin"}
+        </Button>
+      </VStack>
 
-      <div className="theme-list">
+      <VStack gap="2" align="stretch">
         {admins.map((admin) => (
-          <div key={admin.email} className="theme-list__item">
-            <div className="theme-list__info">
-              <strong>{admin.email}</strong>
+          <Flex
+            key={admin.email}
+            justify="space-between"
+            align="center"
+            p="3"
+            border="1px solid"
+            borderColor="brand.contrast"
+            borderRadius="md"
+          >
+            <Text fontWeight="700" color="brand.contrast" fontSize="sm">
+              {admin.email}
               {admin.email === user?.email && (
-                <span className="text-muted"> (you)</span>
+                <Text as="span" opacity={0.6}> (you)</Text>
               )}
-            </div>
-            <div className="theme-list__actions">
-              <button
-                type="button"
-                className="btn btn--small btn--secondary"
-                onClick={() => handleRemove(admin.email)}
-                disabled={admin.email === user?.email}
-              >
-                Remove
-              </button>
-            </div>
-          </div>
+            </Text>
+            <Button
+              size="sm"
+              variant="outline"
+              borderColor="brand.contrast"
+              color="brand.contrast"
+              _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}
+              onClick={() => handleRemove(admin.email)}
+              disabled={admin.email === user?.email}
+            >
+              Remove
+            </Button>
+          </Flex>
         ))}
         {admins.length === 0 && (
-          <p className="text-muted">No admin users found.</p>
+          <Text color="brand.contrast" opacity={0.6}>No admin users found.</Text>
         )}
-      </div>
+      </VStack>
 
-      <div className="row" style={{ marginTop: "2rem" }}>
-        <Link to="/admin" className="btn btn--secondary">
-          Back to Admin
-        </Link>
-      </div>
+      <Box mt="8">
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/admin">
+            <Button variant="outline" borderColor="brand.contrast" color="brand.contrast" _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}>
+              Back to Admin
+            </Button>
+          </Link>
+        </ChakraLink>
+      </Box>
     </SplitLayout>
   );
 };

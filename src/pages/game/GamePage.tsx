@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  HStack,
+  Text,
+  VStack,
+  Link as ChakraLink,
+} from "@chakra-ui/react";
+import { Link } from "react-router-dom";
 import { Canvas } from "../../canvas";
 import { Game } from "../../core/Board";
 import { BuildingType } from "../../core/Building";
@@ -100,28 +111,6 @@ export const GamePage = () => {
         setError(err instanceof Error ? err.message : "Failed to load game");
       });
 
-    // Log controls
-    console.log(`
-🎮 Game Controls:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Click     - Select unit/building, move, or loot
-Arrow Keys - Pan camera
-
-Building (hover + press key):
-  H - Build House
-  T - Build Tower
-  C - Build Castle
-  B - Build Boat
-  F - Build Farm
-
-Units:
-  P - Create Peasant (on house)
-  U - Upgrade unit
-  A - Upgrade to Archer
-  X - Attack target
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`);
-
     // Cleanup on unmount
     return () => {
       if (animationFrameRef.current !== null) {
@@ -133,57 +122,84 @@ Units:
   // Show error state
   if (error !== null) {
     return (
-      <div className="game-body">
-        <div className="container container--centered">
-          <h1 className="hero-title text-gradient">Heroes of Fright and Panic</h1>
-          <p className="message message--error">{error}</p>
-          <Link to="/games" className="btn btn--large btn--day">
-            Back to Games
-          </Link>
-        </div>
-      </div>
+      <Flex className="game-body" align="center" justify="center">
+        <VStack gap="4" textAlign="center" maxW="600px" p="10">
+          <Heading fontSize="3rem" bgGradient="to-r" gradientFrom="#ffd54f" gradientTo="#ff6f00" bgClip="text">
+            Heroes of Fright and Panic
+          </Heading>
+          <Box bg="rgba(255, 87, 34, 0.15)" border="1px solid #ff5722" color="#ffab91" p="3" borderRadius="lg" fontWeight="700">
+            {error}
+          </Box>
+          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+            <Link to="/games">
+              <Button bg="#ffd54f" color="#0b0906" fontWeight="700" size="lg">
+                Back to Games
+              </Button>
+            </Link>
+          </ChakraLink>
+        </VStack>
+      </Flex>
     );
   }
 
-  // Show player selection if no player specified
+  // No game ID
   if (gameId === undefined) {
     return (
-      <div className="game-body">
-        <div className="container container--centered">
-          <h1 className="hero-title text-gradient">Heroes of Fright and Panic</h1>
-          <p className="message message--error">No game ID found</p>
-          <Link to="/games" className="btn btn--large btn--day">
-            Back to Games
-          </Link>
-        </div>
-      </div>
+      <Flex className="game-body" align="center" justify="center">
+        <VStack gap="4" textAlign="center" maxW="600px" p="10">
+          <Heading fontSize="3rem" bgGradient="to-r" gradientFrom="#ffd54f" gradientTo="#ff6f00" bgClip="text">
+            Heroes of Fright and Panic
+          </Heading>
+          <Box bg="rgba(255, 87, 34, 0.15)" border="1px solid #ff5722" color="#ffab91" p="3" borderRadius="lg" fontWeight="700">
+            No game ID found
+          </Box>
+          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+            <Link to="/games">
+              <Button bg="#ffd54f" color="#0b0906" fontWeight="700" size="lg">
+                Back to Games
+              </Button>
+            </Link>
+          </ChakraLink>
+        </VStack>
+      </Flex>
     );
   }
 
+  // Player selection
   if (myPlayerType === null && !isSpectator) {
     return (
-      <div className="game-body">
-        <div className="container container--centered">
-          <h1 className="hero-title text-gradient">Heroes of Fright and Panic</h1>
-          <h2 className="subtitle">Choose your side</h2>
-          <div className="cta-buttons">
-            <Link to={`?player=day`} className="btn btn--large btn--day">
-              Day Player
-            </Link>
-            <Link to={`?player=night`} className="btn btn--large btn--night">
-              Night Player
-            </Link>
-          </div>
-          <p className="text-muted mt-lg">Share the other link with your opponent!</p>
-          <Link to={`?player=spectator`} className="text-muted mt-lg">
-            Spectate
-          </Link>
-        </div>
-      </div>
+      <Flex className="game-body" align="center" justify="center">
+        <VStack gap="4" textAlign="center" maxW="600px" p="10">
+          <Heading fontSize="3rem" bgGradient="to-r" gradientFrom="#ffd54f" gradientTo="#ff6f00" bgClip="text">
+            Heroes of Fright and Panic
+          </Heading>
+          <Text fontSize="1.5rem">Choose your side</Text>
+          <HStack gap="4">
+            <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+              <Link to={`?player=day`}>
+                <Button bg="#ffd54f" color="#0b0906" fontWeight="700" size="lg" boxShadow="0 4px 0 #b68c1d" _hover={{ transform: "translateY(-2px)" }}>
+                  Day Player
+                </Button>
+              </Link>
+            </ChakraLink>
+            <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+              <Link to={`?player=night`}>
+                <Button bg="#b39ddb" color="#0b0906" fontWeight="700" size="lg" boxShadow="0 4px 0 #664f91" _hover={{ transform: "translateY(-2px)" }}>
+                  Night Player
+                </Button>
+              </Link>
+            </ChakraLink>
+          </HStack>
+          <Text color="rgba(255, 255, 255, 0.7)" mt="6">Share the other link with your opponent!</Text>
+          <ChakraLink asChild color="rgba(255, 255, 255, 0.7)" mt="2">
+            <Link to={`?player=spectator`}>Spectate</Link>
+          </ChakraLink>
+        </VStack>
+      </Flex>
     );
   }
 
-  // Main game view
+  // Main game view — canvas and sidebar keep their CSS classes for Board.ts DOM manipulation
   return (
     <div className="game-body">
       <div id="app">
@@ -250,4 +266,4 @@ Units:
       </div>
     </div>
   );
-}
+};

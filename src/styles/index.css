@@ -1,6 +1,3 @@
-@import "./base.css";
-@import "./components.css";
-
 @font-face {
   font-family: "Alagard";
   src: url("/fonts/alagard.ttf") format("truetype");
