@@ -6,15 +6,12 @@ import { Clock } from "./Clock";
 import { Dialog } from "./Dialog";
 import { GameClient } from "./GameClient";
 import { parseGameState } from "./GameParser";
-import type {
-  GameAction,
-  PlayerType,
-  ServerGameState,
-} from "./GameTypes";
+import type { GameAction, PlayerType, ServerGameState } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
 import { Notifications } from "./Notifications";
-import { PieceKind } from "./Piece";
+import { EquipmentType } from "@shared/equipment";
 import { createPlayer, type Player } from "@shared/player";
+import type { TilePosition } from "@shared/map/tile";
 import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
 
@@ -362,10 +359,7 @@ export class Game {
       return false;
     }
 
-    const { success, response } = await this.client.sendAction(
-      this.id,
-      action,
-    );
+    const { success, response } = await this.client.sendAction(this.id, action);
 
     if (response === undefined) {
       return false;
@@ -419,59 +413,86 @@ export class Game {
       return;
     }
 
-    // If we have a selected tile, try to perform an action
+    // If we have a selected tile with our own piece, the click resolves to a
+    // concrete engine action: attack an enemy, harvest adjacent terrain
+    // (tree/rock), otherwise move.
     if (
       this.selectedTile !== undefined &&
       this.selectedTile !== null &&
+      this.selectedTile.piece?.owner?.type === myPlayer &&
       myPlayer !== null
     ) {
-      const previousSelectedPosition = {
+      const from: TilePosition = {
         row: this.selectedTile.row,
         column: this.selectedTile.column,
       };
-      const isNeighborClick = clickedTile.isNeighborTo(
-        previousSelectedPosition,
-      );
 
-      const success = await this.sendAction({
-        type: "click",
-        player: myPlayer,
-        position: tilePosition,
-        selectedPosition: this.getSelectedPosition(),
-      });
+      const action: GameAction = ((): GameAction => {
+        if (this.isEnemyTile(clickedTile, myPlayer)) {
+          return {
+            type: "attack",
+            player: myPlayer,
+            attackerPosition: from,
+            targetPosition: tilePosition,
+          };
+        }
+        if (
+          clickedTile.landscape?.lootDrop !== undefined &&
+          clickedTile.isNeighborTo(from)
+        ) {
+          return {
+            type: "loot",
+            player: myPlayer,
+            piecePosition: from,
+            targetPosition: tilePosition,
+          };
+        }
+        return {
+          type: "move",
+          player: myPlayer,
+          from,
+          to: tilePosition,
+        };
+      })();
+
+      const success = await this.sendAction(action);
 
       if (success) {
-        const newTile = this.findTile(tilePosition);
-        if (newTile?.piece?.owner?.type === myPlayer) {
-          // Piece moved to clicked tile - select it there
-          this.selectedTile = newTile;
-        } else if (isNeighborClick) {
-          // Clicked a neighbor (e.g. looting) - keep selection on original tile
-          // Re-fetch the tile using row/column (not pixel coords)
-          const updatedOriginalTile = this.findTile(previousSelectedPosition);
-          if (updatedOriginalTile?.piece?.owner?.type === myPlayer) {
-            this.selectedTile = updatedOriginalTile;
-          } else {
-            this.selectedTile = undefined;
-          }
+        // Re-select the acting piece wherever it now lives (it moves on a
+        // successful move, stays put on an attack or harvest).
+        const movedTile = this.findTile(tilePosition);
+        const originalTile = this.findTile(from);
+        if (movedTile?.piece?.owner?.type === myPlayer) {
+          this.selectedTile = movedTile;
+        } else if (originalTile?.piece?.owner?.type === myPlayer) {
+          this.selectedTile = originalTile;
         } else {
-          // Non-neighbor click - clear selection
           this.selectedTile = undefined;
         }
       }
     } else {
-      // No selection, just clicking on empty tile
+      // No actionable selection - just (de)select the clicked tile
       this.selectedTile = clickedTile;
     }
   }
 
   /**
+   * Whether a tile holds an enemy piece or enemy building (a valid attack target)
+   */
+  private isEnemyTile(tile: Tile, myPlayer: PlayerType): boolean {
+    const enemyPiece =
+      tile.piece?.owner?.type !== undefined &&
+      tile.piece.owner.type !== myPlayer;
+    const enemyBuilding =
+      tile.building?.owner?.type !== undefined &&
+      tile.building.owner.type !== myPlayer;
+    return enemyPiece || enemyBuilding;
+  }
+
+  /**
    * Build a structure at the given position
    */
-  async build(
-    buildingType: BuildingType,
-    { x, y }: Coordinate,
-  ): Promise<void> {
+  async build(buildingType: BuildingType, { x, y }: Coordinate): Promise<void> {
     if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
@@ -482,7 +503,6 @@ export class Game {
       player: this.myPlayerType,
       buildingType,
       position: tilePosition,
-      selectedPosition: this.getSelectedPosition(),
     });
   }
 
@@ -502,61 +522,47 @@ export class Game {
       player: this.myPlayerType,
       buildingType: BuildingType.house,
       position: tilePosition,
-      selectedPosition: this.getSelectedPosition(),
     });
   }
 
   /**
-   * Create a peasant at the given position
+   * Spawn a peasant in the friendly house at the given position
    */
-  async createPeasant({ x, y }: Coordinate): Promise<void> {
+  async spawnPeasant({ x, y }: Coordinate): Promise<void> {
     if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (tilePosition === null) return;
 
     await this.sendAction({
-      type: "createPeasant",
+      type: "spawnPeasant",
       player: this.myPlayerType,
       position: tilePosition,
     });
   }
 
   /**
-   * Upgrade a unit at the given position
+   * Equip the piece at the given position with a piece of equipment
    */
-  async upgrade({ x, y }: Coordinate): Promise<void> {
+  async craftEquipment(
+    equipmentType: EquipmentType,
+    { x, y }: Coordinate,
+  ): Promise<void> {
     if (this.myPlayerType === null) return;
 
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (tilePosition === null) return;
 
     await this.sendAction({
-      type: "upgrade",
+      type: "craftEquipment",
       player: this.myPlayerType,
-      position: tilePosition,
+      equipmentType,
+      piecePosition: tilePosition,
     });
   }
 
   /**
-   * Upgrade a unit to archer at the given position
-   */
-  async upgradeArcher({ x, y }: Coordinate): Promise<void> {
-    if (this.myPlayerType === null) return;
-
-    const tilePosition = this.pixelToTilePosition({ x, y });
-    if (tilePosition === null) return;
-
-    await this.sendAction({
-      type: "upgrade",
-      player: this.myPlayerType,
-      position: tilePosition,
-      targetKind: PieceKind.peasant,
-    });
-  }
-
-  /**
-   * Attack a target at the given position
+   * Attack the target at the given position using the currently selected piece
    */
   async attack({ x, y }: Coordinate): Promise<void> {
     if (this.myPlayerType === null) return;
@@ -564,8 +570,8 @@ export class Game {
     const tilePosition = this.pixelToTilePosition({ x, y });
     if (tilePosition === null) return;
 
-    const selectedPosition = this.getSelectedPosition();
-    if (selectedPosition === undefined) {
+    const attackerPosition = this.getSelectedPosition();
+    if (attackerPosition === undefined) {
       console.warn("No unit selected to attack with");
       return;
     }
@@ -573,8 +579,8 @@ export class Game {
     await this.sendAction({
       type: "attack",
       player: this.myPlayerType,
-      position: tilePosition,
-      selectedPosition,
+      attackerPosition,
+      targetPosition: tilePosition,
     });
   }
 }

@@ -2,8 +2,9 @@ import type { BuildingType } from "@shared/building/index.ts";
 import type { EquipmentType } from "@shared/equipment/index.ts";
 import type { ResearchType } from "@shared/research/index.ts";
 import type { SteedType } from "@shared/steed/index.ts";
+import type { TilePosition } from "@shared/map/tile.ts";
 
-export type { TilePosition } from "@shared/map/tile.ts";
+export type { TilePosition };
 
 export type PlayerType = "day" | "night";
 
@@ -75,6 +76,12 @@ export type AttackAction = BaseAction & {
   readonly targetPosition: TilePosition;
 };
 
+export type LootAction = BaseAction & {
+  readonly type: "loot";
+  readonly piecePosition: TilePosition;
+  readonly targetPosition: TilePosition;
+};
+
 export type GameAction =
   | MoveAction
   | BuildAction
@@ -86,7 +93,8 @@ export type GameAction =
   | ResearchAction
   | EnterTowerAction
   | SummonArchAngelAction
-  | AttackAction;
+  | AttackAction
+  | LootAction;
 
 export type ActionResult = {
   readonly success: boolean;

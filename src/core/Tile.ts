@@ -112,10 +112,7 @@ export class Tile {
     const tilesInRange = this.getTilesInRange(tiles, attackRange);
 
     tilesInRange.forEach((tile) => {
-      if (
-        tile.piece !== undefined &&
-        tile.piece.owner?.type !== myPlayerType
-      ) {
+      if (tile.piece !== undefined && tile.piece.owner?.type !== myPlayerType) {
         Hexagon.renderArea(ctx, tile.x, tile.y, "#ff000044");
         Hexagon.render(ctx, tile.x, tile.y, "#ff0000aa");
       }
@@ -195,12 +192,11 @@ export class Tile {
 
   canWalkOn(tile: Tile) {
     if (tile.landscape === null) return false;
-    return (
-      this.piece?.walkableLandscape.includes(tile.landscape.type) ?? false
-    );
+    return this.piece?.walkableLandscape.includes(tile.landscape.type) ?? false;
   }
 
-  canLoot(_tile: Tile): boolean {
-    return false;
+  canLoot(tile: Tile): boolean {
+    if (this.piece === undefined) return false;
+    return tile.landscape?.lootDrop !== undefined && this.isNeighborTo(tile);
   }
 }

@@ -7,8 +7,20 @@ import {
   createHouseBuilding,
   createTowerBuilding,
 } from "../building/index.ts";
-import { createSword, createShield, createBow, EquipmentType } from "../equipment/index.ts";
-import { type Landscape, LandscapeType, grass, water as waterLandscape, tree as treeLandscape } from "../map/landscape.ts";
+import {
+  createSword,
+  createShield,
+  createBow,
+  EquipmentType,
+} from "../equipment/index.ts";
+import {
+  type Landscape,
+  LandscapeType,
+  grass,
+  water as waterLandscape,
+  tree as treeLandscape,
+  mountain as mountainLandscape,
+} from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
 import {
   type Piece,
@@ -35,6 +47,7 @@ import {
   handleEnterTower,
   handleSummonArchAngel,
   handleAttack,
+  handleLoot,
   checkWinCondition,
   handleAction,
 } from "./engine.ts";
@@ -66,11 +79,25 @@ const makeGame = (overrides: Partial<Game> = {}): Game => ({
   tiles: make5x5GrassTiles(),
   dayPlayer: createPlayer({
     type: "day",
-    resources: createResourceMap({ wood: 50, stone: 50, iron: 50, gold: 50, food: 50, faith: 200 }),
+    resources: createResourceMap({
+      wood: 50,
+      stone: 50,
+      iron: 50,
+      gold: 50,
+      food: 50,
+      faith: 200,
+    }),
   }),
   nightPlayer: createPlayer({
     type: "night",
-    resources: createResourceMap({ wood: 50, stone: 50, iron: 50, gold: 50, food: 50, faith: 200 }),
+    resources: createResourceMap({
+      wood: 50,
+      stone: 50,
+      iron: 50,
+      gold: 50,
+      food: 50,
+      faith: 200,
+    }),
   }),
   currentPlayer: "day",
   clock: { time: 6, hasDawned: true, hasDusked: false },
@@ -85,17 +112,32 @@ const make5x5GrassTiles = (): Tile[] =>
     makeTile(Math.floor(index / 5), index % 5),
   );
 
-const placePiece = (tiles: ReadonlyArray<Tile>, row: number, col: number, piece: Piece): Tile[] =>
+const placePiece = (
+  tiles: ReadonlyArray<Tile>,
+  row: number,
+  col: number,
+  piece: Piece,
+): Tile[] =>
   tiles.map((tile) =>
     tile.row === row && tile.column === col ? { ...tile, piece } : tile,
   );
 
-const placeBuilding = (tiles: ReadonlyArray<Tile>, row: number, col: number, building: Building): Tile[] =>
+const placeBuilding = (
+  tiles: ReadonlyArray<Tile>,
+  row: number,
+  col: number,
+  building: Building,
+): Tile[] =>
   tiles.map((tile) =>
     tile.row === row && tile.column === col ? { ...tile, building } : tile,
   );
 
-const setLandscape = (tiles: ReadonlyArray<Tile>, row: number, col: number, landscape: Landscape): Tile[] =>
+const setLandscape = (
+  tiles: ReadonlyArray<Tile>,
+  row: number,
+  col: number,
+  landscape: Landscape,
+): Tile[] =>
   tiles.map((tile) =>
     tile.row === row && tile.column === col ? { ...tile, landscape } : tile,
   );
@@ -141,7 +183,9 @@ describe("handleMove", () => {
   it("rejects move to occupied tile", () => {
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 3, createPeasant("day"),
+      2,
+      3,
+      createPeasant("day"),
     );
     const game = makeGame({ tiles });
 
@@ -158,7 +202,9 @@ describe("handleMove", () => {
   it("rejects move to non-walkable terrain", () => {
     const tiles = setLandscape(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 3, waterLandscape(),
+      2,
+      3,
+      waterLandscape(),
     );
     const game = makeGame({ tiles });
 
@@ -176,7 +222,9 @@ describe("handleMove", () => {
     const archer = pieceWithEquipment(createPeasant("day"), createBow());
     const tiles = setLandscape(
       placePiece(make5x5GrassTiles(), 2, 2, archer),
-      2, 3, treeLandscape(),
+      2,
+      3,
+      treeLandscape(),
     );
     const game = makeGame({ tiles });
 
@@ -275,7 +323,9 @@ describe("handleBuild", () => {
   it("rejects building on non-grass terrain", () => {
     const tiles = setLandscape(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 3, waterLandscape(),
+      2,
+      3,
+      waterLandscape(),
     );
     const game = makeGame({ tiles });
 
@@ -329,7 +379,12 @@ describe("handleBuild", () => {
 
 describe("handleSpawnPeasant", () => {
   it("spawns a peasant in an empty house", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createHouseBuilding("day"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createHouseBuilding("day"),
+    );
     const game = makeGame({ tiles });
 
     const { game: after, result } = handleSpawnPeasant(game, {
@@ -344,7 +399,12 @@ describe("handleSpawnPeasant", () => {
   });
 
   it("costs 1 food", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createHouseBuilding("day"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createHouseBuilding("day"),
+    );
     const game = makeGame({ tiles });
 
     const { game: after } = handleSpawnPeasant(game, {
@@ -359,7 +419,9 @@ describe("handleSpawnPeasant", () => {
   it("rejects spawn on occupied house", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 2, createHouseBuilding("day"),
+      2,
+      2,
+      createHouseBuilding("day"),
     );
     const game = makeGame({ tiles });
 
@@ -373,7 +435,12 @@ describe("handleSpawnPeasant", () => {
   });
 
   it("rejects spawn on enemy house", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createHouseBuilding("night"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createHouseBuilding("night"),
+    );
     const game = makeGame({ tiles });
 
     const { result } = handleSpawnPeasant(game, {
@@ -457,7 +524,12 @@ describe("handleCraftEquipment", () => {
 
 describe("handleTrainPriest", () => {
   it("trains a priest at a church", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createChurchBuilding("day"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createChurchBuilding("day"),
+    );
     const game = makeGame({ tiles });
 
     const { game: after, result } = handleTrainPriest(game, {
@@ -472,7 +544,12 @@ describe("handleTrainPriest", () => {
   });
 
   it("costs 1 gold", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createChurchBuilding("day"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createChurchBuilding("day"),
+    );
     const game = makeGame({ tiles });
 
     const { game: after } = handleTrainPriest(game, {
@@ -485,7 +562,12 @@ describe("handleTrainPriest", () => {
   });
 
   it("rejects training at enemy church", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createChurchBuilding("night"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createChurchBuilding("night"),
+    );
     const game = makeGame({ tiles });
 
     const { result } = handleTrainPriest(game, {
@@ -507,7 +589,9 @@ describe("handleHeal", () => {
     const damagedKing = pieceWithDamage(createKing("day"), 2); // 1 def absorbed, 1 heart lost => 2 hearts
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 2, 2, createPriest("day")),
-      2, 3, damagedKing,
+      2,
+      3,
+      damagedKing,
     );
     const game = makeGame({ tiles });
 
@@ -527,7 +611,9 @@ describe("handleHeal", () => {
     const damagedKing = pieceWithDamage(createKing("day"), 2);
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 2, 2, createPriest("day")),
-      2, 3, damagedKing,
+      2,
+      3,
+      damagedKing,
     );
     const game = makeGame({ tiles });
 
@@ -544,7 +630,9 @@ describe("handleHeal", () => {
   it("rejects healing a piece at full health", () => {
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 2, 2, createPriest("day")),
-      2, 3, createPeasant("day"),
+      2,
+      3,
+      createPeasant("day"),
     );
     const game = makeGame({ tiles });
 
@@ -562,7 +650,9 @@ describe("handleHeal", () => {
     const damagedKing = pieceWithDamage(createKing("day"), 2);
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 0, 0, createPriest("day")),
-      4, 4, damagedKing,
+      4,
+      4,
+      damagedKing,
     );
     const game = makeGame({ tiles });
 
@@ -585,7 +675,9 @@ describe("handleResearch", () => {
   it("researches speed at castle", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      2, 2, createCastleBuilding("day"),
+      2,
+      2,
+      createCastleBuilding("day"),
     );
     const game = makeGame({ tiles });
 
@@ -603,7 +695,9 @@ describe("handleResearch", () => {
   it("deducts research cost (speed = 1 wood)", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      2, 2, createCastleBuilding("day"),
+      2,
+      2,
+      createCastleBuilding("day"),
     );
     const game = makeGame({ tiles });
 
@@ -618,7 +712,12 @@ describe("handleResearch", () => {
   });
 
   it("rejects research without castle", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createHouseBuilding("day"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createHouseBuilding("day"),
+    );
     const game = makeGame({ tiles });
 
     const { result } = handleResearch(game, {
@@ -634,7 +733,9 @@ describe("handleResearch", () => {
   it("rejects Mining III without Mining II", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      2, 2, createCastleBuilding("day"),
+      2,
+      2,
+      createCastleBuilding("day"),
     );
     const game = makeGame({ tiles });
 
@@ -657,7 +758,9 @@ describe("handleEnterTower", () => {
   it("transforms tower into castle when king enters", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      2, 3, createTowerBuilding("day"),
+      2,
+      3,
+      createTowerBuilding("day"),
     );
     const game = makeGame({ tiles });
 
@@ -680,7 +783,9 @@ describe("handleEnterTower", () => {
   it("rejects non-king entering tower", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 3, createTowerBuilding("day"),
+      2,
+      3,
+      createTowerBuilding("day"),
     );
     const game = makeGame({ tiles });
 
@@ -697,7 +802,9 @@ describe("handleEnterTower", () => {
   it("rejects entering non-adjacent tower", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 0, 0, createKing("day")),
-      4, 4, createTowerBuilding("day"),
+      4,
+      4,
+      createTowerBuilding("day"),
     );
     const game = makeGame({ tiles });
 
@@ -720,7 +827,9 @@ describe("handleAttack", () => {
   it("peasant kills enemy peasant", () => {
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 3, createPeasant("night"),
+      2,
+      3,
+      createPeasant("night"),
     );
     const game = makeGame({ tiles });
 
@@ -739,7 +848,9 @@ describe("handleAttack", () => {
   it("peasant cannot destroy building (1 atk vs 1 def)", () => {
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 3, createHouseBuilding("night"),
+      2,
+      3,
+      createHouseBuilding("night"),
     );
     const game = makeGame({ tiles });
 
@@ -759,7 +870,9 @@ describe("handleAttack", () => {
     const swordsman = pieceWithEquipment(createPeasant("day"), createSword());
     const tiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, swordsman),
-      2, 3, createHouseBuilding("night"),
+      2,
+      3,
+      createHouseBuilding("night"),
     );
     const game = makeGame({ tiles });
 
@@ -778,7 +891,9 @@ describe("handleAttack", () => {
   it("rejects attack on own piece", () => {
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2, 3, createPeasant("day"),
+      2,
+      3,
+      createPeasant("day"),
     );
     const game = makeGame({ tiles });
 
@@ -795,7 +910,9 @@ describe("handleAttack", () => {
   it("rejects attack out of range", () => {
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 0, 0, createPeasant("day")),
-      4, 4, createPeasant("night"),
+      4,
+      4,
+      createPeasant("night"),
     );
     const game = makeGame({ tiles });
 
@@ -814,9 +931,13 @@ describe("handleAttack", () => {
     const tiles = placeBuilding(
       placePiece(
         placePiece(make5x5GrassTiles(), 2, 2, angel),
-        2, 3, createKing("night"),
+        2,
+        3,
+        createKing("night"),
       ),
-      2, 3, createCastleBuilding("night"),
+      2,
+      3,
+      createCastleBuilding("night"),
     );
     const game = makeGame({ tiles });
 
@@ -860,7 +981,9 @@ describe("checkWinCondition", () => {
   it("game continues when both kings are alive", () => {
     const tiles = placePiece(
       placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      3, 3, createKing("night"),
+      3,
+      3,
+      createKing("night"),
     );
     const game = makeGame({ tiles });
 
@@ -882,7 +1005,12 @@ describe("checkWinCondition", () => {
 
 describe("handleSummonArchAngel", () => {
   it("rejects summoning without enough praying priests", () => {
-    const tiles = placeBuilding(make5x5GrassTiles(), 2, 2, createChurchBuilding("day"));
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createChurchBuilding("day"),
+    );
     const game = makeGame({ tiles });
 
     const { result } = handleSummonArchAngel(game, {
@@ -898,19 +1026,34 @@ describe("handleSummonArchAngel", () => {
     // Create 10 churches with priests
     const baseTiles = make5x5GrassTiles();
     const positions = [
-      [0, 0], [0, 1], [0, 2], [0, 3], [0, 4],
-      [1, 0], [1, 1], [1, 2], [1, 3], [1, 4],
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [0, 4],
+      [1, 0],
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [1, 4],
     ] as const;
     const tilesWithChurches = positions.reduce(
       (acc, [row, col]) =>
         placeBuilding(
           placePiece(acc, row, col, createPriest("day")),
-          row, col, createChurchBuilding("day"),
+          row,
+          col,
+          createChurchBuilding("day"),
         ),
       baseTiles,
     );
     // Add an empty church for summoning
-    const tiles = placeBuilding(tilesWithChurches, 2, 2, createChurchBuilding("day"));
+    const tiles = placeBuilding(
+      tilesWithChurches,
+      2,
+      2,
+      createChurchBuilding("day"),
+    );
     const game = makeGame({
       tiles,
       dayPlayer: createPlayer({
@@ -958,7 +1101,14 @@ describe("clock and turns", () => {
       tiles,
       dayPlayer: createPlayer({
         type: "day",
-        resources: createResourceMap({ wood: 50, stone: 50, iron: 50, gold: 50, food: 50, faith: 200 }),
+        resources: createResourceMap({
+          wood: 50,
+          stone: 50,
+          iron: 50,
+          gold: 50,
+          food: 50,
+          faith: 200,
+        }),
         research: createResearch({ speedLevel: 1 }), // 30 min per action
       }),
     });
@@ -977,6 +1127,123 @@ describe("clock and turns", () => {
 // ============================================
 // ACTION DISPATCHER TESTS
 // ============================================
+
+describe("handleLoot", () => {
+  it("harvests an adjacent tree for wood and clears it to grass", () => {
+    const tiles = setLandscape(
+      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
+      2,
+      3,
+      treeLandscape(),
+    );
+    const game = makeGame({ tiles });
+    const woodBefore = game.dayPlayer.resources.wood;
+
+    const { game: after, result } = handleLoot(game, {
+      type: "loot",
+      player: "day",
+      piecePosition: { row: 2, column: 2 },
+      targetPosition: { row: 2, column: 3 },
+    });
+
+    expect(result.success).toBe(true);
+    expect(after.dayPlayer.resources.wood).toBe(woodBefore + 1);
+    const looted = after.tiles.find((t) => t.row === 2 && t.column === 3);
+    expect(looted?.landscape?.type).toBe(LandscapeType.grass);
+    expect(looted?.landscape?.lootDrop).toBeUndefined();
+  });
+
+  it("harvests an adjacent mountain for stone", () => {
+    const tiles = setLandscape(
+      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
+      2,
+      3,
+      mountainLandscape(),
+    );
+    const game = makeGame({ tiles });
+    const stoneBefore = game.dayPlayer.resources.stone;
+
+    const { game: after, result } = handleLoot(game, {
+      type: "loot",
+      player: "day",
+      piecePosition: { row: 2, column: 2 },
+      targetPosition: { row: 2, column: 3 },
+    });
+
+    expect(result.success).toBe(true);
+    expect(after.dayPlayer.resources.stone).toBe(stoneBefore + 1);
+  });
+
+  it("rejects looting a non-adjacent tile", () => {
+    const tiles = setLandscape(
+      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
+      4,
+      4,
+      treeLandscape(),
+    );
+    const game = makeGame({ tiles });
+
+    const { result } = handleLoot(game, {
+      type: "loot",
+      player: "day",
+      piecePosition: { row: 2, column: 2 },
+      targetPosition: { row: 4, column: 4 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Target must be adjacent to your piece");
+  });
+
+  it("rejects looting terrain with no loot drop", () => {
+    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const game = makeGame({ tiles });
+
+    const { result } = handleLoot(game, {
+      type: "loot",
+      player: "day",
+      piecePosition: { row: 2, column: 2 },
+      targetPosition: { row: 2, column: 3 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Nothing to harvest here");
+  });
+
+  it("rejects looting without a friendly piece", () => {
+    const tiles = setLandscape(make5x5GrassTiles(), 2, 3, treeLandscape());
+    const game = makeGame({ tiles });
+
+    const { result } = handleLoot(game, {
+      type: "loot",
+      player: "day",
+      piecePosition: { row: 2, column: 2 },
+      targetPosition: { row: 2, column: 3 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("No piece or not your piece");
+  });
+
+  it("rejects looting when it is not the player's turn", () => {
+    const tiles = setLandscape(
+      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("night")),
+      2,
+      3,
+      treeLandscape(),
+    );
+    const game = makeGame({ tiles });
+
+    const { result } = handleLoot(game, {
+      type: "loot",
+      player: "night",
+      piecePosition: { row: 2, column: 2 },
+      targetPosition: { row: 2, column: 3 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Not your turn");
+  });
+});
 
 describe("handleAction", () => {
   it("dispatches move action", () => {
@@ -1002,6 +1269,25 @@ describe("handleAction", () => {
       player: "day",
       buildingType: BuildingType.house,
       position: { row: 2, column: 3 },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("dispatches loot action", () => {
+    const tiles = setLandscape(
+      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
+      2,
+      3,
+      treeLandscape(),
+    );
+    const game = makeGame({ tiles });
+
+    const { result } = handleAction(game, {
+      type: "loot",
+      player: "day",
+      piecePosition: { row: 2, column: 2 },
+      targetPosition: { row: 2, column: 3 },
     });
 
     expect(result.success).toBe(true);

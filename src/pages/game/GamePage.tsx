@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { Canvas } from "../../canvas";
 import { Game } from "../../core/Board";
 import { BuildingType } from "../../core/Building";
+import { EquipmentType } from "@shared/equipment";
 import { ImageAssets, defaultImageAssets } from "../../images";
 import { ThemeImageAssets } from "../../images/theme-image-assets";
 import { supabase, getEdgeFunctionError } from "../../lib/supabase";
@@ -38,7 +39,12 @@ export const GamePage = () => {
     playerParam === "day" || playerParam === "night" ? playerParam : null;
 
   useEffect(() => {
-    if (canvasRef.current === null || wrapperRef.current === null || gameId === undefined || (myPlayerType === null && !isSpectator)) {
+    if (
+      canvasRef.current === null ||
+      wrapperRef.current === null ||
+      gameId === undefined ||
+      (myPlayerType === null && !isSpectator)
+    ) {
       return;
     }
 
@@ -100,9 +106,10 @@ export const GamePage = () => {
           r: (position) => game.build(BuildingType.church, position),
 
           // Unit actions
-          p: (position) => game.createPeasant(position),
-          u: (position) => game.upgrade(position),
-          a: (position) => game.upgradeArcher(position),
+          p: (position) => game.spawnPeasant(position),
+          s: (position) => game.craftEquipment(EquipmentType.sword, position),
+          d: (position) => game.craftEquipment(EquipmentType.shield, position),
+          b: (position) => game.craftEquipment(EquipmentType.bow, position),
           x: (position) => game.attack(position),
         });
       })
@@ -124,13 +131,30 @@ export const GamePage = () => {
     return (
       <Flex className="game-body" align="center" justify="center">
         <VStack gap="4" textAlign="center" maxW="600px" p="10">
-          <Heading fontSize="3rem" bgGradient="to-r" gradientFrom="#ffd54f" gradientTo="#ff6f00" bgClip="text">
+          <Heading
+            fontSize="3rem"
+            bgGradient="to-r"
+            gradientFrom="#ffd54f"
+            gradientTo="#ff6f00"
+            bgClip="text"
+          >
             Heroes of Fright and Panic
           </Heading>
-          <Box bg="rgba(255, 87, 34, 0.15)" border="1px solid #ff5722" color="#ffab91" p="3" borderRadius="lg" fontWeight="700">
+          <Box
+            bg="rgba(255, 87, 34, 0.15)"
+            border="1px solid #ff5722"
+            color="#ffab91"
+            p="3"
+            borderRadius="lg"
+            fontWeight="700"
+          >
             {error}
           </Box>
-          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <ChakraLink
+            asChild
+            textDecoration="none"
+            _hover={{ textDecoration: "none" }}
+          >
             <Link to="/games">
               <Button bg="#ffd54f" color="#0b0906" fontWeight="700" size="lg">
                 Back to Games
@@ -147,13 +171,30 @@ export const GamePage = () => {
     return (
       <Flex className="game-body" align="center" justify="center">
         <VStack gap="4" textAlign="center" maxW="600px" p="10">
-          <Heading fontSize="3rem" bgGradient="to-r" gradientFrom="#ffd54f" gradientTo="#ff6f00" bgClip="text">
+          <Heading
+            fontSize="3rem"
+            bgGradient="to-r"
+            gradientFrom="#ffd54f"
+            gradientTo="#ff6f00"
+            bgClip="text"
+          >
             Heroes of Fright and Panic
           </Heading>
-          <Box bg="rgba(255, 87, 34, 0.15)" border="1px solid #ff5722" color="#ffab91" p="3" borderRadius="lg" fontWeight="700">
+          <Box
+            bg="rgba(255, 87, 34, 0.15)"
+            border="1px solid #ff5722"
+            color="#ffab91"
+            p="3"
+            borderRadius="lg"
+            fontWeight="700"
+          >
             No game ID found
           </Box>
-          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <ChakraLink
+            asChild
+            textDecoration="none"
+            _hover={{ textDecoration: "none" }}
+          >
             <Link to="/games">
               <Button bg="#ffd54f" color="#0b0906" fontWeight="700" size="lg">
                 Back to Games
@@ -170,27 +211,57 @@ export const GamePage = () => {
     return (
       <Flex className="game-body" align="center" justify="center">
         <VStack gap="4" textAlign="center" maxW="600px" p="10">
-          <Heading fontSize="3rem" bgGradient="to-r" gradientFrom="#ffd54f" gradientTo="#ff6f00" bgClip="text">
+          <Heading
+            fontSize="3rem"
+            bgGradient="to-r"
+            gradientFrom="#ffd54f"
+            gradientTo="#ff6f00"
+            bgClip="text"
+          >
             Heroes of Fright and Panic
           </Heading>
           <Text fontSize="1.5rem">Choose your side</Text>
           <HStack gap="4">
-            <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+            <ChakraLink
+              asChild
+              textDecoration="none"
+              _hover={{ textDecoration: "none" }}
+            >
               <Link to={`?player=day`}>
-                <Button bg="#ffd54f" color="#0b0906" fontWeight="700" size="lg" boxShadow="0 4px 0 #b68c1d" _hover={{ transform: "translateY(-2px)" }}>
+                <Button
+                  bg="#ffd54f"
+                  color="#0b0906"
+                  fontWeight="700"
+                  size="lg"
+                  boxShadow="0 4px 0 #b68c1d"
+                  _hover={{ transform: "translateY(-2px)" }}
+                >
                   Day Player
                 </Button>
               </Link>
             </ChakraLink>
-            <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+            <ChakraLink
+              asChild
+              textDecoration="none"
+              _hover={{ textDecoration: "none" }}
+            >
               <Link to={`?player=night`}>
-                <Button bg="#b39ddb" color="#0b0906" fontWeight="700" size="lg" boxShadow="0 4px 0 #664f91" _hover={{ transform: "translateY(-2px)" }}>
+                <Button
+                  bg="#b39ddb"
+                  color="#0b0906"
+                  fontWeight="700"
+                  size="lg"
+                  boxShadow="0 4px 0 #664f91"
+                  _hover={{ transform: "translateY(-2px)" }}
+                >
                   Night Player
                 </Button>
               </Link>
             </ChakraLink>
           </HStack>
-          <Text color="rgba(255, 255, 255, 0.7)" mt="6">Share the other link with your opponent!</Text>
+          <Text color="rgba(255, 255, 255, 0.7)" mt="6">
+            Share the other link with your opponent!
+          </Text>
           <ChakraLink asChild color="rgba(255, 255, 255, 0.7)" mt="2">
             <Link to={`?player=spectator`}>Spectate</Link>
           </ChakraLink>

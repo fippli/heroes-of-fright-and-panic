@@ -3,16 +3,13 @@ import type { LandscapeType } from "./Landscape";
 import type { PieceKind } from "./Piece";
 import type { ResourceMap } from "@shared/player/resource-map";
 
-export type { PlayerType } from "@shared/actions/index";
+import type { PlayerType } from "@shared/actions/index";
 
-export type GameAction = {
-  type: string;
-  player: PlayerType;
-  position?: { row: number; column: number };
-  selectedPosition?: { row: number; column: number };
-  buildingType?: BuildingType;
-  targetKind?: PieceKind;
-};
+export type { PlayerType };
+
+// The client and engine now share a single, type-safe action contract.
+// Re-exported so existing client imports keep working.
+export type { GameAction } from "@shared/actions/index";
 
 type GameClock = {
   time: number;
@@ -22,7 +19,14 @@ type GameClock = {
 
 export type ServerPlayer = {
   type: PlayerType;
-  resources: { wood: number; gold: number; stone: number; food: number; iron?: number; faith?: number };
+  resources: {
+    wood: number;
+    gold: number;
+    stone: number;
+    food: number;
+    iron?: number;
+    faith?: number;
+  };
 };
 
 export type ServerTile = {
