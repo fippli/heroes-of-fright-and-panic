@@ -1,5 +1,6 @@
 import {
   createSystem,
+  defaultConfig,
   defineConfig,
   defineTokens,
   defineSemanticTokens,
@@ -85,4 +86,4 @@ const config = defineConfig({
   },
 });
 
-export const system = createSystem(config);
+export const system = createSystem(defaultConfig, config);

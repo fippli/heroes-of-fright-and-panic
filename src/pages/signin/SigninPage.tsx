@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Button, Input, Text, VStack, Link as ChakraLink } from "@chakra-ui/react";
+import { Box, Button, Input, Link as ChakraLink, chakra } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 import { Field } from "@chakra-ui/react";
 import { supabase } from "../../lib/supabase";
@@ -79,7 +79,13 @@ export const SigninPage = () => {
         </Box>
       )}
 
-      <VStack as="form" onSubmit={handleSubmit} gap="4" align="stretch">
+      <chakra.form
+        onSubmit={handleSubmit}
+        display="flex"
+        flexDirection="column"
+        gap="4"
+        alignItems="stretch"
+      >
         <Field.Root>
           <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Email address</Field.Label>
           <Input
@@ -124,7 +130,7 @@ export const SigninPage = () => {
         >
           {isSubmitting ? "Loading..." : "Sign In"}
         </Button>
-      </VStack>
+      </chakra.form>
 
       <ChakraLink asChild color="brand.contrast" textDecoration="underline" _hover={{ color: "#3d3d3b" }}>
         <Link to="/forgot-password">Forgot password?</Link>
