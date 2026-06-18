@@ -5,7 +5,6 @@ import {
   Button,
   Flex,
   Heading,
-  SimpleGrid,
   Text,
   VStack,
   Link as ChakraLink,
@@ -55,11 +54,7 @@ export const ThemeEditorPage = () => {
       (asset) => asset.category === category && asset.assetKey === assetKey,
     );
 
-  const uploadFile = async (
-    category: string,
-    assetKey: string,
-    file: File,
-  ) => {
+  const uploadFile = async (category: string, assetKey: string, file: File) => {
     if (themeId === undefined) return;
 
     const slotKey = `${category}/${assetKey}`;
@@ -127,9 +122,20 @@ export const ThemeEditorPage = () => {
         <ErrorBox>
           {themeId === undefined ? "No theme ID provided." : "No admin access."}
         </ErrorBox>
-        <ChakraLink asChild mt="4" display="inline-block" textDecoration="none" _hover={{ textDecoration: "none" }}>
+        <ChakraLink
+          asChild
+          mt="4"
+          display="inline-block"
+          textDecoration="none"
+          _hover={{ textDecoration: "none" }}
+        >
           <Link to="/admin/themes">
-            <Button variant="outline" borderColor="fg" color="fg" _hover={{ bg: "bg.muted" }}>
+            <Button
+              variant="outline"
+              borderColor="fg"
+              color="fg"
+              _hover={{ bg: "bg.muted" }}
+            >
               Back
             </Button>
           </Link>
@@ -152,7 +158,7 @@ export const ThemeEditorPage = () => {
       readonly label: string;
     }[],
   ) => (
-    <SimpleGrid columns={[2, 3, 4]} gap="2" w="100%">
+    <Flex wrap="wrap" gap="3">
       {slots.map((slot) => {
         const existingAsset = findAsset(slot.category, slot.key);
         const slotKey = `${slot.category}/${slot.key}`;
@@ -160,9 +166,9 @@ export const ThemeEditorPage = () => {
         const isDraggedOver = dragOver === slotKey;
 
         return (
-          <Box key={slotKey}>
+          <Box key={slotKey} w="120px">
             {existingAsset !== undefined ? (
-              <Box w="100%" aspectRatio="1" position="relative">
+              <Box w="120px" h="120px" position="relative">
                 <img
                   src={themesApi.getPublicUrl(existingAsset.storagePath)}
                   alt={slot.label}
@@ -190,15 +196,17 @@ export const ThemeEditorPage = () => {
                 as="label"
                 align="center"
                 justify="center"
-                w="100%"
-                aspectRatio="1"
+                w="120px"
+                h="120px"
                 border={isDraggedOver ? "2px solid" : "2px dashed"}
                 borderColor="brand.contrast"
                 cursor="pointer"
                 fontSize="1.5rem"
                 opacity={isUploading ? 0.5 : 1}
                 color="brand.contrast"
-                onDrop={(event: DragEvent<HTMLLabelElement>) => handleDrop(slot.category, slot.key, event)}
+                onDrop={(event: DragEvent<HTMLLabelElement>) =>
+                  handleDrop(slot.category, slot.key, event)
+                }
                 onDragOver={(event: DragEvent<HTMLLabelElement>) => {
                   event.preventDefault();
                   setDragOver(slotKey);
@@ -226,7 +234,7 @@ export const ThemeEditorPage = () => {
           </Box>
         );
       })}
-    </SimpleGrid>
+    </Flex>
   );
 
   return (
@@ -249,15 +257,22 @@ export const ThemeEditorPage = () => {
             textDecoration="none"
             _hover={{ textDecoration: "none", opacity: 1 }}
           >
-            <Link to={`/admin/themes/${themeId}/factions/${id}`}>
-              {label}
-            </Link>
+            <Link to={`/admin/themes/${themeId}/factions/${id}`}>{label}</Link>
           </ChakraLink>
         ))}
         <Box mt="auto">
-          <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <ChakraLink
+            asChild
+            textDecoration="none"
+            _hover={{ textDecoration: "none" }}
+          >
             <Link to="/admin/themes">
-              <Button variant="outline" borderColor="fg" color="fg" _hover={{ bg: "bg.muted" }}>
+              <Button
+                variant="outline"
+                borderColor="fg"
+                color="fg"
+                _hover={{ bg: "bg.muted" }}
+              >
                 Back
               </Button>
             </Link>
@@ -282,16 +297,22 @@ export const ThemeEditorPage = () => {
 
         {faction !== undefined && faction !== "landscape" && (
           <>
-            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">Pieces</Heading>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">
+              Pieces
+            </Heading>
             {renderGrid(pieceSlots)}
-            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">Buildings</Heading>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">
+              Buildings
+            </Heading>
             {renderGrid(buildingSlots)}
           </>
         )}
 
         {faction === "landscape" && (
           <>
-            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">Landscape</Heading>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">
+              Landscape
+            </Heading>
             {renderGrid(landscapeSlots)}
           </>
         )}
