@@ -35,31 +35,31 @@ export class DevGame {
   private gameState: GameState;
   private readonly logElement: HTMLElement | null;
 
-  constructor(canvas: Canvas, size: number) {
+  constructor(canvas: Canvas, initialState: GameState) {
     this.canvas = canvas;
     this.dayPlayer = createPlayer({ type: "day" });
     this.nightPlayer = createPlayer({ type: "night" });
     this.imageAssets = defaultImageAssets;
     this.logElement = document.getElementById("dev-log");
 
-    const created = createGame({
-      boardSize: size,
-      name: "Dev Game",
-      alliance: "day",
-      creatorEmail: "dev@local",
-      inviteEmail: null,
-    });
-
-    this.gameState = {
-      id: "dev",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      ...created,
-    };
-
+    this.gameState = initialState;
     this.syncFromState();
-    this.log(`Dev game created (${size}x${size}). Day player's turn.`);
+    this.log(
+      `Loaded "${initialState.name ?? "game"}". ${this.currentPlayer} player's turn.`,
+    );
     this.log("Click to select pieces. Use keyboard shortcuts to act.");
+  }
+
+  /**
+   * Replace the current game with a new state (e.g. when switching scenarios).
+   */
+  load(game: GameState): void {
+    this.gameState = game;
+    this.selectedTile = undefined;
+    this.syncFromState();
+    this.log(
+      `Loaded "${game.name ?? "game"}". ${this.currentPlayer} player's turn.`,
+    );
   }
 
   get player(): Player {
@@ -153,7 +153,9 @@ export class DevGame {
     // Select own piece
     if (clickedTile.piece?.owner?.type === this.currentPlayer) {
       this.selectedTile = clickedTile;
-      this.log(`Selected ${clickedTile.piece.kind} at (${pos.row},${pos.column})`);
+      this.log(
+        `Selected ${clickedTile.piece.kind} at (${pos.row},${pos.column})`,
+      );
       return;
     }
 
@@ -163,13 +165,18 @@ export class DevGame {
       clickedTile.piece === undefined
     ) {
       this.selectedTile = clickedTile;
-      this.log(`Selected ${clickedTile.building.type} at (${pos.row},${pos.column})`);
+      this.log(
+        `Selected ${clickedTile.building.type} at (${pos.row},${pos.column})`,
+      );
       return;
     }
 
     // Move or attack if we have a selection
     if (this.selectedTile !== undefined && this.selectedTile !== null) {
-      const from = { row: this.selectedTile.row, column: this.selectedTile.column };
+      const from = {
+        row: this.selectedTile.row,
+        column: this.selectedTile.column,
+      };
 
       // If target has an enemy piece or building, attack
       if (
@@ -202,6 +209,21 @@ export class DevGame {
         return;
       }
 
+      // Harvest adjacent tree/rock
+      if (
+        clickedTile.landscape?.lootDrop !== undefined &&
+        this.selectedTile.isNeighborTo(pos)
+      ) {
+        this.dispatch({
+          type: "loot",
+          player: this.currentPlayer,
+          piecePosition: from,
+          targetPosition: pos,
+        });
+        this.selectedTile = undefined;
+        return;
+      }
+
       // Otherwise move
       this.dispatch({
         type: "move",
@@ -211,7 +233,9 @@ export class DevGame {
       });
 
       // Re-select piece at new position
-      const newTile = this.findTile(pos);
+      const newTile = this.tiles.find(
+        (tile) => tile.row === pos.row && tile.column === pos.column,
+      );
       if (newTile?.piece?.owner?.type === this.currentPlayer) {
         this.selectedTile = newTile;
       } else {
@@ -319,3 +343,23 @@ export class DevGame {
     }
   }
 }
+
+/**
+ * Build a full random dev game state of the given board size.
+ */
+export const createGeneratedGame = (size: number): GameState => {
+  const created = createGame({
+    boardSize: size,
+    name: `Random ${size}x${size}`,
+    alliance: "day",
+    creatorEmail: "dev@local",
+    inviteEmail: null,
+  });
+
+  return {
+    id: "dev",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...created,
+  };
+};
