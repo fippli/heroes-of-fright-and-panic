@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Canvas } from "../../canvas";
 import { DevGame, createGeneratedGame } from "../../core/DevGame";
 import { BuildingType } from "../../core/Building";
+import { SteedType } from "@shared/steed";
+import { ResearchType } from "@shared/research";
 import { scenarios, buildScenarioGame } from "@shared/scenarios";
 import type { Coordinate } from "../../types/coordinate";
 import "../game/game.css";
@@ -83,6 +85,18 @@ export const DevPage = () => {
       "1": (position) => game.craftSword(position),
       "2": (position) => game.craftShield(position),
       "3": (position) => game.craftBow(position),
+
+      // Building / unit actions (some need a selected source first)
+      e: (position) => game.enterTower(position), // king selected → tower
+      n: (position) => game.trainPriest(position), // on church
+      m: (position) => game.summonArchAngel(position), // on church
+      g: (position) => game.heal(position), // priest selected → ally
+      o: (position) => game.buySteed(SteedType.horse, position), // house selected → tile
+      f: (position) => game.buySteed(SteedType.boat, position), // house selected → water
+      "4": (position) => game.research(ResearchType.speed, position), // on castle
+      "5": (position) => game.research(ResearchType.miningII, position),
+      "6": (position) => game.research(ResearchType.miningIII, position),
+      "7": (position) => game.research(ResearchType.queen, position),
     });
 
     return () => {
@@ -207,6 +221,27 @@ export const DevPage = () => {
               </div>
               <div>
                 <strong>X</strong> — Attack (select first)
+              </div>
+              <div>
+                <strong>E</strong> — Enter Tower → Castle (select king, hover
+                tower)
+              </div>
+              <div>
+                <strong>N</strong> — Train Priest (hover church)
+              </div>
+              <div>
+                <strong>M</strong> — Summon Arch Angel (hover church)
+              </div>
+              <div>
+                <strong>G</strong> — Heal (select priest, hover ally)
+              </div>
+              <div>
+                <strong>O / F</strong> — Buy Horse / Boat (select house, hover
+                tile)
+              </div>
+              <div>
+                <strong>4/5/6/7</strong> — Research speed / miningII / miningIII
+                / queen (hover castle)
               </div>
               <div>
                 <strong>Arrows</strong> — Pan camera

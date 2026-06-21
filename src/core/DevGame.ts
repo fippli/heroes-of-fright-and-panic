@@ -15,6 +15,8 @@ import { createGame } from "@shared/game/create-game.ts";
 import type { Game as GameState } from "@shared/game/types.ts";
 import type { GameAction } from "@shared/actions/index.ts";
 import { EquipmentType } from "@shared/equipment/index.ts";
+import { SteedType } from "@shared/steed/index.ts";
+import { ResearchType } from "@shared/research/index.ts";
 
 /**
  * DevGame - Local game for development/testing.
@@ -316,6 +318,104 @@ export class DevGame {
       type: "attack",
       player: this.currentPlayer,
       attackerPosition: {
+        row: this.selectedTile.row,
+        column: this.selectedTile.column,
+      },
+      targetPosition: { row: tile.row, column: tile.column },
+    });
+  }
+
+  /** Train a priest in the friendly church under the cursor. */
+  trainPriest({ x, y }: Coordinate): void {
+    const tile = this.findTile({ x, y });
+    if (tile === undefined) return;
+
+    this.dispatch({
+      type: "trainPriest",
+      player: this.currentPlayer,
+      churchPosition: { row: tile.row, column: tile.column },
+    });
+  }
+
+  /** Summon an arch angel in the friendly church under the cursor. */
+  summonArchAngel({ x, y }: Coordinate): void {
+    const tile = this.findTile({ x, y });
+    if (tile === undefined) return;
+
+    this.dispatch({
+      type: "summonArchAngel",
+      player: this.currentPlayer,
+      churchPosition: { row: tile.row, column: tile.column },
+    });
+  }
+
+  /** Research a technology at the friendly castle under the cursor. */
+  research(researchType: ResearchType, { x, y }: Coordinate): void {
+    const tile = this.findTile({ x, y });
+    if (tile === undefined) return;
+
+    this.dispatch({
+      type: "research",
+      player: this.currentPlayer,
+      researchType,
+      castlePosition: { row: tile.row, column: tile.column },
+    });
+  }
+
+  /** Move the selected king into the tower under the cursor to form a castle. */
+  enterTower({ x, y }: Coordinate): void {
+    const tile = this.findTile({ x, y });
+    if (tile === undefined) return;
+    if (this.selectedTile === undefined || this.selectedTile === null) {
+      this.log("Select your king first");
+      return;
+    }
+
+    this.dispatch({
+      type: "enterTower",
+      player: this.currentPlayer,
+      kingPosition: {
+        row: this.selectedTile.row,
+        column: this.selectedTile.column,
+      },
+      towerPosition: { row: tile.row, column: tile.column },
+    });
+  }
+
+  /** Heal the friendly piece under the cursor with the selected priest. */
+  heal({ x, y }: Coordinate): void {
+    const tile = this.findTile({ x, y });
+    if (tile === undefined) return;
+    if (this.selectedTile === undefined || this.selectedTile === null) {
+      this.log("Select your priest first");
+      return;
+    }
+
+    this.dispatch({
+      type: "heal",
+      player: this.currentPlayer,
+      priestPosition: {
+        row: this.selectedTile.row,
+        column: this.selectedTile.column,
+      },
+      targetPosition: { row: tile.row, column: tile.column },
+    });
+  }
+
+  /** Place a steed on the tile under the cursor, bought from the selected house. */
+  buySteed(steedType: SteedType, { x, y }: Coordinate): void {
+    const tile = this.findTile({ x, y });
+    if (tile === undefined) return;
+    if (this.selectedTile === undefined || this.selectedTile === null) {
+      this.log("Select your house first");
+      return;
+    }
+
+    this.dispatch({
+      type: "buySteed",
+      player: this.currentPlayer,
+      steedType,
+      housePosition: {
         row: this.selectedTile.row,
         column: this.selectedTile.column,
       },

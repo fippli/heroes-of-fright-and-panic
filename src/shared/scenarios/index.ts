@@ -230,6 +230,56 @@ export const scenarios: ReadonlyArray<Scenario> = [
     buildings: [{ row: 2, column: 6, type: BuildingType.tower, owner: "day" }],
   },
   {
+    id: "enter-tower",
+    name: "Enter tower (castle)",
+    description:
+      "Select the king, then press E while hovering the adjacent tower to turn it into a castle.",
+    map: `
+      . . . . .
+      . k . . .
+      . . . . .
+    `,
+    buildings: [{ row: 1, column: 2, type: BuildingType.tower, owner: "day" }],
+  },
+  {
+    id: "church-actions",
+    name: "Church: priests",
+    description:
+      "Hover the church and press N to train a priest. (M summons an arch angel, which needs 10 praying priests + 100 faith.)",
+    map: `
+      . . . . .
+      . . . . .
+      . . . . .
+    `,
+    buildings: [{ row: 1, column: 1, type: BuildingType.church, owner: "day" }],
+  },
+  {
+    id: "castle-research",
+    name: "Castle: research",
+    description:
+      "Hover the castle and press 4/5/6/7 to research speed / miningII / miningIII / queen.",
+    map: `
+      . . . . .
+      . . . . .
+      . . . . .
+    `,
+    buildings: [{ row: 1, column: 1, type: BuildingType.castle, owner: "day" }],
+  },
+  {
+    id: "house-steeds",
+    name: "House: steeds",
+    description:
+      "Select the house, then press O on a grass tile to buy a horse, or F on the water tile to buy a boat.",
+    map: `
+      . . . . .
+      . . . . .
+      . . . ~ .
+      . . . . .
+      . . . . .
+    `,
+    buildings: [{ row: 2, column: 2, type: BuildingType.house, owner: "day" }],
+  },
+  {
     id: "duel",
     name: "Two kings",
     description:

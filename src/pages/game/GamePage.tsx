@@ -15,6 +15,8 @@ import { Canvas } from "../../canvas";
 import { Game } from "../../core/Board";
 import { BuildingType } from "../../core/Building";
 import { EquipmentType } from "@shared/equipment";
+import { SteedType } from "@shared/steed";
+import { ResearchType } from "@shared/research";
 import { ImageAssets, defaultImageAssets } from "../../images";
 import { ThemeImageAssets } from "../../images/theme-image-assets";
 import { supabase, getEdgeFunctionError } from "../../lib/supabase";
@@ -111,6 +113,18 @@ export const GamePage = () => {
           d: (position) => game.craftEquipment(EquipmentType.shield, position),
           b: (position) => game.craftEquipment(EquipmentType.bow, position),
           x: (position) => game.attack(position),
+
+          // Building / unit actions (some need a selected source first)
+          e: (position) => game.enterTower(position), // king selected → tower
+          n: (position) => game.trainPriest(position), // on church
+          m: (position) => game.summonArchAngel(position), // on church
+          g: (position) => game.heal(position), // priest selected → ally
+          o: (position) => game.buySteed(SteedType.horse, position), // house → tile
+          f: (position) => game.buySteed(SteedType.boat, position), // house → water
+          "4": (position) => game.research(ResearchType.speed, position), // castle
+          "5": (position) => game.research(ResearchType.miningII, position),
+          "6": (position) => game.research(ResearchType.miningIII, position),
+          "7": (position) => game.research(ResearchType.queen, position),
         });
       })
       .catch((err) => {

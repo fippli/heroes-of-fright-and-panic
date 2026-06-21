@@ -10,6 +10,8 @@ import type { GameAction, PlayerType, ServerGameState } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
 import { Notifications } from "./Notifications";
 import { EquipmentType } from "@shared/equipment";
+import { SteedType } from "@shared/steed";
+import { ResearchType } from "@shared/research";
 import { amplifiedView } from "@shared/piece";
 import { createPlayer, type Player } from "@shared/player";
 import type { TilePosition } from "@shared/map/tile";
@@ -588,6 +590,128 @@ export class Game {
       player: this.myPlayerType,
       attackerPosition,
       targetPosition: tilePosition,
+    });
+  }
+
+  /**
+   * Train a priest in the friendly church at the given position
+   */
+  async trainPriest({ x, y }: Coordinate): Promise<void> {
+    if (this.myPlayerType === null) return;
+
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (tilePosition === null) return;
+
+    await this.sendAction({
+      type: "trainPriest",
+      player: this.myPlayerType,
+      churchPosition: tilePosition,
+    });
+  }
+
+  /**
+   * Summon an arch angel in the friendly church at the given position
+   */
+  async summonArchAngel({ x, y }: Coordinate): Promise<void> {
+    if (this.myPlayerType === null) return;
+
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (tilePosition === null) return;
+
+    await this.sendAction({
+      type: "summonArchAngel",
+      player: this.myPlayerType,
+      churchPosition: tilePosition,
+    });
+  }
+
+  /**
+   * Research a technology at the friendly castle at the given position
+   */
+  async research(
+    researchType: ResearchType,
+    { x, y }: Coordinate,
+  ): Promise<void> {
+    if (this.myPlayerType === null) return;
+
+    const tilePosition = this.pixelToTilePosition({ x, y });
+    if (tilePosition === null) return;
+
+    await this.sendAction({
+      type: "research",
+      player: this.myPlayerType,
+      researchType,
+      castlePosition: tilePosition,
+    });
+  }
+
+  /**
+   * Move the selected king into the tower at the given position to form a castle
+   */
+  async enterTower({ x, y }: Coordinate): Promise<void> {
+    if (this.myPlayerType === null) return;
+
+    const towerPosition = this.pixelToTilePosition({ x, y });
+    if (towerPosition === null) return;
+
+    const kingPosition = this.getSelectedPosition();
+    if (kingPosition === undefined) {
+      console.warn("Select your king first");
+      return;
+    }
+
+    await this.sendAction({
+      type: "enterTower",
+      player: this.myPlayerType,
+      kingPosition,
+      towerPosition,
+    });
+  }
+
+  /**
+   * Heal the friendly piece at the given position with the selected priest
+   */
+  async heal({ x, y }: Coordinate): Promise<void> {
+    if (this.myPlayerType === null) return;
+
+    const targetPosition = this.pixelToTilePosition({ x, y });
+    if (targetPosition === null) return;
+
+    const priestPosition = this.getSelectedPosition();
+    if (priestPosition === undefined) {
+      console.warn("Select your priest first");
+      return;
+    }
+
+    await this.sendAction({
+      type: "heal",
+      player: this.myPlayerType,
+      priestPosition,
+      targetPosition,
+    });
+  }
+
+  /**
+   * Place a steed on the given tile, bought from the selected house
+   */
+  async buySteed(steedType: SteedType, { x, y }: Coordinate): Promise<void> {
+    if (this.myPlayerType === null) return;
+
+    const targetPosition = this.pixelToTilePosition({ x, y });
+    if (targetPosition === null) return;
+
+    const housePosition = this.getSelectedPosition();
+    if (housePosition === undefined) {
+      console.warn("Select your house first");
+      return;
+    }
+
+    await this.sendAction({
+      type: "buySteed",
+      player: this.myPlayerType,
+      steedType,
+      housePosition,
+      targetPosition,
     });
   }
 }
