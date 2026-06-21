@@ -37,6 +37,7 @@ import {
   createArchAngel,
   getPieceView,
   getPieceAttackRange,
+  amplifiedView,
   pieceHasEquipment,
   pieceWithEquipment,
   pieceWithHealing,
@@ -1012,22 +1013,22 @@ export const getVisibleTiles = (
   const visible = new Set<string>();
 
   game.tiles.forEach((tile) => {
+    // Pieces are the only source of field of vision. A friendly building the
+    // piece occupies amplifies its view (e.g. a peasant in a tower sees 4).
     if (tile.piece !== null && tile.piece.owner === playerType) {
-      const tilesInRange = findTilesInRange(
-        game.tiles,
-        tile,
-        getPieceView(tile.piece),
-      );
+      const occupiedBuilding =
+        tile.building !== null && tile.building.owner === playerType
+          ? tile.building.viewRange
+          : undefined;
+      const view = amplifiedView(getPieceView(tile.piece), occupiedBuilding);
+      const tilesInRange = findTilesInRange(game.tiles, tile, view);
       tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
     }
 
+    // Buildings produce no field of vision of their own, but you always see
+    // your own building's tile, and Queen research reveals its neighbors.
     if (tile.building !== null && tile.building.owner === playerType) {
-      const tilesInRange = findTilesInRange(
-        game.tiles,
-        tile,
-        tile.building.viewRange,
-      );
-      tilesInRange.forEach((pos) => visible.add(`${pos.row},${pos.column}`));
+      visible.add(`${tile.row},${tile.column}`);
 
       if (player.research.hasQueen) {
         const neighbors = findNeighborTiles(game.tiles, tile);

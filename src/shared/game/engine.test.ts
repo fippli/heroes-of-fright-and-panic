@@ -50,6 +50,7 @@ import {
   handleLoot,
   checkWinCondition,
   handleAction,
+  getVisibleTiles,
 } from "./engine.ts";
 import type { Game, GameClock } from "./types.ts";
 
@@ -1242,6 +1243,79 @@ describe("handleLoot", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Not your turn");
+  });
+});
+
+describe("getVisibleTiles", () => {
+  it("reveals one ring around a lone peasant", () => {
+    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const game = makeGame({ tiles });
+
+    const visible = getVisibleTiles(game, "day");
+
+    expect(visible.has("2,2")).toBe(true);
+    expect(visible.has("2,3")).toBe(true); // adjacent
+    expect(visible.has("0,2")).toBe(false); // two rings away
+  });
+
+  it("amplifies a peasant's view to the tower it occupies", () => {
+    const tiles = placeBuilding(
+      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
+      2,
+      2,
+      createTowerBuilding("day"),
+    );
+    const game = makeGame({ tiles });
+
+    const visible = getVisibleTiles(game, "day");
+
+    // Tower view (4) > peasant view (1): tiles two rings out are now visible.
+    expect(visible.has("0,2")).toBe(true);
+    expect(visible.has("2,0")).toBe(true);
+  });
+
+  it("an unoccupied building reveals only its own tile, no vision radius", () => {
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createTowerBuilding("day"),
+    );
+    const game = makeGame({ tiles });
+
+    const visible = getVisibleTiles(game, "day");
+
+    expect(visible.has("2,2")).toBe(true); // you always see your own building
+    expect(visible.has("2,3")).toBe(false); // but it projects no vision
+  });
+
+  it("Queen research reveals tiles adjacent to your buildings", () => {
+    const tiles = placeBuilding(
+      make5x5GrassTiles(),
+      2,
+      2,
+      createTowerBuilding("day"),
+    );
+    const game = makeGame({
+      tiles,
+      dayPlayer: createPlayer({
+        type: "day",
+        research: createResearch({ hasQueen: true }),
+      }),
+    });
+
+    const visible = getVisibleTiles(game, "day");
+
+    expect(visible.has("2,3")).toBe(true);
+  });
+
+  it("does not reveal tiles for the enemy player's pieces", () => {
+    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("night"));
+    const game = makeGame({ tiles });
+
+    const visible = getVisibleTiles(game, "day");
+
+    expect(visible.has("2,2")).toBe(false);
   });
 });
 

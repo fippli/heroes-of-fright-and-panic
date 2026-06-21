@@ -128,6 +128,8 @@ There are five building types. All buildings have 1 defense and 0 hearts.
 | Wall   | 1 stone             | 0          | Owner only   | Defensive barrier. |
 | Church | 3 wood + 3 stone    | 1          | Both players | Trains priests. Priests inside generate faith. |
 
+A building's View Range is not standalone vision — it only takes effect when a friendly piece occupies the building, amplifying that piece's view (see [Fog of War](#fog-of-war)).
+
 ---
 
 ## Equipment
@@ -264,11 +266,17 @@ A player loses if either condition is met:
 
 ## Fog of War
 
-Tiles are visible within the view range of a player's own pieces and buildings. Non-visible tiles are shown as unexplored.
+Field of vision comes from **pieces only**. Tiles are visible within the view range of a player's own pieces; non-visible tiles are shown as unexplored.
+
+Buildings produce no field of vision on their own. A player always sees the tile their own building occupies, but an empty building reveals nothing around it.
+
+### Building-Amplified Vision
+
+When a friendly piece occupies a building, the piece's view range is amplified to the larger of its own view and the building's view range. For example, a peasant (view 1) standing in a tower (view range 4) sees 4 rings; a king (view 2) in a castle (view range 3) sees 3.
 
 ### Queen Research
 
-When Queen research is unlocked, all tiles adjacent to the player's buildings become visible.
+When Queen research is unlocked, all tiles adjacent to the player's buildings become visible (the one case where a building grants vision without an occupant).
 
 ---
 

@@ -34,10 +34,18 @@ import {
   type Piece,
   type PlayerType,
 } from "@shared/piece/index.ts";
+import { BuildingType, createBuilding } from "@shared/building/index.ts";
 import { createPlayer } from "@shared/player/index.ts";
 import { createResourceMap } from "@shared/player/resource-map.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { Game, GameClock } from "@shared/game/types.ts";
+
+type ScenarioBuilding = {
+  readonly row: number;
+  readonly column: number;
+  readonly type: BuildingType;
+  readonly owner: PlayerType;
+};
 
 export type Scenario = {
   readonly id: string;
@@ -45,6 +53,9 @@ export type Scenario = {
   readonly description: string;
   readonly map: string;
   readonly currentPlayer?: PlayerType;
+  // Buildings are placed by coordinate after the ASCII terrain/pieces are laid
+  // out (the grid only encodes terrain and pieces).
+  readonly buildings?: ReadonlyArray<ScenarioBuilding>;
 };
 
 type TokenSpec = {
@@ -114,6 +125,15 @@ export const buildScenarioGame = (scenario: Scenario): Game => {
   const tiles = rows.flatMap((tokens, row) =>
     tokens.map((token, column) => tokenToTile(token, row, column)),
   );
+  const tilesWithBuildings = (scenario.buildings ?? []).reduce(
+    (acc, spec) =>
+      acc.map((tile) =>
+        tile.row === spec.row && tile.column === spec.column
+          ? { ...tile, building: createBuilding(spec.type, spec.owner) }
+          : tile,
+      ),
+    tiles,
+  );
   const size = Math.max(rows.length, ...rows.map((tokens) => tokens.length));
   const currentPlayer = scenario.currentPlayer ?? "day";
 
@@ -123,7 +143,7 @@ export const buildScenarioGame = (scenario: Scenario): Game => {
     updatedAt: new Date(),
     name: scenario.name,
     size,
-    tiles,
+    tiles: tilesWithBuildings,
     dayPlayer: createPlayer({ type: "day", resources: sandboxResources() }),
     nightPlayer: createPlayer({ type: "night", resources: sandboxResources() }),
     currentPlayer,
@@ -194,6 +214,20 @@ export const scenarios: ReadonlyArray<Scenario> = [
       . p M . .
       . . . . .
     `,
+  },
+  {
+    id: "tower-vision",
+    name: "Tower vision",
+    description:
+      "Two day peasants. The left one alone sees one ring; the right one stands in a tower and its vision is amplified to the tower's range (4). Select each to compare the highlighted view area.",
+    map: `
+      . . . . . . . . .
+      . . . . . . . . .
+      . p . . . . p . .
+      . . . . . . . . .
+      . . . . . . . . .
+    `,
+    buildings: [{ row: 2, column: 6, type: BuildingType.tower, owner: "day" }],
   },
   {
     id: "duel",

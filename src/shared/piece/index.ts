@@ -1,7 +1,10 @@
 import { LandscapeType } from "@shared/map/landscape.ts";
 import { type Equipment, EquipmentType } from "@shared/equipment/index.ts";
 import type { Steed } from "@shared/steed/index.ts";
-import { createResourceMap, type ResourceMap } from "@shared/player/resource-map.ts";
+import {
+  createResourceMap,
+  type ResourceMap,
+} from "@shared/player/resource-map.ts";
 
 export type PlayerType = "day" | "night";
 
@@ -133,6 +136,16 @@ export const getPieceView = (piece: Piece): number => {
   const steedBonus = piece.steed !== null ? piece.steed.viewBonus : 0;
   return piece.baseView + steedBonus;
 };
+
+/**
+ * A piece's effective vision when standing on a friendly building: its own view
+ * amplified up to the building's view range (a peasant in a tower sees as far
+ * as the tower). Buildings grant no vision of their own when unoccupied.
+ */
+export const amplifiedView = (
+  pieceView: number,
+  buildingViewRange?: number,
+): number => Math.max(pieceView, buildingViewRange ?? 0);
 
 export const getPieceMove = (piece: Piece): number => {
   const steedBonus = piece.steed !== null ? piece.steed.moveBonus : 0;

@@ -10,6 +10,7 @@ import type { GameAction, PlayerType, ServerGameState } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
 import { Notifications } from "./Notifications";
 import { EquipmentType } from "@shared/equipment";
+import { amplifiedView } from "@shared/piece";
 import { createPlayer, type Player } from "@shared/player";
 import type { TilePosition } from "@shared/map/tile";
 import { renderResourcesInDOM } from "./render-resources";
@@ -293,14 +294,20 @@ export class Game {
     this.tiles.forEach((tile) => {
       if (tile.piece?.owner?.type === this.myPlayerType) {
         tile.explored = true;
-        const viewRange = Math.max(
-          tile.building?.viewRange ?? 0,
+        // A piece's view is amplified by a friendly building it occupies.
+        const buildingView =
+          tile.building?.owner?.type === this.myPlayerType
+            ? tile.building.viewRange
+            : undefined;
+        const viewRange = amplifiedView(
           tile.piece?.viewRange ?? 0,
+          buildingView,
         );
         const tilesInRange = tile.getTilesInRange(this.tiles, viewRange);
         tilesInRange.forEach((rangeTile) => (rangeTile.explored = true));
       }
 
+      // You always see your own building's tile (buildings emit no vision).
       if (tile.building?.owner?.type === this.myPlayerType) {
         tile.explored = true;
       }
