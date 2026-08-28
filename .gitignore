@@ -34,3 +34,6 @@ supabase/functions/shared/
 supabase/.temp/
 games/
 screenshots/
+
+# Claude Code local config
+.claude/

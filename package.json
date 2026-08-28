@@ -10,7 +10,7 @@
     "dev": "vite",
     "copy:shared": "rm -rf supabase/functions/shared && cp -r src/shared supabase/functions/shared",
     "deploy:functions": "pnpm copy:shared && pnpm dlx supabase functions deploy game-create && pnpm dlx supabase functions deploy game-join && pnpm dlx supabase functions deploy game-action && pnpm dlx supabase functions deploy game-state",
-    "build": "vite build",
+    "build": "vite build && cp dist/index.html dist/404.html",
     "lint": "oxlint .",
     "format": "prettier --write .",
     "test": "vitest",
