@@ -10,6 +10,7 @@ Asynchronous turn-based strategy game for two players on a hexagonal grid.
 - [CLI Reference](cli.md) — Command-line interface: create games, play interactively or with AI, spectate, and connect to Supabase
 - [API Reference](api.md) — Supabase edge functions: game-create, game-action, game-state, game-join
 - [Development Guide](development.md) — Setup, tooling, code conventions, and testing
+- [Road to Playable v1](v1-plan.md) — Status report, gap list, and milestone plan for the first complete playable version
 
 ## Quick Links
 

@@ -15,6 +15,7 @@ const DOCS: ReadonlyArray<{ readonly slug: string; readonly title: string }> = [
   { slug: "cli", title: "CLI Reference" },
   { slug: "api", title: "API Reference" },
   { slug: "development", title: "Development Guide" },
+  { slug: "v1-plan", title: "Road to Playable v1" },
 ];
 
 // ============================================
