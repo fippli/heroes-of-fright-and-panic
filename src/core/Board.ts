@@ -17,6 +17,7 @@ import { createPlayer, type Player } from "@shared/player";
 import type { TilePosition } from "@shared/map/tile";
 import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
+import { boundsOfTiles, focusPoint } from "./viewport";
 
 /**
  * Game class - Client-side render-only implementation
@@ -52,6 +53,9 @@ export class Game {
 
   // Track previous time for transition detection
   private previousWasDay: boolean = true;
+
+  // Whether the view has been positioned on the player's pieces yet
+  private viewInitialized: boolean = false;
 
   // Game over state
   gameOver: boolean = false;
@@ -107,6 +111,10 @@ export class Game {
     this.gameOver = parsed.gameOver;
     this.winner = parsed.winner;
 
+    if (!this.viewInitialized && this.tiles.length > 0) {
+      this.initializeView();
+    }
+
     // Detect time transitions for dialogs
     const wasDay = this.previousWasDay;
     const isNowDay = this.clock.isDay();
@@ -116,6 +124,20 @@ export class Game {
       this.dialog.open({ title: "Dawn", content: "The sun is rising" });
     }
     this.previousWasDay = isNowDay;
+  }
+
+  /**
+   * Constrain panning to the map and position the view: where the URL says
+   * it was (survives a refresh), else centered on this player's king (or
+   * first owned piece). Spectators default to the map center.
+   */
+  private initializeView(): void {
+    this.viewInitialized = true;
+    const bounds = boundsOfTiles(this.tiles);
+    this.canvas.setContentBounds(bounds);
+    if (!this.canvas.restoreViewFromUrl()) {
+      this.canvas.centerOn(focusPoint(this.tiles, this.myPlayerType, bounds));
+    }
   }
 
   /**

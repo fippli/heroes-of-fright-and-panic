@@ -17,6 +17,7 @@ import type { GameAction } from "@shared/actions/index.ts";
 import { EquipmentType } from "@shared/equipment/index.ts";
 import { SteedType } from "@shared/steed/index.ts";
 import { ResearchType } from "@shared/research/index.ts";
+import { boundsOfTiles, focusPoint } from "./viewport";
 
 /**
  * DevGame - Local game for development/testing.
@@ -46,6 +47,7 @@ export class DevGame {
 
     this.gameState = initialState;
     this.syncFromState();
+    this.focusView(true);
     this.log(
       `Loaded "${initialState.name ?? "game"}". ${this.currentPlayer} player's turn.`,
     );
@@ -59,6 +61,7 @@ export class DevGame {
     this.gameState = game;
     this.selectedTile = undefined;
     this.syncFromState();
+    this.focusView();
     this.log(
       `Loaded "${game.name ?? "game"}". ${this.currentPlayer} player's turn.`,
     );
@@ -66,6 +69,20 @@ export class DevGame {
 
   get player(): Player {
     return this.currentPlayer === "day" ? this.dayPlayer : this.nightPlayer;
+  }
+
+  /**
+   * Constrain panning to the map and center on the current player's king.
+   * On first load the view stored in the URL (from earlier scrolling) wins,
+   * so a refresh keeps the camera where it was.
+   */
+  private focusView(restoreFromUrl: boolean = false): void {
+    const bounds = boundsOfTiles(this.tiles);
+    this.canvas.setContentBounds(bounds);
+    if (restoreFromUrl && this.canvas.restoreViewFromUrl()) {
+      return;
+    }
+    this.canvas.centerOn(focusPoint(this.tiles, this.currentPlayer, bounds));
   }
 
   // ============================================
