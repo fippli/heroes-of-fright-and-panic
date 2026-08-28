@@ -1,6 +1,6 @@
 # Road to Playable v1
 
-Status report and plan for shipping the first complete, playable version of Heroes of Fright and Panic. Written 2026-08-28 against commit `c79e48a`.
+Status report and plan for shipping the first complete, playable version of Dusk and Dawn. Written 2026-08-28 against commit `c79e48a`.
 
 **Definition of v1:** two people (or one person and the AI) can create a game, find it, play it through to a king's death in the browser without reading the source, without the game freezing, and with enough on-screen information to make decisions.
 

@@ -1,4 +1,4 @@
-# Heroes of Fright and Panic
+# Dusk and Dawn
 
 Asynchronous turn-based strategy game for two players on a hexagonal grid.
 

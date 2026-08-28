@@ -1,4 +1,4 @@
-# Heroes of Fright and Panic - Game Specification
+# Dusk and Dawn - Game Specification
 
 Asynchronous turn-based strategy game for two players on a hexagonal grid. Players alternate control based on an in-game day/night cycle.
 

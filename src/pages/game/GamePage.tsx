@@ -152,7 +152,7 @@ export const GamePage = () => {
             gradientTo="#ff6f00"
             bgClip="text"
           >
-            Heroes of Fright and Panic
+            Dusk and Dawn
           </Heading>
           <Box
             bg="rgba(255, 87, 34, 0.15)"
@@ -192,7 +192,7 @@ export const GamePage = () => {
             gradientTo="#ff6f00"
             bgClip="text"
           >
-            Heroes of Fright and Panic
+            Dusk and Dawn
           </Heading>
           <Box
             bg="rgba(255, 87, 34, 0.15)"
@@ -232,7 +232,7 @@ export const GamePage = () => {
             gradientTo="#ff6f00"
             bgClip="text"
           >
-            Heroes of Fright and Panic
+            Dusk and Dawn
           </Heading>
           <Text fontSize="1.5rem">Choose your side</Text>
           <HStack gap="4">

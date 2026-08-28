@@ -5,7 +5,7 @@ import { runAutoPlay } from "./commands/auto-play.ts";
 import { runLogin } from "./commands/login.ts";
 
 const USAGE = `
-Heroes of Fright and Panic — CLI
+Dusk and Dawn — CLI
 
 Usage:
   cli create    --size <n> --seed <s> --out <path>    Create a new game

@@ -1,6 +1,6 @@
 # Game Data Classes
 
-This document describes the core data classes and their relationships in Heroes of Fright and Panic.
+This document describes the core data classes and their relationships in Dusk and Dawn.
 
 ## Class Diagram
 

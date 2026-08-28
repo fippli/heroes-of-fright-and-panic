@@ -5,6 +5,11 @@ import { Piece } from "./Piece";
 import { createPlayer, type Player } from "@shared/player";
 import {
   type Piece as EnginePiece,
+  PieceKind,
+  createArchAngel,
+  createKing,
+  createPeasant,
+  createPriest,
   getPieceView,
   getPieceAttackRange,
   getWalkableLandscape,
@@ -40,11 +45,47 @@ const parseTile = (tile: ServerTile): Tile =>
     piece: tile.piece != null ? parsePiece(tile.piece) : undefined,
   });
 
+type ServerPiece = NonNullable<ServerTile["piece"]>;
+
+const defaultEnginePiece = (kind: PieceKind, owner: "day" | "night"): EnginePiece => {
+  switch (kind) {
+    case PieceKind.king:
+      return createKing(owner);
+    case PieceKind.priest:
+      return createPriest(owner);
+    case PieceKind.archAngel:
+      return createArchAngel(owner);
+    case PieceKind.peasant:
+    default:
+      return createPeasant(owner);
+  }
+};
+
+// Games saved before the engine overhaul may lack equipment/steed/base stats.
+// Fill anything missing from the kind's factory defaults so the shared getters
+// never see a partial piece.
+export const normalizePiece = (serverPiece: ServerPiece): EnginePiece => {
+  const owner = serverPiece.owner ?? "day";
+  const defaults = defaultEnginePiece(serverPiece.kind, owner);
+  const definedFields = Object.fromEntries(
+    Object.entries(serverPiece).filter(([, value]) => value !== undefined),
+  );
+  return {
+    ...defaults,
+    ...definedFields,
+    owner,
+    equipment: Array.isArray(serverPiece.equipment)
+      ? (serverPiece.equipment as EnginePiece["equipment"])
+      : defaults.equipment,
+    steed: (serverPiece.steed ?? null) as EnginePiece["steed"],
+  };
+};
+
 // Engine pieces carry base stats + equipment/steed, not the effective ranges
 // the renderer needs. Derive them with the shared getters so the view/move
 // overlays match what the engine will actually allow.
-const parsePiece = (serverPiece: NonNullable<ServerTile["piece"]>): Piece => {
-  const enginePiece = serverPiece as unknown as EnginePiece;
+const parsePiece = (serverPiece: ServerPiece): Piece => {
+  const enginePiece = normalizePiece(serverPiece);
   return new Piece({
     kind: serverPiece.kind,
     viewRange: serverPiece.viewRange ?? getPieceView(enginePiece),

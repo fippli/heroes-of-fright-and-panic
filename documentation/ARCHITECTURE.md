@@ -1,6 +1,6 @@
 # System Architecture
 
-This document provides an overview of the Heroes of Fright and Panic system architecture.
+This document provides an overview of the Dusk and Dawn system architecture.
 
 ## High-Level Architecture
 

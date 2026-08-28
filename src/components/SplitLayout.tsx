@@ -24,11 +24,11 @@ export const SplitLayout = ({ pageTitle, children }: SplitLayoutProps) => {
           lineHeight="1.1"
           textShadow="0px 0px 25px #1d1d1b"
         >
-          Heroes
+          Dusk
           <br />
-          of Fright
+          and
           <br />
-          and Panic
+          Dawn
         </Heading>
       </Flex>
 

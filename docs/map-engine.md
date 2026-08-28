@@ -1,6 +1,6 @@
 # Map Engine
 
-Design document for the procedural map generation system in Heroes of Fright and Panic.
+Design document for the procedural map generation system in Dusk and Dawn.
 
 ## Hex grid
 

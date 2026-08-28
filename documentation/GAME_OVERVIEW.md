@@ -1,8 +1,8 @@
-# Heroes of Fright and Panic - Game Documentation
+# Dusk and Dawn - Game Documentation
 
 ## Overview
 
-**Heroes of Fright and Panic** (also referred to as "Tower Game" or "Forest Game") is a turn-based strategy game featuring two opposing players who take turns based on a day/night cycle. The game is played on a procedurally generated hexagonal tile map where players gather resources, build structures, train units, and compete for territory control.
+**Dusk and Dawn** (also referred to as "Tower Game" or "Forest Game") is a turn-based strategy game featuring two opposing players who take turns based on a day/night cycle. The game is played on a procedurally generated hexagonal tile map where players gather resources, build structures, train units, and compete for territory control.
 
 ## Core Concept
 

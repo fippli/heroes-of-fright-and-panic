@@ -1,4 +1,4 @@
--- Supabase PostgreSQL Schema for Heroes of Fright and Panic
+-- Supabase PostgreSQL Schema for Dusk and Dawn
 -- Run this in your Supabase SQL Editor to set up the database
 
 -- Games table

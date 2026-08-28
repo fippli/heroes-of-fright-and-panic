@@ -1,6 +1,6 @@
 # Database Structure
 
-Heroes of Fright and Panic uses **MongoDB** as its database. This document describes the database schema and data structures.
+Dusk and Dawn uses **MongoDB** as its database. This document describes the database schema and data structures.
 
 ## Database Configuration
 
