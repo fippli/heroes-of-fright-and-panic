@@ -56,7 +56,21 @@ def generate_mark(key, seed):
     print("generated mark", key)
     return path
 
+def flat_noisy_base():
+    """Flat parchment with faint 2-tone noise: no stains or repeated features to spot across hexes."""
+    import random
+    rng = random.Random(7)
+    im = Image.new("RGBA", (SIZE, SIZE), (236, 222, 190, 255))
+    px = im.load()
+    for y in range(SIZE):
+        for x in range(SIZE):
+            if rng.random() < 0.18:
+                px[x, y] = (228, 213, 178, 255)
+    return im
+
 def parchment_base():
+    if SIZE <= 48:
+        return flat_noisy_base()
     # Cleanest blank parchment we have; fall back to a flat colour
     for cand in ("grass-v3.png", "unexplored-v1.png", "farm-v1.png"):
         p = os.path.join(BASE_DIR, cand)
@@ -72,7 +86,7 @@ def procedural_marks(key, tile):
     rng = random.Random(hash(key) & 0xffff)
     d = ImageDraw.Draw(tile)
     ink = darker(TINTS[key][0])
-    n = max(3, SIZE // 6)
+    n = max(2, SIZE // 12)
     for _ in range(n):
         x, y = rng.randrange(1, SIZE - 3), rng.randrange(1, SIZE - 3)
         if key == "grass":       # small V tufts

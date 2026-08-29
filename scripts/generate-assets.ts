@@ -245,7 +245,7 @@ const paperPromptFor = (category: AssetCategory, key: string): Prompt => {
 };
 
 const LOFI_SUFFIX =
-  "simple minimal pixel art map icon, thin ink outline, muted parchment colours, very few colours, chunky pixels, no background";
+  "extremely simple minimal pixel art icon, blocky, flat colours, only 3 or 4 colours, no fine details, thin dark outline, muted parchment palette, no background";
 
 // Lo-fi: keep only the subject clause of the paper prompt and a short faction hint
 const lofiPromptFor = (category: AssetCategory, key: string): Prompt => {
