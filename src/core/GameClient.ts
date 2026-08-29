@@ -23,6 +23,9 @@ export class GameClient {
         const { data, error } = await supabase.functions.invoke("game-state", {
           body: { gameId },
         });
+        // An action started while this poll was in flight; its response is
+        // newer than this snapshot, so drop it.
+        if (this.isProcessingAction) return;
         if (error === null && data !== null) {
           onUpdate(data as ServerGameState);
         }

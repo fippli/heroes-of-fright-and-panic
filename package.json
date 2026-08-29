@@ -8,8 +8,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "copy:shared": "rm -rf supabase/functions/shared && cp -r src/shared supabase/functions/shared",
-    "deploy:functions": "pnpm copy:shared && pnpm dlx supabase functions deploy game-create && pnpm dlx supabase functions deploy game-join && pnpm dlx supabase functions deploy game-action && pnpm dlx supabase functions deploy game-state",
+    "copy:shared": "rm -rf supabase/functions/shared && cp -r src/shared supabase/functions/shared && pnpm stamp:version",
+    "stamp:version": "printf 'export const engineVersion = \"%s\";\n' \"$(git rev-parse --short HEAD)$(git diff --quiet || echo -dirty) $(date -u +%Y-%m-%dT%H:%MZ)\" > supabase/functions/shared/version.ts",
+    "deploy:functions": "pnpm copy:shared && pnpm dlx supabase functions deploy game-create && pnpm dlx supabase functions deploy game-join && pnpm dlx supabase functions deploy game-action && pnpm dlx supabase functions deploy game-state && pnpm dlx supabase functions deploy game-debug",
+    "deploy:debug": "pnpm copy:shared && pnpm dlx supabase functions deploy game-debug",
+    "debug:game": "npx tsx scripts/game-debug.ts",
     "build": "vite build && cp dist/index.html dist/404.html",
     "lint": "oxlint .",
     "format": "prettier --write .",

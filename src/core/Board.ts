@@ -18,6 +18,7 @@ import type { TilePosition } from "@shared/map/tile";
 import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
 import { boundsOfTiles, focusPoint } from "./viewport";
+import { predictAction } from "./predict";
 
 /**
  * Game class - Client-side render-only implementation
@@ -56,6 +57,10 @@ export class Game {
 
   // Whether the view has been positioned on the player's pieces yet
   private viewInitialized: boolean = false;
+
+  // Last state confirmed by the server; the base for optimistic predictions
+  // and what we fall back to when a prediction is not confirmed.
+  private lastServerState: ServerGameState | null = null;
 
   // Game over state
   gameOver: boolean = false;
@@ -138,12 +143,27 @@ export class Game {
     if (!this.canvas.restoreViewFromUrl()) {
       this.canvas.centerOn(focusPoint(this.tiles, this.myPlayerType, bounds));
     }
+
+    // A player with no pieces at all can only mean the game was stored in an
+    // older data model the client no longer understands. Say so instead of
+    // showing an unexplained blank map.
+    const hasOwnPiece = this.tiles.some(
+      (tile) => tile.piece?.owner?.type === this.myPlayerType,
+    );
+    if (this.myPlayerType !== null && !hasOwnPiece) {
+      this.dialog.open({
+        title: "Incompatible game",
+        content:
+          "This game was created with an older version and has no pieces the current game can read. Start a new game to play.",
+      });
+    }
   }
 
   /**
    * Parse game state from server response
    */
   parse(game: ServerGameState): void {
+    this.lastServerState = game;
     this.applyGameState(game);
 
     console.log("Game state parsed", {
@@ -185,6 +205,7 @@ export class Game {
     const wasMyTurn = this.isMyTurn;
     const wasGameOver = this.gameOver;
 
+    this.lastServerState = game;
     this.applyGameState(game);
 
     // Handle game over (only show dialog once)
@@ -390,9 +411,21 @@ export class Game {
       return false;
     }
 
+    // Optimistic update: run the same engine locally and render the outcome
+    // right away. The server's response below always replaces it.
+    const baseline = this.lastServerState;
+    const predicted = baseline !== null ? predictAction(baseline, action) : null;
+    if (predicted !== null) {
+      this.applyGameState(predicted);
+    }
+
     const { success, response } = await this.client.sendAction(this.id, action);
 
     if (response === undefined) {
+      // Request failed outright: undo the prediction
+      if (predicted !== null && baseline !== null) {
+        this.applyGameState(baseline);
+      }
       return false;
     }
 
@@ -405,6 +438,8 @@ export class Game {
       console.warn("Action failed:", response.result.error);
       if (response.game !== undefined) {
         this.parseQuiet(response.game);
+      } else if (predicted !== null && baseline !== null) {
+        this.applyGameState(baseline);
       }
     }
 

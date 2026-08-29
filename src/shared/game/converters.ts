@@ -2,6 +2,16 @@ import type { Tile } from "../map/tile.ts";
 import { createPlayer } from "../player/index.ts";
 import type { Game, GameRow } from "./types.ts";
 
+// Rows written before the engine overhaul omit `piece`/`building` keys
+// entirely instead of storing null. The engine relies on `!== null` checks,
+// so fill them in to keep legacy games from crashing it.
+const normalizeTile = (tile: Tile): Tile => ({
+  ...tile,
+  landscape: tile.landscape ?? null,
+  piece: tile.piece ?? null,
+  building: tile.building ?? null,
+});
+
 // Convert database row to application type.
 // The factory calls normalize potentially missing fields (e.g. old rows
 // before faith/research were added) by filling in defaults.
@@ -11,7 +21,7 @@ export const rowToGame = (row: GameRow): Game => ({
   updatedAt: new Date(row.updated_at),
   name: row.name ?? undefined,
   size: row.size,
-  tiles: row.tiles,
+  tiles: row.tiles.map(normalizeTile),
   dayPlayer: createPlayer(row.day_player),
   nightPlayer: createPlayer(row.night_player),
   currentPlayer: row.current_player,
