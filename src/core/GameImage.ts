@@ -29,6 +29,10 @@ export class GameImage {
       return;
     }
 
+    // Pixel-art sprites smaller than their drawn size must scale with hard
+    // pixels; larger sources (photos, 1024px defaults) look better smoothed.
+    const upscaling = this.image.naturalWidth < this.width;
+    ctx.imageSmoothingEnabled = !upscaling;
     ctx.drawImage(this.image, x, y, this.width, this.height);
   }
 

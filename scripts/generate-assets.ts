@@ -2,7 +2,7 @@
  * Generate the game's sprite set with PixelLab and optionally upload it as a
  * theme.
  *
- *   pnpm assets:generate [--variants 2] [--concurrency 6] [--size 128]
+ *   pnpm assets:generate [--style default|paper] [--lofi] [--variants 2] [--concurrency 6] [--size 128]
  *                        [--only king_day,grass] [--out generated/assets]
  *   pnpm assets:upload --theme "Dusk and Dawn v1" [--out generated/assets]
  *                      [--picks generated/assets/picks.json]
@@ -52,8 +52,14 @@ const readPixellabKey = (): string => {
   return parsed.api_key;
 };
 
-const outDir = path.resolve(flag("--out", "generated/assets"));
-const size = Number(flag("--size", "128"));
+const style = flag("--style", "default");
+const lofi = args.includes("--lofi");
+const outDir = path.resolve(
+  flag("--out", style === "paper" ? (lofi ? "generated/paper32" : "generated/paper") : "generated/assets"),
+);
+const size = Number(flag("--size", lofi ? "32" : "128"));
+// Request a larger canvas than the target (terrain gets center-cropped afterwards)
+const genSize = Number(flag("--gen-size", String(size)));
 const variants = Number(flag("--variants", "2"));
 const concurrency = Number(flag("--concurrency", "6"));
 const only = flag("--only", "")
@@ -145,7 +151,114 @@ const LANDSCAPE: Record<string, string> = {
   mountain: "grey rocky mountain peaks with snowy tops seen from above, seamless top-down terrain tile texture",
 };
 
+// ---- "Fantasy paper map" style: sepia parchment, ink linework, map icons ----
+
+const PAPER_SUFFIX =
+  "fantasy paper map style, hand-drawn ink linework on aged parchment, sepia and muted earth tones, illustrative, clean";
+const PAPER_DAY = "Day alliance, warm ochre and cream accents";
+const PAPER_NIGHT = "Night alliance, dark ink and muted violet accents";
+
+const paperPiece = (day: string, night: string): Record<"day" | "night", string> => ({
+  day: `${day}, ${PAPER_DAY}, ${PAPER_SUFFIX}`,
+  night: `${night}, ${PAPER_NIGHT}, ${PAPER_SUFFIX}`,
+});
+
+const PAPER_PIECES: Record<string, Record<"day" | "night", string>> = {
+  peasant: paperPiece(
+    "a small map figure of a medieval peasant with a pitchfork, full body",
+    "a small map figure of a skeleton peasant with a rusty pitchfork, full body",
+  ),
+  king: paperPiece(
+    "a small map figure of a crowned king in armour with a sceptre, full body",
+    "a small map figure of a skeletal lich king with a bone crown and cursed sceptre, full body",
+  ),
+  priest: paperPiece(
+    "a small map figure of a hooded priest with a glowing staff, full body",
+    "a small map figure of a hooded skeletal cultist with a dark staff, full body",
+  ),
+  archAngel: paperPiece(
+    "a small map figure of an armoured angel with feathered wings and a flaming sword, full body",
+    "a small map figure of a fallen angel with tattered bat wings and a dark sword, full body",
+  ),
+};
+
+const PAPER_ITEMS: Record<string, string> = {
+  sword: `an ink-drawn map icon of a longsword, ${PAPER_SUFFIX}`,
+  shield: `an ink-drawn map icon of a round wooden shield, ${PAPER_SUFFIX}`,
+  bow: `a single curved wooden recurve bow with a taut bowstring, no arrow, isolated object on a fully transparent background, no paper, no parchment, no frame, ${PAPER_SUFFIX}`,
+  horse: `a small map figure of a saddled horse, full body, ${PAPER_SUFFIX}`,
+  boat: `an ink-drawn map icon of a small wooden sailing boat, ${PAPER_SUFFIX}`,
+};
+
+const PAPER_BUILDINGS: Record<string, Record<"day" | "night", string>> = {
+  house: paperPiece(
+    "a hand-drawn map icon of a small thatched cottage with a chimney",
+    "a hand-drawn map icon of a crooked haunted hut with a sagging roof",
+  ),
+  castle: paperPiece(
+    "a hand-drawn map icon of a stone castle with towers, battlements and a banner",
+    "a hand-drawn map icon of a dark gothic castle with jagged towers",
+  ),
+  tower: paperPiece(
+    "a hand-drawn map icon of a tall stone watchtower with a wooden lookout",
+    "a hand-drawn map icon of a crooked dark watchtower with a beacon",
+  ),
+  wall: paperPiece(
+    "a hand-drawn map icon of a single straight stone wall section with battlements spanning the full width, no towers",
+    "a hand-drawn map icon of a single straight spiked bone wall section spanning the full width, no towers",
+  ),
+  church: paperPiece(
+    "a hand-drawn map icon of a small stone chapel with a steeple and cross",
+    "a hand-drawn map icon of a dark shrine with a spire",
+  ),
+};
+
+const PAPER_LANDSCAPE: Record<string, string> = {
+  unexplored: `blank aged parchment paper with faint ink fog swirls, seamless texture filling the entire canvas, ${PAPER_SUFFIX}`,
+  grass: `open meadow covering the entire canvas: aged parchment with a uniform faint green wash and scattered small hand-drawn ink grass tufts everywhere, no border, no frame, ${PAPER_SUFFIX}`,
+  farm: `aged parchment paper with hand-drawn ink crop rows and a faint ochre wash, seamless texture filling the entire canvas, no border, ${PAPER_SUFFIX}`,
+  tree: `a cluster of hand-drawn ink pine and oak trees with a muted green wash, map icon, ${PAPER_SUFFIX}`,
+  sand: `open desert covering the entire canvas: aged parchment with a uniform faint ochre wash and scattered small hand-drawn ink dune strokes and dots everywhere, no border, no frame, ${PAPER_SUFFIX}`,
+  water: `open sea covering the entire canvas: aged parchment with a uniform muted blue-grey wash and small hand-drawn ink wave marks everywhere, no land, no coastline, no border, ${PAPER_SUFFIX}`,
+  mountain: `a cluster of hand-drawn ink mountain peaks with hatched shaded sides, map icon, ${PAPER_SUFFIX}`,
+};
+
+const PAPER_ICON_TERRAIN = new Set(["tree", "mountain"]);
+
+const paperPromptFor = (category: AssetCategory, key: string): Prompt => {
+  if (category === "landscape") {
+    const icon = PAPER_ICON_TERRAIN.has(key);
+    return {
+      description: PAPER_LANDSCAPE[key],
+      view: icon ? "low top-down" : "high top-down",
+      noBackground: icon,
+    };
+  }
+  const match = /^(.+)_(day|night)$/.exec(key);
+  if (category === "building" && match !== null) {
+    return { description: PAPER_BUILDINGS[match[1]][match[2] as "day" | "night"], view: "low top-down", noBackground: true };
+  }
+  if (match !== null) {
+    return { description: PAPER_PIECES[match[1]][match[2] as "day" | "night"], view: "low top-down", noBackground: true };
+  }
+  return { description: PAPER_ITEMS[key], view: "low top-down", noBackground: true };
+};
+
+const LOFI_SUFFIX =
+  "simple minimal pixel art map icon, thin ink outline, muted parchment colours, very few colours, chunky pixels, no background";
+
+// Lo-fi: keep only the subject clause of the paper prompt and a short faction hint
+const lofiPromptFor = (category: AssetCategory, key: string): Prompt => {
+  const paper = paperPromptFor(category, key);
+  const subject = paper.description.split(", ")[0].replace(/^(a |an )?(hand-drawn |ink-drawn )?(map icon of |small map figure of )?/, "");
+  const faction = key.endsWith("_night") ? "dark ink and violet" : key.endsWith("_day") ? "warm ochre" : "";
+  const description = [subject, faction, LOFI_SUFFIX].filter((part) => part !== "").join(", ");
+  return { ...paper, description };
+};
+
 const promptFor = (category: AssetCategory, key: string): Prompt => {
+  if (style === "paper" && lofi) return lofiPromptFor(category, key);
+  if (style === "paper") return paperPromptFor(category, key);
   if (category === "landscape") {
     return { description: LANDSCAPE[key], view: "high top-down", noBackground: false };
   }
@@ -186,18 +299,27 @@ type Job = {
   readonly file: string;
 };
 
+const paletteImage = (): { type: "base64"; base64: string } | undefined => {
+  const file = path.join(outDir, "palette.png");
+  if (!fs.existsSync(file)) return undefined;
+  return { type: "base64", base64: fs.readFileSync(file).toString("base64") };
+};
+
 const generateOne = async (apiKey: string, job: Job): Promise<number> => {
+  const paper = style === "paper";
+  const palette = paper ? paletteImage() : undefined;
   const body = {
     description: `${job.prompt.description}, pixel art`,
-    image_size: { width: size, height: size },
+    image_size: { width: genSize, height: genSize },
     text_guidance_scale: 8,
-    outline: STYLE.outline,
-    shading: STYLE.shading,
-    detail: STYLE.detail,
+    outline: paper ? "single color outline" : STYLE.outline,
+    shading: lofi ? "flat shading" : paper ? "medium shading" : STYLE.shading,
+    detail: lofi ? "low detail" : paper ? "medium detail" : STYLE.detail,
     view: job.prompt.view,
     isometric: false,
     no_background: job.prompt.noBackground,
     seed: seedFor(job.key, job.variant),
+    ...(palette !== undefined ? { color_image: palette } : {}),
   };
   for (let attempt = 1; attempt <= 4; attempt += 1) {
     const response = await fetch("https://api.pixellab.ai/v1/generate-image-pixflux", {
@@ -214,7 +336,11 @@ const generateOne = async (apiKey: string, job: Job): Promise<number> => {
       fs.writeFileSync(job.file, Buffer.from(base64, "base64"));
       fs.writeFileSync(
         job.file.replace(/\.png$/, ".json"),
-        JSON.stringify({ ...body, category: job.category, key: job.key, variant: job.variant }, null, 2),
+        JSON.stringify(
+          { ...body, color_image: palette !== undefined ? "palette.png" : undefined, category: job.category, key: job.key, variant: job.variant },
+          null,
+          2,
+        ),
       );
       return data.usage?.usd ?? 0;
     }
