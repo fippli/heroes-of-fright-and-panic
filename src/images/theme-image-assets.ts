@@ -64,7 +64,7 @@ const landscapeAssetKey = (type: LandscapeType): string => {
 const createGameImage = (url: string): GameImage =>
   new GameImage({
     src: url,
-    width: Hexagon.width,
+    width: Hexagon.height,
     height: Hexagon.height,
   });
 

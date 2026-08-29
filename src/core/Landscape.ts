@@ -33,20 +33,16 @@ export class Landscape {
     ctx.save();
     const x = Hexagon.x(tilePosition.row, tilePosition.column);
     const y = Hexagon.y(tilePosition.row);
-    const centerX = x - Hexagon.width / 2;
-    const centerY = y - Hexagon.height / 2;
-    ctx.translate(centerX, centerY);
 
     if (this.type === LandscapeType.tree) {
-      imageAssets.landscapeImage(LandscapeType.grass).render(ctx, 0, 0);
-      imageAssets.landscapeImage(LandscapeType.tree).render(ctx, 0, 0);
+      imageAssets.landscapeImage(LandscapeType.grass).renderCentered(ctx, x, y);
+      imageAssets.landscapeImage(LandscapeType.tree).renderCentered(ctx, x, y);
     } else if (this.type === LandscapeType.mountain) {
-      imageAssets.landscapeImage(LandscapeType.grass).render(ctx, 0, 0);
-      imageAssets.landscapeImage(LandscapeType.mountain).render(ctx, 0, 0);
+      imageAssets.landscapeImage(LandscapeType.grass).renderCentered(ctx, x, y);
+      imageAssets.landscapeImage(LandscapeType.mountain).renderCentered(ctx, x, y);
     } else {
-      imageAssets.landscapeImage(this.type).render(ctx, 0, 0);
+      imageAssets.landscapeImage(this.type).renderCentered(ctx, x, y);
     }
-    ctx.resetTransform();
     ctx.restore();
   }
 
@@ -57,11 +53,7 @@ export class Landscape {
     imageAssets: ImageAssets,
   ): void {
     ctx.save();
-    const centerX = x - Hexagon.width / 2;
-    const centerY = y - Hexagon.height / 2;
-    ctx.translate(centerX, centerY);
-    imageAssets.landscapeImage(LandscapeType.unexplored).render(ctx, 0, 0);
-    ctx.resetTransform();
+    imageAssets.landscapeImage(LandscapeType.unexplored).renderCentered(ctx, x, y);
     ctx.restore();
   }
 }

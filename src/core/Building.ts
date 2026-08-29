@@ -55,11 +55,7 @@ export class Building {
 
     ctx.clip(Hexagon.path(x, y));
 
-    imageAssets.buildingImage(this.owner, this.type).render(
-      ctx,
-      x - Hexagon.width / 2,
-      y - Hexagon.height / 2,
-    );
+    imageAssets.buildingImage(this.owner, this.type).renderCentered(ctx, x, y);
 
     ctx.restore();
   }

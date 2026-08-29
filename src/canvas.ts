@@ -12,7 +12,7 @@ import type { Coordinate } from "./types/coordinate";
 /** Distance from the canvas edge (px) within which the view starts scrolling */
 const EDGE_SCROLL_MARGIN = 48;
 /** Max scroll speed in px per frame when the mouse is right at the edge */
-const EDGE_SCROLL_MAX_SPEED = 14;
+const EDGE_SCROLL_MAX_SPEED = 24;
 /** URL query param holding the view center so a refresh keeps the camera */
 const VIEW_PARAM = "view";
 /** How long the view must be still before it is written to the URL */

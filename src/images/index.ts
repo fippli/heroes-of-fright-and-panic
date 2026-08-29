@@ -12,49 +12,49 @@ import type { ThemeImageAssets } from "./theme-image-assets";
 
 const peasantImage = new GameImage({
   src: "/img/peasant.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const skeletonImage = new GameImage({
   src: "/img/skeleton.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const knightImage = new GameImage({
   src: "/img/knight.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const soldierImage = new GameImage({
   src: "/img/soldier.svg",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const archerImage = new GameImage({
   src: "/img/archer.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const kingImage = new GameImage({
   src: "/img/knight.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const priestImage = new GameImage({
   src: "/img/peasant.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const archAngelImage = new GameImage({
   src: "/img/knight.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
@@ -64,30 +64,30 @@ const archAngelImage = new GameImage({
 
 const houseImage = new GameImage({
   src: "/img/house.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 const castleImage = new GameImage({
   src: "/img/castle.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const towerImage = new GameImage({
   src: "/img/tower.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const wallImage = new GameImage({
   src: "/img/tower.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const churchImage = new GameImage({
   src: "/img/castle.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
@@ -97,40 +97,40 @@ const churchImage = new GameImage({
 
 const unexploredImage = new GameImage({
   src: "/img/unexplored2.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 const grassImage = new GameImage({
   src: "/img/grass.svg",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 const treeImage = new GameImage({
   src: "/img/forest.svg",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const sandImage = new GameImage({
   src: "/img/sand.svg",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 const waterImage = new GameImage({
   src: "/img/water.svg",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const mountainImage = new GameImage({
   src: "/img/rock.png",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 
 const farmImage = new GameImage({
   src: "/img/grass.svg",
-  width: Hexagon.width,
+  width: Hexagon.height,
   height: Hexagon.height,
 });
 

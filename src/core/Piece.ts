@@ -45,9 +45,9 @@ export class Piece {
     imageAssets: ImageAssets,
   ): void {
     ctx.save();
-    const x = Hexagon.x(position.row, position.column) - Hexagon.width / 2;
-    const y = Hexagon.y(position.row) - Hexagon.height / 2;
-    imageAssets.pieceImage(this.owner, this.kind).render(ctx, x, y);
+    const x = Hexagon.x(position.row, position.column);
+    const y = Hexagon.y(position.row);
+    imageAssets.pieceImage(this.owner, this.kind).renderCentered(ctx, x, y);
     ctx.restore();
   }
 

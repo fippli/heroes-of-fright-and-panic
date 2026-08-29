@@ -31,4 +31,9 @@ export class GameImage {
 
     ctx.drawImage(this.image, x, y, this.width, this.height);
   }
+
+  /** Draw with the image's own size, centered on (cx, cy) */
+  renderCentered(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+    this.render(ctx, cx - this.width / 2, cy - this.height / 2);
+  }
 }

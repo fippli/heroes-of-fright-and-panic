@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Canvas } from "../../canvas";
 import { DevGame, createGeneratedGame } from "../../core/DevGame";
+import { ImageAssets, defaultImageAssets } from "../../images";
+import { ThemeImageAssets } from "../../images/theme-image-assets";
 import { BuildingType } from "../../core/Building";
 import { SteedType } from "@shared/steed";
 import { ResearchType } from "@shared/research";
@@ -57,49 +59,67 @@ export const DevPage = () => {
       firstScenario !== undefined
         ? buildScenarioGame(firstScenario)
         : createGeneratedGame(BOARD_SIZE);
-    const game = new DevGame(canvas, initialState);
-    gameRef.current = game;
 
-    const loop = () => {
-      canvas.init();
-      game.render();
-      canvas.reset();
-      animationFrameRef.current = requestAnimationFrame(loop);
-    };
-    loop();
+    // `?theme=<id>` previews a theme's sprites without creating a game
+    const themeId = new URLSearchParams(window.location.search).get("theme");
+    const loadAssets: Promise<ImageAssets> =
+      themeId !== null
+        ? ThemeImageAssets.fromThemeId(themeId).then((theme) => new ImageAssets(theme))
+        : Promise.resolve(defaultImageAssets);
 
-    canvas.click((position: Coordinate) => game.click(position));
+    let cancelled = false;
+    loadAssets
+      .catch((error) => {
+        console.error("Failed to load theme, using defaults:", error);
+        return defaultImageAssets;
+      })
+      .then((imageAssets) => {
+        if (cancelled) return;
+        const game = new DevGame(canvas, initialState, imageAssets);
+        gameRef.current = game;
 
-    canvas.keydown({
-      // Buildings
-      h: (position) => game.build(BuildingType.house, position),
-      t: (position) => game.build(BuildingType.tower, position),
-      w: (position) => game.build(BuildingType.wall, position),
-      r: (position) => game.build(BuildingType.church, position),
+        const loop = () => {
+          canvas.init();
+          game.render();
+          canvas.reset();
+          animationFrameRef.current = requestAnimationFrame(loop);
+        };
+        loop();
 
-      // Units
-      p: (position) => game.spawnPeasant(position),
-      x: (position) => game.attack(position),
+        canvas.click((position: Coordinate) => game.click(position));
 
-      // Equipment
-      "1": (position) => game.craftSword(position),
-      "2": (position) => game.craftShield(position),
-      "3": (position) => game.craftBow(position),
+        canvas.keydown({
+          // Buildings
+          h: (position) => game.build(BuildingType.house, position),
+          t: (position) => game.build(BuildingType.tower, position),
+          w: (position) => game.build(BuildingType.wall, position),
+          r: (position) => game.build(BuildingType.church, position),
 
-      // Building / unit actions (some need a selected source first)
-      e: (position) => game.enterTower(position), // king selected → tower
-      n: (position) => game.trainPriest(position), // on church
-      m: (position) => game.summonArchAngel(position), // on church
-      g: (position) => game.heal(position), // priest selected → ally
-      o: (position) => game.buySteed(SteedType.horse, position), // house selected → tile
-      f: (position) => game.buySteed(SteedType.boat, position), // house selected → water
-      "4": (position) => game.research(ResearchType.speed, position), // on castle
-      "5": (position) => game.research(ResearchType.miningII, position),
-      "6": (position) => game.research(ResearchType.miningIII, position),
-      "7": (position) => game.research(ResearchType.queen, position),
-    });
+          // Units
+          p: (position) => game.spawnPeasant(position),
+          x: (position) => game.attack(position),
+
+          // Equipment
+          "1": (position) => game.craftSword(position),
+          "2": (position) => game.craftShield(position),
+          "3": (position) => game.craftBow(position),
+
+          // Building / unit actions (some need a selected source first)
+          e: (position) => game.enterTower(position), // king selected → tower
+          n: (position) => game.trainPriest(position), // on church
+          m: (position) => game.summonArchAngel(position), // on church
+          g: (position) => game.heal(position), // priest selected → ally
+          o: (position) => game.buySteed(SteedType.horse, position), // house selected → tile
+          f: (position) => game.buySteed(SteedType.boat, position), // house selected → water
+          "4": (position) => game.research(ResearchType.speed, position), // on castle
+          "5": (position) => game.research(ResearchType.miningII, position),
+          "6": (position) => game.research(ResearchType.miningIII, position),
+          "7": (position) => game.research(ResearchType.queen, position),
+        });
+      });
 
     return () => {
+      cancelled = true;
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
       }

@@ -38,11 +38,15 @@ export class DevGame {
   private gameState: GameState;
   private readonly logElement: HTMLElement | null;
 
-  constructor(canvas: Canvas, initialState: GameState) {
+  constructor(
+    canvas: Canvas,
+    initialState: GameState,
+    imageAssets: ImageAssets = defaultImageAssets,
+  ) {
     this.canvas = canvas;
     this.dayPlayer = createPlayer({ type: "day" });
     this.nightPlayer = createPlayer({ type: "night" });
-    this.imageAssets = defaultImageAssets;
+    this.imageAssets = imageAssets;
     this.logElement = document.getElementById("dev-log");
 
     this.gameState = initialState;
