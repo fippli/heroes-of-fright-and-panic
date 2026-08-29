@@ -37,3 +37,6 @@ screenshots/
 
 # Claude Code local config
 .claude/
+
+# PixelLab output (scripts/generate-assets.ts); the chosen set lives in Supabase as a theme
+generated/
