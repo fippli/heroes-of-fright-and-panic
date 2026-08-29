@@ -137,7 +137,6 @@ export class DevGame {
     });
 
     if (this.selectedTile !== undefined && this.selectedTile !== null) {
-      this.selectedTile.renderArea(canvas.ctx, this.tiles);
       this.selectedTile.renderValidMoves(canvas.ctx, this.tiles);
       this.selectedTile.renderValidAttacks(
         canvas.ctx,

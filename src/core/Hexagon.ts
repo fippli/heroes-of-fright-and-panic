@@ -1,8 +1,8 @@
 const remainingDistanceToRadius = (r: number) => r * (1 - Math.sqrt(3) / 2);
 
 export class Hexagon {
-  // Hex height is 2 * radius = 64px: 32px sprites scale by exactly 2x
-  static radius: number = 32;
+  // Hex height is 2 * radius = 32px: 32px sprites draw 1:1
+  static radius: number = 16;
   static borderWidth: number = 2;
   static width = 2 * (this.radius - remainingDistanceToRadius(this.radius));
   static height = 2 * this.radius;

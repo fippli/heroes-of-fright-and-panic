@@ -289,8 +289,6 @@ export class Game {
 
     // Render selected tile highlight and valid moves/attacks
     if (this.selectedTile !== undefined && this.selectedTile !== null) {
-      // Show view range
-      this.selectedTile.renderArea(canvas.ctx, this.tiles);
       // Show valid moves (green) and lootable tiles (yellow)
       this.selectedTile.renderValidMoves(canvas.ctx, this.tiles);
       // Show attackable enemies (red)
