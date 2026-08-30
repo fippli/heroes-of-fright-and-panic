@@ -101,7 +101,7 @@ export const DocsPage = () => {
       const markdown = await response.text();
       const html = renderMarkdown(markdown);
       setContent(html);
-    } catch (fetchError) {
+    } catch {
       setError("Failed to load document");
     }
     setLoading(false);

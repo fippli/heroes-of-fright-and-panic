@@ -27,7 +27,7 @@ function loadEnvFile() {
         }
       }
     });
-  } catch (error) {
+  } catch {
     // .env.secrets doesn't exist, that's okay
   }
 }
@@ -58,7 +58,7 @@ async function deleteAllGames() {
 
     await client.close();
     console.log("✅ Disconnected from MongoDB");
-  } catch (error) {
+  } catch {
     console.error("❌ Error deleting games:", error);
     await client.close();
     process.exit(1);

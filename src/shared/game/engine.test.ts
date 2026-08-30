@@ -9,7 +9,6 @@ import {
 } from "../building/index.ts";
 import {
   createSword,
-  createShield,
   createBow,
   EquipmentType,
 } from "../equipment/index.ts";
@@ -19,7 +18,6 @@ import {
   grass,
   water as waterLandscape,
   tree as treeLandscape,
-  mountain as mountainLandscape,
 } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
 import { replaceTile } from "../tile/index.ts";
@@ -54,7 +52,7 @@ import {
   handleAction,
   getVisibleTiles,
 } from "./engine.ts";
-import type { Game, GameClock } from "./types.ts";
+import type { Game } from "./types.ts";
 
 // ============================================
 // TEST HELPERS

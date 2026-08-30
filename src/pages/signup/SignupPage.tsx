@@ -29,7 +29,7 @@ export const SignupPage = () => {
       });
   }, [navigate]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
 

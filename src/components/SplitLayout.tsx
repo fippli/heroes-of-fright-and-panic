@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Flex, Box, Heading, VStack } from "@chakra-ui/react";
+import { Flex, Heading, VStack } from "@chakra-ui/react";
 
 type SplitLayoutProps = {
   readonly pageTitle?: string;

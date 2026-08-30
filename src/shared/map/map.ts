@@ -8,7 +8,7 @@ import {
   type Landscape,
 } from "./landscape.ts";
 import type { RandomFunction } from "@shared/utils/random.ts";
-import { createNoise, type NoiseFunction } from "@shared/utils/noise.ts";
+import { createNoise } from "@shared/utils/noise.ts";
 import type { Tile, TilePosition } from "./tile.ts";
 import { findNeighborTiles } from "@shared/tile/index.ts";
 

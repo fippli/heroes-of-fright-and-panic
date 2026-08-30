@@ -5,7 +5,7 @@
  */
 
 import type { Game } from "@shared/game/types.ts";
-import type { GameAction, PlayerType, TilePosition } from "@shared/actions/index.ts";
+import type { GameAction, PlayerType } from "@shared/actions/index.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
 import { BuildingType } from "@shared/building/index.ts";

@@ -1,4 +1,3 @@
-import { createResourceMap, type ResourceMap } from "@shared/player/resource-map.ts";
 
 export enum LandscapeType {
   grass = "grass",

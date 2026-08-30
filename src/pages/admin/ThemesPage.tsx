@@ -38,7 +38,7 @@ export const ThemesPage = () => {
     }
   }, [isLoading, isAdmin]);
 
-  const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
+  const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
 

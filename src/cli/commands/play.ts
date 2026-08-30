@@ -212,7 +212,7 @@ const runInteractiveMode = async (
 
       case "select": {
         const tile = currentGame.tiles.find(
-          (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+          (candidate) => candidate.row === parsed.position.row && candidate.column === parsed.position.column,
         );
         if (tile === undefined) {
           console.log("Invalid position.");
@@ -225,7 +225,7 @@ const runInteractiveMode = async (
 
       case "inspect": {
         const tile = currentGame.tiles.find(
-          (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+          (candidate) => candidate.row === parsed.position.row && candidate.column === parsed.position.column,
         );
         if (tile === undefined) {
           console.log("Invalid position.");
@@ -359,7 +359,7 @@ const runHotseatMode = async (filePath: string): Promise<void> => {
 
       case "select": {
         const tile = currentGame.tiles.find(
-          (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+          (candidate) => candidate.row === parsed.position.row && candidate.column === parsed.position.column,
         );
         if (tile === undefined) {
           console.log("Invalid position.");
@@ -372,7 +372,7 @@ const runHotseatMode = async (filePath: string): Promise<void> => {
 
       case "inspect": {
         const tile = currentGame.tiles.find(
-          (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+          (candidate) => candidate.row === parsed.position.row && candidate.column === parsed.position.column,
         );
         if (tile === undefined) {
           console.log("Invalid position.");
@@ -654,7 +654,7 @@ const runOnlineMode = async (
             break;
           case "select": {
             const tile = game.tiles.find(
-              (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+              (candidate) => candidate.row === parsed.position.row && candidate.column === parsed.position.column,
             );
             if (tile === undefined) {
               console.log("Invalid position.");
@@ -666,7 +666,7 @@ const runOnlineMode = async (
           }
           case "inspect": {
             const tile = game.tiles.find(
-              (tile) => tile.row === parsed.position.row && tile.column === parsed.position.column,
+              (candidate) => candidate.row === parsed.position.row && candidate.column === parsed.position.column,
             );
             if (tile === undefined) {
               console.log("Invalid position.");

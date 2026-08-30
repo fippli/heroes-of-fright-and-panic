@@ -7,7 +7,7 @@ const FILE_PATH = "games/claude-game.json";
 
 const printBoard = (game: Game): void => {
   const lines = Array.from({ length: game.size }, (_, row) => {
-    const cols = Array.from({ length: game.size }, (_, col) => {
+    const cols = Array.from({ length: game.size }, (_unused, col) => {
       const tile = game.tiles.find(
         (t) => t.row === row && t.column === col,
       );

@@ -183,7 +183,7 @@ export const NewGamePage = () => {
     }
   }, [renderPreview, isCheckingAuth]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
 
@@ -352,9 +352,11 @@ export const NewGamePage = () => {
             }
             style={{ width: "auto" }}
           />
-          <Text as="label" htmlFor="aiOpponent" color="brand.contrast" fontWeight="700" fontSize="1.2rem" cursor="pointer">
-            AI Opponent (single player)
-          </Text>
+          <label htmlFor="aiOpponent" style={{ cursor: "pointer" }}>
+            <Text as="span" color="brand.contrast" fontWeight="700" fontSize="1.2rem">
+              AI Opponent (single player)
+            </Text>
+          </label>
         </Flex>
 
         <Field.Root>

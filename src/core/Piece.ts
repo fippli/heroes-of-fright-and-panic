@@ -3,7 +3,6 @@ import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import { LandscapeType } from "./Landscape";
 import type { Player } from "@shared/player";
-import type { ResourceMap } from "@shared/player/resource-map";
 import type { TilePosition } from "./Tile";
 
 export { PieceKind };

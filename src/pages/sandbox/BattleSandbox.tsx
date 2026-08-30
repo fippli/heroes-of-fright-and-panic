@@ -145,7 +145,7 @@ const buildRenderTiles = (
 ): ReadonlyArray<Tile> =>
   baseTiles.map((tile) => {
     const unit = units.find(
-      (unit) => unit.row === tile.row && unit.column === tile.column && unit.hearts > 0,
+      (candidate) => candidate.row === tile.row && candidate.column === tile.column && candidate.hearts > 0,
     );
     if (unit === undefined) return tile;
 
@@ -239,7 +239,7 @@ export const BattleSandbox = () => {
   const animationFrameRef = useRef<number | null>(null);
   const imageAssets: ImageAssets = simpleImageAssets as ImageAssets;
 
-  const [renderTick, setRenderTick] = useState(0);
+  const [, setRenderTick] = useState(0);
   const forceUpdate = () => setRenderTick((tick) => tick + 1);
 
   const battleState = stateRef.current;
@@ -341,7 +341,7 @@ export const BattleSandbox = () => {
           // Resolve combat
           const damage = Math.max(0, activeUnit.attack - clickedEnemy.defense);
           clickedEnemy.hearts = Math.max(0, clickedEnemy.hearts - damage);
-          clickedEnemy.defense = Math.max(0, clickedEnemy.defense - activeUnit.attack);
+          (clickedEnemy as { defense: number }).defense = Math.max(0, clickedEnemy.defense - activeUnit.attack);
 
           const destroyed = clickedEnemy.hearts <= 0;
           const logEntry = destroyed
@@ -408,7 +408,7 @@ export const BattleSandbox = () => {
 
   const advanceTurn = (state: BattleState): number => {
     const aliveOrder = state.turnOrder.filter((unitId) => {
-      const unit = state.units.find((unit) => unit.id === unitId);
+      const unit = state.units.find((candidate) => candidate.id === unitId);
       return unit !== undefined && unit.hearts > 0;
     });
 

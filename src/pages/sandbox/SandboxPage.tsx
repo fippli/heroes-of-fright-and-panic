@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
-import { Flex, Box, Text, VStack } from "@chakra-ui/react";
+import { Flex, Box, Text } from "@chakra-ui/react";
 import { OverworldSandbox } from "./OverworldSandbox";
 import { BattleSandbox } from "./BattleSandbox";
 
@@ -27,8 +27,7 @@ export const SandboxPage = () => {
         {MODES.map((mode) => (
           <Box
             key={mode.path}
-            as={Link}
-            to={`/sandbox/${mode.path}`}
+            asChild
             px="5"
             py="2.5"
             fontSize="xs"
@@ -40,7 +39,7 @@ export const SandboxPage = () => {
             transition="colors"
             _hover={{ color: "fg.subtle", textDecoration: "none" }}
           >
-            {mode.label}
+            <Link to={`/sandbox/${mode.path}`}>{mode.label}</Link>
           </Box>
         ))}
       </Flex>

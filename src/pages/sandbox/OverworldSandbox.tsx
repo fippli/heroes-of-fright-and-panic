@@ -164,7 +164,7 @@ const applyTool = (
   state: SandboxState,
   tile: Tile,
   tool: PlacementTool,
-  imageAssets: ImageAssets,
+  _imageAssets: ImageAssets,
 ): SandboxState => {
   switch (tool.type) {
     case "select":

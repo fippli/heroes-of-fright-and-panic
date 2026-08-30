@@ -6,7 +6,6 @@ import { Clock } from "./Clock";
 import { parseGameState } from "./GameParser";
 import type { PlayerType, ServerGameState } from "./GameTypes";
 import { Hexagon } from "./Hexagon";
-import { PieceKind } from "./Piece";
 import { createPlayer, type Player } from "@shared/player";
 import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";

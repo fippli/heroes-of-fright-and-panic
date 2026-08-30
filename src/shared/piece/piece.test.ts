@@ -1,10 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { createSword, createShield, createBow, EquipmentType } from "@shared/equipment/index.ts";
+import { createSword, createShield, createBow } from "@shared/equipment/index.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
 import { createHorse, createBoat } from "@shared/steed/index.ts";
 import {
-  type Piece,
-  PieceKind,
   createPeasant,
   createKing,
   createPriest,

@@ -22,24 +22,6 @@ const skeletonImage = new GameImage({
   height: Hexagon.height,
 });
 
-const knightImage = new GameImage({
-  src: "/img/knight.png",
-  width: Hexagon.height,
-  height: Hexagon.height,
-});
-
-const soldierImage = new GameImage({
-  src: "/img/soldier.svg",
-  width: Hexagon.height,
-  height: Hexagon.height,
-});
-
-const archerImage = new GameImage({
-  src: "/img/archer.png",
-  width: Hexagon.height,
-  height: Hexagon.height,
-});
-
 const kingImage = new GameImage({
   src: "/img/knight.png",
   width: Hexagon.height,

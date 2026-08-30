@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as hex from "@shared/map/hex.ts";
-import { GameMap } from "@shared/map/map.ts";
-import type { Tile } from "@shared/map/tile.ts";
 import { PieceKind } from "@shared/piece/index.ts";
-import type { Player } from "@shared/player/index.ts";
-import type { ResourceMap } from "@shared/player/resource-map.ts";
 import { createGame } from "./create-game.ts";
 
 describe("createGame", () => {

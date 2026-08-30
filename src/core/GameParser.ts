@@ -3,6 +3,7 @@ import { Clock } from "./Clock";
 import { Landscape } from "./Landscape";
 import { Piece } from "./Piece";
 import { createPlayer, type Player } from "@shared/player";
+import { createResourceMap } from "@shared/player/resource-map";
 import {
   type Piece as EnginePiece,
   PieceKind,
@@ -26,7 +27,7 @@ const parseClock = (clock?: { time: number }): Clock =>
 const parsePlayer = (serverPlayer: ServerPlayer): Player =>
   createPlayer({
     type: serverPlayer.type,
-    resources: serverPlayer.resources,
+    resources: createResourceMap(serverPlayer.resources),
     research: {
       speedLevel: serverPlayer.research?.speedLevel ?? 0,
       hasMiningII: serverPlayer.research?.hasMiningII ?? false,

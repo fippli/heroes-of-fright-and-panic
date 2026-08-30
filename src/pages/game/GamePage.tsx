@@ -5,7 +5,6 @@ import {
   Button,
   Flex,
   Heading,
-  HStack,
   Text,
   VStack,
   Link as ChakraLink,
@@ -15,7 +14,6 @@ import { Canvas } from "../../canvas";
 import { Game } from "../../core/Board";
 import { BuildingType } from "../../core/Building";
 import { EquipmentType } from "@shared/equipment";
-import { SteedType } from "@shared/steed";
 import { ResearchType } from "@shared/research";
 import { supabase, getEdgeFunctionError } from "../../lib/supabase";
 import type { Coordinate } from "../../types/coordinate";

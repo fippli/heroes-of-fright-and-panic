@@ -88,7 +88,7 @@ export const ThemeEditorPage = () => {
   const handleDrop = (
     category: string,
     assetKey: string,
-    event: DragEvent<HTMLLabelElement>,
+    event: DragEvent<HTMLElement>,
   ) => {
     event.preventDefault();
     setDragOver(null);
@@ -205,10 +205,10 @@ export const ThemeEditorPage = () => {
                 fontSize="1.5rem"
                 opacity={isUploading ? 0.5 : 1}
                 color="brand.contrast"
-                onDrop={(event: DragEvent<HTMLLabelElement>) =>
+                onDrop={(event: DragEvent<HTMLElement>) =>
                   handleDrop(slot.category, slot.key, event)
                 }
-                onDragOver={(event: DragEvent<HTMLLabelElement>) => {
+                onDragOver={(event: DragEvent<HTMLElement>) => {
                   event.preventDefault();
                   setDragOver(slotKey);
                 }}

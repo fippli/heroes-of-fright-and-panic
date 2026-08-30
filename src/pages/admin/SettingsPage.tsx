@@ -5,7 +5,6 @@ import {
   Button,
   Flex,
   Heading,
-  HStack,
   Input,
   Text,
   VStack,
@@ -52,7 +51,7 @@ export const SettingsPage = () => {
     }
   }, [isLoading, isAdmin]);
 
-  const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
+  const handleAdd = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
 

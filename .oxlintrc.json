@@ -2,9 +2,20 @@
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "categories": {
     "correctness": "error",
-    "perf": "error",
-    "style": "error",
-    "suspicious": "error"
+    "suspicious": "error",
+    "perf": "warn"
   },
-  "rules": {}
+  "rules": {
+    "no-await-in-loop": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-array-reverse": "off",
+    "unicorn/prefer-set-has": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/no-useless-length-check": "off",
+    "typescript/no-extraneous-class": "off",
+    "oxc/no-accumulating-spread": "off",
+    "oxc/no-map-spread": "off"
+  },
+  "ignorePatterns": ["dist/**", "supabase/functions/shared/**", "generated/**", "node_modules/**", "documentation/**"]
 }

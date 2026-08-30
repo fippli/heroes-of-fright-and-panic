@@ -138,7 +138,7 @@ export const renderBoard = (game: Game, selected?: TilePosition): string => {
   });
   lines.push(`${pad} ${colHeaderChars.join("")}`);
 
-  Array.from({ length: size }, (_, row) => {
+  Array.from({ length: size }, (_unused, row) => {
     const isEven = row % 2 === 0;
     const rowLabel = row.toString().padStart(labelWidth);
 
