@@ -109,6 +109,12 @@ export class Game {
     return this.currentPlayer === this.myPlayerType;
   }
 
+  /** Swap the sprite set; the next frame renders with it */
+  setImageAssets(imageAssets: ImageAssets): void {
+    this.imageAssets = imageAssets;
+    this.notify();
+  }
+
   /** Subscribe to UI snapshots; returns an unsubscribe function */
   subscribe(listener: (ui: GameUiState) => void): () => void {
     this.listeners.add(listener);

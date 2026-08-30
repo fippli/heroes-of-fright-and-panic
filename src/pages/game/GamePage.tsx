@@ -17,12 +17,12 @@ import { BuildingType } from "../../core/Building";
 import { EquipmentType } from "@shared/equipment";
 import { SteedType } from "@shared/steed";
 import { ResearchType } from "@shared/research";
-import { ImageAssets, defaultImageAssets } from "../../images";
-import { ThemeImageAssets } from "../../images/theme-image-assets";
 import { supabase, getEdgeFunctionError } from "../../lib/supabase";
 import type { Coordinate } from "../../types/coordinate";
 import type { GameUiState } from "../../core/ui-state";
 import { BuildMenu } from "./BuildMenu";
+import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
+import { installErrorReporting, reportClientError } from "../../lib/error-report";
 import "./game.css";
 
 export const GamePage = () => {
@@ -36,6 +36,7 @@ export const GamePage = () => {
   const playerParam = searchParams.get("player");
   const [error, setError] = useState<string | null>(null);
   const [ui, setUi] = useState<GameUiState | null>(null);
+  const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
 
   const isSpectator = playerParam === "spectator";
 
@@ -60,16 +61,34 @@ export const GamePage = () => {
     const canvas = new Canvas(canvasElement, wrapperElement);
     canvasInstanceRef.current = canvas;
 
-    // Render loop
+    const uninstallErrorReporting = installErrorReporting({ gameId, player: myPlayerType });
+
+    // Render loop. A throwing frame is reported once and skipped; the loop
+    // must keep running or the board freezes.
     const startRenderLoop = (game: Game) => {
+      let renderErrorReported = false;
       const loop = () => {
         if (canvas.ctx === null) {
           return;
         }
 
-        canvas.init();
-        game.render();
-        canvas.reset();
+        try {
+          canvas.init();
+          game.render();
+        } catch (renderError) {
+          if (!renderErrorReported) {
+            renderErrorReported = true;
+            reportClientError({
+              gameId,
+              player: myPlayerType,
+              message: renderError instanceof Error ? renderError.message : String(renderError),
+              stack: renderError instanceof Error ? renderError.stack : undefined,
+              context: { source: "render" },
+            });
+          }
+        } finally {
+          canvas.reset();
+        }
 
         animationFrameRef.current = requestAnimationFrame(loop);
       };
@@ -85,12 +104,11 @@ export const GamePage = () => {
           throw new Error(await getEdgeFunctionError(invokeError));
         }
 
-        // Load theme assets if the game has a theme
-        const themeId = data.themeId ?? data.theme_id ?? null;
-        const imageAssets =
-          themeId !== null
-            ? new ImageAssets(await ThemeImageAssets.fromThemeId(themeId))
-            : defaultImageAssets;
+        // Theme: a per-game preference from Settings wins over the game's own theme
+        const gameThemeId: string | null = data.themeId ?? data.theme_id ?? null;
+        const themeId = readThemePreference(gameId) ?? gameThemeId;
+        const imageAssets = await loadImageAssets(themeId);
+        setActiveThemeId(themeId);
 
         const game = new Game(canvas, myPlayerType, imageAssets);
         gameRef.current = game;
@@ -133,11 +151,19 @@ export const GamePage = () => {
       })
       .catch((err) => {
         console.error("Error loading game:", err);
+        reportClientError({
+          gameId,
+          player: myPlayerType,
+          message: err instanceof Error ? err.message : "Failed to load game",
+          stack: err instanceof Error ? err.stack : undefined,
+          context: { source: "load" },
+        });
         setError(err instanceof Error ? err.message : "Failed to load game");
       });
 
     // Cleanup on unmount
     return () => {
+      uninstallErrorReporting();
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -328,6 +354,9 @@ export const GamePage = () => {
 
           {ui !== null && gameRef.current !== null && (
             <BuildMenu game={gameRef.current} ui={ui} />
+          )}
+          {gameRef.current !== null && (
+            <GameSettings game={gameRef.current} gameId={gameId} initialThemeId={activeThemeId} />
           )}
         </aside>
       </div>

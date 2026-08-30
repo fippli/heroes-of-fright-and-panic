@@ -4,6 +4,9 @@
  * Usage:
  *   pnpm dlx tsx scripts/game-debug.ts list [--limit 10]
  *   pnpm dlx tsx scripts/game-debug.ts get <gameId> [--as day|night] [--summary]
+ *   pnpm dlx tsx scripts/game-debug.ts events <gameId>
+ *   pnpm dlx tsx scripts/game-debug.ts replay <gameId>
+ *   pnpm dlx tsx scripts/game-debug.ts errors [<gameId>] [--limit 20]
  *
  * SUPABASE_URL overrides the project URL (defaults to the project in
  * supabase/config.toml).
@@ -27,13 +30,20 @@ const url = new URL(`${baseUrl}/functions/v1/game-debug`);
 if (action === "list") {
   url.searchParams.set("action", "list");
   url.searchParams.set("limit", flag("--limit") ?? "10");
+} else if ((action === "events" || action === "replay") && gameId !== undefined) {
+  url.searchParams.set("action", action);
+  url.searchParams.set("gameId", gameId);
+} else if (action === "errors") {
+  url.searchParams.set("action", "errors");
+  url.searchParams.set("limit", flag("--limit") ?? "20");
+  if (gameId !== undefined && !gameId.startsWith("--")) url.searchParams.set("gameId", gameId);
 } else if (action === "get" && gameId !== undefined) {
   url.searchParams.set("action", "get");
   url.searchParams.set("gameId", gameId);
   const as = flag("--as");
   if (as !== null) url.searchParams.set("as", as);
 } else {
-  console.error("Usage: game-debug.ts list [--limit n] | get <gameId> [--as day|night] [--summary]");
+  console.error("Usage: game-debug.ts list [--limit n] | get <gameId> [--as day|night] [--summary] | events <gameId> | replay <gameId> | errors [<gameId>]");
   process.exit(2);
 }
 

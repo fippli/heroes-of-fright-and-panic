@@ -1,4 +1,5 @@
 import { corsHeaders, handleCors } from "../_shared/cors.ts";
+import { appendGameEvents } from "../_shared/events.ts";
 import {
   createAdminClient,
   getUserFromRequest,
@@ -84,6 +85,17 @@ Deno.serve(async (request) => {
         },
       );
     }
+
+    // Seq 0: the full starting position, so the game can be replayed later
+    await appendGameEvents(supabase, newGame.id, [
+      {
+        kind: "created",
+        player: null,
+        action: { seed: body.seed ?? null, mapConfig: mapConfig ?? null, size: boardSize },
+        result: null,
+        state: { ...gameData, id: newGame.id, createdAt: newGame.created_at, updatedAt: newGame.created_at },
+      },
+    ]);
 
     return new Response(
       JSON.stringify({

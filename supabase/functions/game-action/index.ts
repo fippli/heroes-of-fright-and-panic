@@ -3,6 +3,7 @@ import {
   createAdminClient,
   getUserFromRequest,
 } from "../_shared/supabase-client.ts";
+import { appendGameEvents, recordError, type NewGameEvent } from "../_shared/events.ts";
 import { rowToGame, gameToRow } from "@shared/game/converters.ts";
 import type { Game, GameRow } from "@shared/game/types.ts";
 import type { GameAction } from "@shared/actions/index.ts";
@@ -10,24 +11,27 @@ import { processAction } from "@shared/game/actions.ts";
 import { getFilteredGameState } from "@shared/game/engine.ts";
 import { generateAllActions, pickAction } from "@shared/ai/index.ts";
 import { createRandom } from "@shared/utils/random.ts";
+import { engineVersion } from "@shared/version.ts";
 
-Deno.serve(async (request) => {
-  const corsResponse = handleCors(request);
-  if (corsResponse !== null) return corsResponse;
+const json = (body: unknown, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 
+const AI_EMAIL = "ai@bot";
+const MAX_AI_ACTIONS = 50;
+
+type RequestContext = { gameId: string | null; action: GameAction | null };
+
+const handle = async (request: Request, ctx: RequestContext): Promise<Response> => {
   if (request.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "Method not allowed" }, 405);
   }
 
   const user = await getUserFromRequest(request);
   if (user === null) {
-    return new Response(JSON.stringify({ error: "Authentication required" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "Authentication required" }, 401);
   }
 
   const body = await request.json();
@@ -35,21 +39,14 @@ Deno.serve(async (request) => {
   const action: GameAction = body.action;
 
   if (gameId === undefined || typeof gameId !== "string") {
-    return new Response(JSON.stringify({ error: "gameId is required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "gameId is required" }, 400);
   }
+  ctx.gameId = gameId;
 
   if (action === undefined || action.type === undefined || action.player === undefined) {
-    return new Response(
-      JSON.stringify({ error: "Invalid action: missing type or player" }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return json({ error: "Invalid action: missing type or player" }, 400);
   }
+  ctx.action = action;
 
   const supabase = createAdminClient();
   const { data: gameRow, error: fetchError } = await supabase
@@ -59,10 +56,7 @@ Deno.serve(async (request) => {
     .single();
 
   if (fetchError !== null || gameRow === null) {
-    return new Response(JSON.stringify({ error: "Game not found" }), {
-      status: 404,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "Game not found" }, 404);
   }
 
   const game = rowToGame(gameRow as GameRow);
@@ -71,28 +65,17 @@ Deno.serve(async (request) => {
   const playerEmail =
     action.player === "day" ? game.dayPlayerEmail : game.nightPlayerEmail;
   if (playerEmail !== user.email) {
-    return new Response(
-      JSON.stringify({
-        error: `You are not authorized to play as ${action.player}`,
-      }),
-      {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return json({ error: `You are not authorized to play as ${action.player}` }, 403);
   }
 
   if (game.gameOver === true) {
-    return new Response(
-      JSON.stringify({ error: "Game is over", winner: game.winner }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return json({ error: "Game is over", winner: game.winner }, 400);
   }
 
   const { result, updatedGame } = processAction({ game, action });
+  const events: NewGameEvent[] = [
+    { kind: "action", player: action.player, action, result, state: null },
+  ];
 
   if (result.success) {
     const now = new Date();
@@ -125,7 +108,6 @@ Deno.serve(async (request) => {
   }
 
   // If the opponent is AI, run AI turns until the phase switches back
-  const AI_EMAIL = "ai@bot";
   const opponentEmail = action.player === "day"
     ? updatedGame.nightPlayerEmail
     : updatedGame.dayPlayerEmail;
@@ -138,7 +120,8 @@ Deno.serve(async (request) => {
 
     const aiPlayer = action.player === "day" ? "night" as const : "day" as const;
     const random = createRandom(Date.now());
-    const MAX_AI_ACTIONS = 50;
+    let attempts = 0;
+    let applied = 0;
 
     const runAiTurns = (currentGame: Game, remaining: number): Game => {
       if (remaining <= 0) return currentGame;
@@ -149,13 +132,27 @@ Deno.serve(async (request) => {
       const aiAction = pickAction(actions, random);
       if (aiAction === undefined) return currentGame;
 
+      attempts += 1;
       const { result: aiResult, updatedGame: nextGame } = processAction({ game: currentGame, action: aiAction });
       if (!aiResult.success) return runAiTurns(currentGame, remaining - 1);
 
+      applied += 1;
+      events.push({ kind: "ai", player: aiPlayer, action: aiAction, result: aiResult, state: null });
       return runAiTurns(nextGame, remaining - 1);
     };
 
-    return runAiTurns(updatedGame, MAX_AI_ACTIONS);
+    const finalGame = runAiTurns(updatedGame, MAX_AI_ACTIONS);
+    if (finalGame.currentPlayer === aiPlayer && finalGame.gameOver !== true) {
+      // The AI could not finish its phase: record it so the stall is visible
+      events.push({
+        kind: "ai",
+        player: aiPlayer,
+        action: null,
+        result: { success: false, error: `AI stalled after ${attempts} attempts (${applied} applied)` },
+        state: null,
+      });
+    }
+    return finalGame;
   })();
 
   // Persist AI turns if they happened
@@ -179,22 +176,37 @@ Deno.serve(async (request) => {
     }
   }
 
+  await appendGameEvents(supabase, gameId, events);
+
   // Return filtered game state for the player who made the action
   const finalGame = opponentIsAi ? afterAi : updatedGame;
   const filteredGame = getFilteredGameState(finalGame, action.player);
 
-  return new Response(
-    JSON.stringify({
-      result,
-      game: {
-        ...filteredGame,
-        id: filteredGame.id,
-        viewingAs: action.player,
-      },
-    }),
-    {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+  return json({
+    result,
+    engineVersion,
+    game: {
+      ...filteredGame,
+      id: filteredGame.id,
+      viewingAs: action.player,
     },
-  );
+  });
+};
+
+Deno.serve(async (request) => {
+  const corsResponse = handleCors(request);
+  if (corsResponse !== null) return corsResponse;
+
+  const ctx: RequestContext = { gameId: null, action: null };
+  try {
+    return await handle(request, ctx);
+  } catch (caught) {
+    try {
+      await recordError(createAdminClient(), ctx.gameId, caught, ctx.action);
+    } catch (logError) {
+      console.error("Could not record error:", logError);
+    }
+    const message = caught instanceof Error ? caught.message : "Internal server error";
+    return json({ error: message, engineVersion }, 500);
+  }
 });

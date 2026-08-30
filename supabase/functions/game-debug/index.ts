@@ -7,6 +7,9 @@
  *
  *   GET  ?action=list[&limit=10]
  *   GET  ?action=get&gameId=<id>[&as=day|night]
+ *   GET  ?action=events&gameId=<id>        every recorded event (no snapshots)
+ *   GET  ?action=replay&gameId=<id>        re-run the log and diff against stored state
+ *   GET  ?action=errors[&gameId=<id>]      recent browser-reported errors
  *   POST { "action": "list" | "get", "gameId"?, "as"?, "limit"? }
  *
  * `as` returns the state after fog-of-war filtering, i.e. exactly what that
@@ -19,6 +22,7 @@ import type { GameRow } from "@shared/game/types.ts";
 import { getFilteredGameState } from "@shared/game/engine.ts";
 import { redactGame, summarizeGame } from "@shared/game/debug.ts";
 import { engineVersion } from "@shared/version.ts";
+import { diffGames, replayEvents, type GameEvent } from "@shared/game/events.ts";
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
@@ -109,6 +113,67 @@ Deno.serve(async (request) => {
     });
   }
 
+  if (params.action === "events" || params.action === "replay") {
+    if (params.gameId === null) {
+      return json({ error: "gameId is required" }, 400);
+    }
+    const { data, error } = await supabase
+      .from("game_events")
+      .select("seq, kind, player, action, result, state, engine_version, created_at")
+      .eq("game_id", params.gameId)
+      .order("seq", { ascending: true });
+    if (error !== null || data === null) {
+      return json({ error: error?.message ?? "Failed to load events" }, 500);
+    }
+    const events: GameEvent[] = data.map((row) => ({
+      seq: row.seq as number,
+      kind: row.kind as GameEvent["kind"],
+      player: (row.player as GameEvent["player"]) ?? null,
+      action: (row.action as GameEvent["action"]) ?? null,
+      result: (row.result as GameEvent["result"]) ?? null,
+      state: (row.state as GameEvent["state"]) ?? null,
+      engineVersion: (row.engine_version as string | null) ?? null,
+      createdAt: row.created_at as string,
+    }));
+
+    if (params.action === "events") {
+      return json({
+        engineVersion,
+        events: events.map((event) => ({
+          ...event,
+          // Snapshots are large and carry emails; the replay action uses them
+          state: event.kind === "error" ? event.state : event.state !== null ? "(snapshot)" : null,
+        })),
+      });
+    }
+
+    const report = replayEvents(events);
+    const { data: row } = await supabase.from("games").select("*").eq("id", params.gameId).single();
+    const stored = row !== null ? rowToGame(row as GameRow) : null;
+    return json({
+      engineVersion,
+      applied: report.applied,
+      error: report.error,
+      divergence: report.divergence,
+      diffAgainstStored:
+        report.game !== null && stored !== null ? diffGames(report.game, stored) : null,
+      replayed: report.game !== null ? { clock: report.game.clock, currentPlayer: report.game.currentPlayer, summary: summarizeGame(report.game) } : null,
+      stored: stored !== null ? { clock: stored.clock, currentPlayer: stored.currentPlayer } : null,
+    });
+  }
+
+  if (params.action === "errors") {
+    let query = supabase
+      .from("client_errors")
+      .select("id, game_id, player, message, stack, context, user_agent, app_version, created_at")
+      .order("created_at", { ascending: false })
+      .limit(params.limit);
+    if (params.gameId !== null) query = query.eq("game_id", params.gameId);
+    const { data, error } = await query;
+    if (error !== null) return json({ error: error.message }, 500);
+    return json({ engineVersion, errors: data });
+  }
+
   return json(
     {
       engineVersion,
@@ -117,6 +182,9 @@ Deno.serve(async (request) => {
         "?action=list&limit=10",
         "?action=get&gameId=<id>",
         "?action=get&gameId=<id>&as=day|night",
+        "?action=events&gameId=<id>",
+        "?action=replay&gameId=<id>",
+        "?action=errors[&gameId=<id>]",
       ],
     },
     400,

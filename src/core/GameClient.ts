@@ -1,5 +1,19 @@
 import { supabase, getEdgeFunctionError } from "../lib/supabase";
+import { reportClientError } from "../lib/error-report";
 import type { ActionResponse, GameAction, ServerGameState } from "./GameTypes";
+
+/** A request that never settles would freeze the UI (input is blocked while an action is in flight) */
+const ACTION_TIMEOUT_MS = 20_000;
+const POLL_TIMEOUT_MS = 15_000;
+
+const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
+  new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => { window.clearTimeout(timer); resolve(value); },
+      (error) => { window.clearTimeout(timer); reject(error); },
+    );
+  });
 
 /**
  * GameClient handles all communication with the game server.
@@ -20,9 +34,11 @@ export class GameClient {
       if (this.isProcessingAction) return;
 
       try {
-        const { data, error } = await supabase.functions.invoke("game-state", {
-          body: { gameId },
-        });
+        const { data, error } = await withTimeout(
+          supabase.functions.invoke("game-state", { body: { gameId } }),
+          POLL_TIMEOUT_MS,
+          "game-state",
+        );
         // An action started while this poll was in flight; its response is
         // newer than this snapshot, so drop it.
         if (this.isProcessingAction) return;
@@ -54,15 +70,16 @@ export class GameClient {
     this.isProcessingAction = true;
 
     try {
-      const { data, error } = await supabase.functions.invoke("game-action", {
-        body: { gameId, action },
-      });
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("game-action", { body: { gameId, action } }),
+        ACTION_TIMEOUT_MS,
+        "game-action",
+      );
 
       if (error !== null) {
-        console.error(
-          "Error sending action:",
-          await getEdgeFunctionError(error),
-        );
+        const message = await getEdgeFunctionError(error);
+        console.error("Error sending action:", message);
+        reportClientError({ gameId, player: action.player, message: `game-action failed: ${message}`, context: { action } });
         return { success: false };
       }
 
@@ -70,6 +87,13 @@ export class GameClient {
       return { success: response.result.success, response };
     } catch (actionError) {
       console.error("Error sending action:", actionError);
+      reportClientError({
+        gameId,
+        player: action.player,
+        message: actionError instanceof Error ? actionError.message : String(actionError),
+        stack: actionError instanceof Error ? actionError.stack : undefined,
+        context: { action, source: "sendAction" },
+      });
       return { success: false };
     } finally {
       this.isProcessingAction = false;

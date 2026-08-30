@@ -198,6 +198,30 @@ canvas {
   opacity: 0.8;
 }
 
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.setting select {
+  flex: 1;
+  max-width: 60%;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--game-text-color);
+  font-family: inherit;
+}
+
+.hint--error {
+  color: #ffab91;
+  opacity: 1;
+}
+
 .hint {
   margin: 0;
   font-size: 0.8rem;
