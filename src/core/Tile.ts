@@ -22,6 +22,8 @@ export class Tile {
   readonly landscape: Landscape | null;
   readonly building?: Building;
   readonly piece?: Piece;
+  /** Steed lying on the tile (horse/boat), mounted by moving a piece onto it */
+  readonly steed: string | null;
 
   constructor({
     row,
@@ -30,6 +32,7 @@ export class Tile {
     landscape,
     piece,
     building,
+    steed,
   }: {
     row: number;
     column: number;
@@ -37,9 +40,11 @@ export class Tile {
     landscape?: Landscape;
     piece?: Piece;
     building?: Building;
+    steed?: string | null;
   }) {
     this.piece = piece;
     this.building = building;
+    this.steed = steed ?? null;
     this.x = Hexagon.x(row, column);
     this.y = Hexagon.y(row);
     this.row = row;
@@ -56,6 +61,9 @@ export class Tile {
       if (this.landscape !== null) {
         this.landscape.render(ctx, this, imageAssets);
         this.building?.render(ctx, this, imageAssets);
+        if (this.steed !== null && this.piece === undefined) {
+          imageAssets.itemImage(this.steed)?.renderCentered(ctx, this.x, this.y);
+        }
         this.piece?.render(ctx, this, imageAssets);
       }
     } else {

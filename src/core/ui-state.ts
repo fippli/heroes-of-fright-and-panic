@@ -47,6 +47,8 @@ export type GameUiState = {
     readonly row: number;
     readonly column: number;
     readonly landscape: string | null;
+    /** Steed lying on the tile, if any */
+    readonly steed: string | null;
     /** Own building on the selected tile, if any */
     readonly building: BuildingType | null;
     /** Own piece on the selected tile, if any */

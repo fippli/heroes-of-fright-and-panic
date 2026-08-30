@@ -28,6 +28,15 @@ describe("normalizePiece", () => {
 });
 
 describe("parseGameState", () => {
+  it("keeps a steed lying on a tile", () => {
+    const game = {
+      id: "g1", size: 1, currentPlayer: "day", clock: { time: 6 },
+      dayPlayer: { type: "day", resources: {} }, nightPlayer: { type: "night", resources: {} },
+      tiles: [{ row: 0, column: 0, landscape: { type: LandscapeType.grass }, building: null, piece: null, steed: { type: "horse" } }],
+    } as unknown as ServerGameState;
+    expect(parseGameState(game).tiles[0].steed).toBe("horse");
+  });
+
   it("parses a legacy game whose pieces have no equipment field", () => {
     const game: ServerGameState = {
       id: "g1",

@@ -173,6 +173,13 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
             </section>
           )}
 
+          {selected.steed !== null && piece === null && (
+            <div className="selection__portrait">
+              {ui.sprites.items[selected.steed] !== undefined && <img src={ui.sprites.items[selected.steed]} alt={selected.steed} />}
+              <span className="selection__meta">A {ITEM_LABEL[selected.steed]?.toLowerCase() ?? selected.steed} waits here — move a piece onto this tile to mount it.</span>
+            </div>
+          )}
+
           {building !== null && piece === null && ui.sprites.building !== null && (
             <div className="selection__portrait">
               <img src={ui.sprites.building} alt={title} />

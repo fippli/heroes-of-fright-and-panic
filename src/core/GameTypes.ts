@@ -60,6 +60,8 @@ export type ServerTile = {
     steed?: unknown;
     walkableLandscape?: LandscapeType[];
   } | null;
+  /** A steed left on the tile (bought at a house), waiting to be mounted */
+  steed?: { type: string } | null;
 };
 
 export type ServerGameState = {

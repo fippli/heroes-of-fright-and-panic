@@ -232,6 +232,7 @@ export class Game {
               row: selected.row,
               column: selected.column,
               landscape: selected.landscape?.type ?? null,
+              steed: selected.steed,
               building: mine(selected.building?.owner) ? (selected.building?.type ?? null) : null,
               piece: mine(selected.piece?.owner) ? (selected.piece?.kind ?? null) : null,
               pieceInfo:
@@ -325,6 +326,11 @@ export class Game {
     this.nightPlayer = parsed.nightPlayer;
     this.tiles = parsed.tiles;
     this.markPastures();
+    // Tiles are rebuilt on every update; keep the selection pointing at the
+    // current tile at that position, not a stale copy with an old piece
+    if (this.selectedTile != null) {
+      this.selectedTile = this.findTile({ row: this.selectedTile.row, column: this.selectedTile.column });
+    }
     this.gameOver = parsed.gameOver;
     this.winner = parsed.winner;
 
