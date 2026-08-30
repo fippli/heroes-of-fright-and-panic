@@ -7,6 +7,7 @@ import { rowToGame } from "@shared/game/converters.ts";
 import type { GameRow } from "@shared/game/types.ts";
 import type { PlayerType } from "@shared/actions/index.ts";
 import { getFilteredGameState } from "@shared/game/engine.ts";
+import { isAiTurn, runAiPhase } from "../_shared/ai-turn.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -51,7 +52,15 @@ Deno.serve(async (request) => {
     });
   }
 
-  const game = rowToGame(gameRow as GameRow);
+  const stored = rowToGame(gameRow as GameRow);
+
+  // A stalled AI phase (older than the background runner should need) is
+  // resumed here, so a game can never sit on the AI's turn forever.
+  const STALL_AFTER_MS = 15_000;
+  const game =
+    isAiTurn(stored) && Date.now() - stored.updatedAt.getTime() > STALL_AFTER_MS
+      ? await runAiPhase(supabase, stored)
+      : stored;
 
   // Derive player perspective from JWT email
   const playerType: PlayerType | null =

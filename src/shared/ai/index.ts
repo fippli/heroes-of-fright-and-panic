@@ -9,6 +9,8 @@ import type { GameAction, PlayerType, TilePosition } from "@shared/actions/index
 import type { Tile } from "@shared/map/tile.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
 import { BuildingType } from "@shared/building/index.ts";
+import { processAction } from "@shared/game/actions.ts";
+import type { ActionResult } from "@shared/actions/index.ts";
 import { EquipmentType, createEquipment } from "@shared/equipment/index.ts";
 import { ResearchType, canResearch, researchCostOf } from "@shared/research/index.ts";
 import { SteedType, createSteed } from "@shared/steed/index.ts";
@@ -239,8 +241,12 @@ const generateResearchActions = (game: Game, player: PlayerType): ReadonlyArray<
 
   if (castles.length === 0) return [];
 
+  // Speed beyond level 2 makes a phase take hundreds of actions; the AI
+  // does not need it and it only slows the game for the human
+  const AI_MAX_SPEED_LEVEL = 2;
   const researchable = [ResearchType.speed, ResearchType.miningII, ResearchType.miningIII, ResearchType.queen]
     .filter((researchType) =>
+      !(researchType === ResearchType.speed && playerData.research.speedLevel >= AI_MAX_SPEED_LEVEL) &&
       canResearch(playerData.research, researchType) &&
       canAfford(playerData.resources, researchCostOf(researchType)),
     );
@@ -388,4 +394,61 @@ export const pickAction = (
   );
 
   return result.picked ?? actions.at(-1);
+};
+
+// ============================================
+// PHASE RUNNER
+// ============================================
+
+export type AiPhaseStep = {
+  readonly action: GameAction;
+  readonly result: ActionResult;
+};
+
+export type AiPhaseReport = {
+  readonly game: Game;
+  /** Successful actions, in order */
+  readonly steps: ReadonlyArray<AiPhaseStep>;
+  readonly attempts: number;
+  /** True when the AI ran out of attempts and passed the remainder of its phase */
+  readonly passedRemainder: boolean;
+};
+
+/**
+ * Play the AI's whole phase. Picks weighted actions until the clock crosses
+ * into the other side's phase; if the attempt budget runs out first, the
+ * remainder of the phase is passed so the game can never stall on the AI.
+ */
+export const playAiPhase = (
+  game: Game,
+  aiPlayer: PlayerType,
+  random: RandomFunction,
+  maxAttempts: number = 200,
+): AiPhaseReport => {
+  let current = game;
+  let attempts = 0;
+  const steps: AiPhaseStep[] = [];
+
+  while (current.currentPlayer === aiPlayer && current.gameOver !== true && attempts < maxAttempts) {
+    const aiAction = pickAction(generateAllActions(current, aiPlayer), random);
+    if (aiAction === undefined) break;
+    attempts += 1;
+    const { result, updatedGame } = processAction({ game: current, action: aiAction });
+    if (!result.success) continue;
+    steps.push({ action: aiAction, result });
+    current = updatedGame;
+  }
+
+  let passedRemainder = false;
+  if (current.currentPlayer === aiPlayer && current.gameOver !== true) {
+    const pass: GameAction = { type: "pass", player: aiPlayer, toPhaseEnd: true };
+    const { result, updatedGame } = processAction({ game: current, action: pass });
+    if (result.success) {
+      steps.push({ action: pass, result });
+      current = updatedGame;
+      passedRemainder = true;
+    }
+  }
+
+  return { game: current, steps, attempts, passedRemainder };
 };

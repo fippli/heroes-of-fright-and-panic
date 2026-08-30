@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGame } from "../game/create-game.ts";
-import { generateAllActions, pickAction } from "./index.ts";
+import { generateAllActions, pickAction, playAiPhase } from "./index.ts";
+import { createResearch } from "../research/index.ts";
 
 const gameWithoutDayPieces = () => {
   const game = createGame({ boardSize: 12, name: "ai", alliance: "day", creatorEmail: "a@b.c", inviteEmail: null, seed: 2 });
@@ -26,5 +27,42 @@ describe("generateAllActions", () => {
     const actions = generateAllActions(game, "night");
     expect(actions.length).toBeGreaterThan(0);
     expect(actions.some((action) => action.type === "pass")).toBe(false);
+  });
+});
+
+describe("playAiPhase", () => {
+  it("always hands the turn back, even with nothing to do", () => {
+    const game = gameWithoutDayPieces();
+    const report = playAiPhase(game, "day", () => 0.5);
+    expect(report.game.currentPlayer).toBe("night");
+    // With no pieces the only legal action is pass, tick by tick
+    expect(report.steps.every((step) => step.action.type === "pass")).toBe(true);
+  });
+
+  it("passes the remainder when the attempt budget runs out", () => {
+    const game = gameWithoutDayPieces();
+    const report = playAiPhase(game, "day", () => 0.5, 3);
+    expect(report.attempts).toBe(3);
+    expect(report.passedRemainder).toBe(true);
+    expect(report.game.currentPlayer).toBe("night");
+  });
+
+  it("plays real actions and still ends the phase within the attempt budget", () => {
+    const base = gameWithoutDayPieces();
+    // Night phase starts at 18:00
+    const game = { ...base, clock: { time: 18, hasDawned: true, hasDusked: true }, currentPlayer: "night" as const };
+    let seed = 7;
+    const random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const report = playAiPhase(game, "night", random, 100);
+    expect(report.game.currentPlayer).toBe("day");
+    expect(report.steps.length).toBeGreaterThan(0);
+  });
+
+  it("never researches Speed past level 2", () => {
+    const base = gameWithoutDayPieces();
+    const research = { ...createResearch(), speedLevel: 2 };
+    const game = { ...base, nightPlayer: { ...base.nightPlayer, research, resources: { ...base.nightPlayer.resources, wood: 99, stone: 99, gold: 99, iron: 99 } } };
+    const actions = generateAllActions(game, "night");
+    expect(actions.some((a) => a.type === "research" && a.researchType === "speed")).toBe(false);
   });
 });
