@@ -21,6 +21,8 @@ import { supabase, getEdgeFunctionError } from "../../lib/supabase";
 import type { Coordinate } from "../../types/coordinate";
 import type { GameUiState } from "../../core/ui-state";
 import { BuildMenu } from "./BuildMenu";
+import { Banner } from "./Banner";
+import { EventFeed } from "./EventFeed";
 import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
 import { installErrorReporting, reportClientError } from "../../lib/error-report";
 import "./game.css";
@@ -321,6 +323,7 @@ export const GamePage = () => {
     <div className="game-body">
       <div id="app">
         <div className="board">
+          <Banner notice={ui?.notice ?? null} />
           <div className="canvas-wrapper" ref={wrapperRef}>
             <canvas id="canvas" ref={canvasRef} width="600" height="600" />
           </div>
@@ -356,6 +359,9 @@ export const GamePage = () => {
 
           {ui !== null && gameRef.current !== null && (
             <BuildMenu game={gameRef.current} ui={ui} />
+          )}
+          {gameRef.current !== null && (
+            <EventFeed game={gameRef.current} gameId={gameId} player={myPlayerType} />
           )}
           {gameRef.current !== null && (
             <GameSettings game={gameRef.current} gameId={gameId} initialThemeId={activeThemeId} />

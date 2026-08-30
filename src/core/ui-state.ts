@@ -2,8 +2,16 @@ import type { BuildingType } from "@shared/building";
 import type { PieceKind } from "@shared/piece";
 import type { ResourceMap } from "@shared/player/resource-map";
 
+export type Notice = {
+  readonly id: number;
+  readonly text: string;
+  readonly tone: "info" | "success" | "error";
+};
+
 /** What the sidebar needs to know about the board, published on every change */
 export type GameUiState = {
+  /** Latest thing worth telling the player; null when there is nothing new */
+  readonly notice: Notice | null;
   readonly isPlayer: boolean;
   readonly isMyTurn: boolean;
   readonly resources: ResourceMap;

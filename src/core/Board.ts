@@ -20,7 +20,7 @@ import { Tile } from "./Tile";
 import { LandscapeType } from "./Landscape";
 import { boundsOfTiles, focusPoint } from "./viewport";
 import { predictAction } from "./predict";
-import type { GameUiState } from "./ui-state";
+import type { GameUiState, Notice } from "./ui-state";
 
 /**
  * Game class - Client-side render-only implementation
@@ -69,6 +69,22 @@ export class Game {
 
   // Sidebar subscribers, notified with a fresh snapshot on every change
   private readonly listeners = new Set<(ui: GameUiState) => void>();
+
+  // Latest banner message
+  private notice: Notice | null = null;
+  private noticeCounter = 0;
+
+  /** Show a short message in the banner (replaces the previous one) */
+  private say(text: string, tone: Notice["tone"] = "info"): void {
+    this.noticeCounter += 1;
+    this.notice = { id: this.noticeCounter, text, tone };
+    this.notify();
+  }
+
+  /** Whether this client can currently see a tile (fog of war) */
+  isExplored(position: { row: number; column: number }): boolean {
+    return this.findTile(position)?.explored === true;
+  }
 
   // Game over state
   gameOver: boolean = false;
@@ -132,6 +148,7 @@ export class Game {
     const mine = (owner: { type: PlayerType } | undefined): boolean =>
       owner !== undefined && owner.type === this.myPlayerType;
     return {
+      notice: this.notice,
       isPlayer: this.myPlayerType !== null,
       isMyTurn: this.isMyTurn,
       resources: this.player.resources,
@@ -194,13 +211,14 @@ export class Game {
     // Detect time transitions for dialogs
     const wasDay = this.previousWasDay;
     const isNowDay = this.clock.isDay();
-    if (wasDay && !isNowDay) {
-      this.dialog.open({ title: "Dusk", content: "The sun is setting" });
-    } else if (!wasDay && isNowDay) {
-      this.dialog.open({ title: "Dawn", content: "The sun is rising" });
-    }
     this.previousWasDay = isNowDay;
-    this.notify();
+    if (wasDay && !isNowDay) {
+      this.say("Dusk — the sun is setting. Night's phase begins.");
+    } else if (!wasDay && isNowDay) {
+      this.say("Dawn — the sun is rising. Day's phase begins.");
+    } else {
+      this.notify();
+    }
   }
 
   /**
@@ -291,10 +309,7 @@ export class Game {
     if (!wasMyTurn && isNowMyTurn && this.myPlayerType !== null) {
       console.log("It's your turn!");
       Notifications.notifyTurnChange(this.myPlayerType);
-      this.dialog.open({
-        title: "Your Turn!",
-        content: `It's ${this.myPlayerType} player's turn`,
-      });
+      this.say("Your turn.", "success");
     }
   }
 
@@ -482,7 +497,7 @@ export class Game {
     }
 
     if (!this.isMyTurn) {
-      console.warn("Not your turn - action blocked");
+      this.say("Not your turn yet.", "error");
       return false;
     }
 
@@ -501,6 +516,7 @@ export class Game {
       if (predicted !== null && baseline !== null) {
         this.applyGameState(baseline);
       }
+      this.say("Could not reach the server — the move was undone. Try again.", "error");
       return false;
     }
 
@@ -511,6 +527,7 @@ export class Game {
       }
     } else {
       console.warn("Action failed:", response.result.error);
+      this.say(response.result.error ?? "That action was refused.", "error");
       if (response.game !== undefined) {
         this.parseQuiet(response.game);
       } else if (predicted !== null && baseline !== null) {

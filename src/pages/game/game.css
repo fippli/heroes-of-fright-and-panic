@@ -42,7 +42,53 @@ body:has(.game-body) {
   align-items: center;
   justify-content: center;
   height: 100%;
+  position: relative;
 }
+
+.banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  max-width: min(80%, 520px);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(20, 16, 12, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--game-text-color);
+  font-size: 0.95rem;
+  pointer-events: none;
+  text-align: center;
+}
+
+.banner--success { border-color: #9ccc65; }
+.banner--error { border-color: #ff7043; color: #ffccbc; }
+
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.feed li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.feed__time {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.feed__theirs { opacity: 0.85; }
 
 .canvas-wrapper {
   width: 100%;
