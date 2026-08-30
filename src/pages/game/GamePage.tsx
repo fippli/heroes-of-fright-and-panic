@@ -46,6 +46,7 @@ export const GamePage = () => {
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const joinGame = async (side: "day" | "night") => {
     setJoining(true);
@@ -328,34 +329,44 @@ export const GamePage = () => {
           <Banner notice={ui?.notice ?? null} />
           <button type="button" className="action-btn help-toggle" onClick={() => setHelpOpen(true)} title="How to play (?)">?</button>
           <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
-          {ui !== null && gameRef.current !== null && <SelectionPanel game={gameRef.current} ui={ui} />}
           <div className="canvas-wrapper" ref={wrapperRef}>
             <canvas id="canvas" ref={canvasRef} width="600" height="600" />
           </div>
         </div>
 
         <aside className="sidebar">
-          {ui !== null && <EconomyPanel ui={ui} />}
-          {opponentOpen && (
-            <section className="panel">
-              <h2>Invite</h2>
-              <p className="hint">The other seat is empty. Send this link — whoever opens it while signed in can take it.</p>
-              <div className="invite">
-                <input className="invite__link" readOnly value={inviteLink} onFocus={(event) => event.target.select()} />
-                <button type="button" className="action-btn invite__copy" onClick={() => void copyInvite()}>
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
-            </section>
-          )}
-          {ui !== null && gameRef.current !== null && (
-            <BuildMenu game={gameRef.current} ui={ui} />
-          )}
+          <div className="sidebar__top">
+            <div className="sidebar__title">
+              <span className="sidebar__brand">Dusk and Dawn</span>
+              <button type="button" className="action-btn cog" onClick={() => setSettingsOpen((open) => !open)} title="Settings" aria-label="Settings" aria-expanded={settingsOpen}>
+                ⚙
+              </button>
+            </div>
+            {gameRef.current !== null && (
+              <GameSettings game={gameRef.current} gameId={gameId} initialThemeId={activeThemeId} open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+            )}
+          </div>
+          <div className="sidebar__scroll">
+            {ui !== null && gameRef.current !== null && <SelectionPanel game={gameRef.current} ui={ui} />}
+            {ui !== null && <EconomyPanel ui={ui} />}
+            {opponentOpen && (
+              <section className="panel">
+                <h2>Invite</h2>
+                <p className="hint">The other seat is empty. Send this link — whoever opens it while signed in can take it.</p>
+                <div className="invite">
+                  <input className="invite__link" readOnly value={inviteLink} onFocus={(event) => event.target.select()} />
+                  <button type="button" className="action-btn invite__copy" onClick={() => void copyInvite()}>
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              </section>
+            )}
+            {ui !== null && gameRef.current !== null && (
+              <BuildMenu game={gameRef.current} ui={ui} />
+            )}
+          </div>
           {gameRef.current !== null && (
             <EventFeed game={gameRef.current} gameId={gameId} player={role} />
-          )}
-          {gameRef.current !== null && (
-            <GameSettings game={gameRef.current} gameId={gameId} initialThemeId={activeThemeId} />
           )}
         </aside>
       </div>

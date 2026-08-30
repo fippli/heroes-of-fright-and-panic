@@ -58,8 +58,8 @@ const Slot = ({ label, item, sprite, side, buy, icons }: SlotProps) => {
 };
 
 /**
- * Slides in from the left of the board when a tile is selected. Pieces get a
- * paper-doll with equipment slots and stats; own buildings get their actions.
+ * Sidebar inventory for the selected tile. Pieces get a paper-doll with
+ * equipment slots and stats; own buildings get their actions.
  */
 export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui: GameUiState }) => {
   const selected = ui.selected;
@@ -110,7 +110,7 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
       : undefined;
 
   return (
-    <aside className={`selection${open ? " selection--open" : ""}`} aria-hidden={!open}>
+    <section className="panel selection" hidden={!open}>
       {selected !== null && (
         <>
           <header className="selection__head">
@@ -243,6 +243,6 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
           )}
         </>
       )}
-    </aside>
+    </section>
   );
 };

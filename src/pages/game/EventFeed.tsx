@@ -5,7 +5,7 @@ import type { GameEvent } from "@shared/game/events";
 import type { Game } from "../../core/Board";
 
 const POLL_MS = 3000;
-const SHOW = 12;
+const HISTORY = 200;
 
 type Row = {
   seq: number; kind: GameEvent["kind"]; player: string | null; action: GameEvent["action"];
@@ -30,7 +30,7 @@ export const EventFeed = ({ game, gameId, player }: { readonly game: Game; reado
         .eq("game_id", gameId)
         .in("kind", ["action", "ai"])
         .order("seq", { ascending: false })
-        .limit(40);
+        .limit(HISTORY);
       if (!cancelled && data !== null) setRows(data as Row[]);
     };
     void load();
@@ -47,12 +47,12 @@ export const EventFeed = ({ game, gameId, player }: { readonly game: Game; reado
     if (row.result !== null && !row.result.success) return false;
     const positions = eventPositions(row.action);
     return positions.length > 0 && positions.some((position) => game.isExplored(position));
-  }).slice(0, SHOW);
+  });
 
-  if (visible.length === 0) return null;
   return (
-    <section className="panel">
+    <section className="panel chronicle">
       <h2>Chronicle</h2>
+      {visible.length === 0 && <p className="hint">Nothing has happened yet.</p>}
       <ol className="feed">
         {visible.map((row) => (
           <li key={row.seq} className={row.player === player ? "feed__mine" : "feed__theirs"}>

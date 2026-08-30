@@ -26,10 +26,14 @@ export const GameSettings = ({
   game,
   gameId,
   initialThemeId,
+  open,
+  onClose,
 }: {
   readonly game: Game;
   readonly gameId: string;
   readonly initialThemeId: string | null;
+  readonly open: boolean;
+  readonly onClose: () => void;
 }) => {
   const [themes, setThemes] = useState<readonly Theme[]>([]);
   const [themeId, setThemeId] = useState<string>(initialThemeId ?? BUILT_IN_THEME);
@@ -63,9 +67,13 @@ export const GameSettings = ({
     }
   };
 
+  if (!open) return null;
   return (
-    <section className="panel">
-      <h2>Settings</h2>
+    <section className="panel settings-pop" role="dialog" aria-label="Settings">
+      <div className="settings-pop__head">
+        <h2>Settings</h2>
+        <button type="button" className="action-btn selection__close" onClick={onClose} title="Close">×</button>
+      </div>
       <label className="setting">
         <span>Theme</span>
         <select
