@@ -120,7 +120,7 @@ There are four piece types:
 
 ## Buildings
 
-There are five building types. All buildings have 1 defense and 0 hearts.
+There are six building types. All buildings have 1 defense and 0 hearts.
 
 | Type   | Cost                | View Range | Walkable By  | Special |
 |--------|---------------------|------------|-------------|---------|
@@ -129,6 +129,7 @@ There are five building types. All buildings have 1 defense and 0 hearts.
 | Castle | Free (from tower)   | 3          | Both players | Research hub. Castle destroyed = king inside dies. |
 | Wall   | 1 stone             | 0          | Owner only   | Defensive barrier. |
 | Church | 3 wood + 3 stone    | 1          | Both players | Trains priests. Priests inside generate faith. |
+| Dock   | 4 wood              | 1          | Both players | Built on sand next to water. Builds boats. |
 
 ---
 
@@ -146,7 +147,7 @@ Equipment is for peasants only. Each peasant can carry at most one of each type.
 
 ## Steeds
 
-Steeds are placed on tiles adjacent to houses. Pieces pick them up by moving onto the tile.
+Horses are bought at houses and placed on an adjacent tile; boats are built at docks and placed on adjacent water. Pieces pick them up by moving onto the tile.
 
 | Type  | Cost    | Effect |
 |-------|---------|--------|
@@ -246,7 +247,7 @@ There are thirteen actions available:
 | Build             | Place building on grass inside your kingdom (a tile you can see). | Varies by building |
 | SpawnPeasant      | Create peasant in an empty friendly house, if there is housing for it (1 slot per house, 2 per homestead, 3 per manor). | 1 food |
 | CraftEquipment    | Equip a peasant with sword, shield, or bow. | Varies by equipment |
-| BuySteed          | Place horse or boat adjacent to a friendly house. | Varies by steed |
+| BuySteed          | Place a horse next to a friendly house, or a boat next to a friendly dock. | Varies by steed |
 | TrainPriest       | Create priest in an empty friendly church. | 1 gold |
 | Heal              | Priest heals adjacent ally by 1 heart. | 1 faith |
 | Research          | Unlock research at castle if affordable and prerequisites met. | Varies by research |

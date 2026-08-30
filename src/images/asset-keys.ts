@@ -41,6 +41,8 @@ export const ASSET_SLOTS: readonly AssetSlot[] = [
   { category: "building", key: "wall_night", label: "Wall (Night)" },
   { category: "building", key: "church_day", label: "Church (Day)" },
   { category: "building", key: "church_night", label: "Church (Night)" },
+  { category: "building", key: "dock_day", label: "Dock (Day)" },
+  { category: "building", key: "dock_night", label: "Dock (Night)" },
 
   // Resource icons (sidebar, prices)
   { category: "icon", key: "wood", label: "Wood" },

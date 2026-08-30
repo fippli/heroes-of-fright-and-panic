@@ -18,10 +18,12 @@ import {
   grass,
   water as waterLandscape,
   tree as treeLandscape,
+  sand as sandLandscape,
 } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
 import { replaceTile } from "../tile/index.ts";
 import { createBuilding } from "../building/index.ts";
+import { SteedType } from "../steed/index.ts";
 import {
   type Piece,
   PieceKind,
@@ -39,6 +41,7 @@ import { createResearch, ResearchType } from "../research/index.ts";
 import {
   handleMove,
   handleBuild,
+  handleBuySteed,
   handleSpawnPeasant,
   handleCraftEquipment,
   handleTrainPriest,
@@ -1370,5 +1373,32 @@ describe("population cap", () => {
     expect(handleSpawnPeasant(withHouses([2], 1), { type: "spawnPeasant", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(true);
     expect(handleSpawnPeasant(withHouses([3], 2), { type: "spawnPeasant", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(true);
     expect(handleSpawnPeasant(withHouses([3], 3), { type: "spawnPeasant", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(false);
+  });
+});
+
+describe("docks", () => {
+  const shore = () => {
+    // (2,3) sand next to water at (2,4); peasant at (2,2) sees both
+    const tiles = setLandscape(
+      setLandscape(placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")), 2, 3, sandLandscape()),
+      2,
+      4,
+      waterLandscape(),
+    );
+    return makeGame({ tiles });
+  };
+
+  it("builds a dock on sand next to water, but not on grass", () => {
+    const game = shore();
+    expect(handleBuild(game, { type: "build", player: "day", buildingType: BuildingType.dock, position: { row: 2, column: 3 } }).result.success).toBe(true);
+    expect(handleBuild(game, { type: "build", player: "day", buildingType: BuildingType.dock, position: { row: 1, column: 2 } }).result.success).toBe(false);
+    expect(handleBuild(game, { type: "build", player: "day", buildingType: BuildingType.house, position: { row: 2, column: 3 } }).result.success).toBe(false);
+  });
+
+  it("boats are built at docks, horses at houses", () => {
+    const withDock = handleBuild(shore(), { type: "build", player: "day", buildingType: BuildingType.dock, position: { row: 2, column: 3 } }).game;
+    const dock = { row: 2, column: 3 };
+    expect(handleBuySteed(withDock, { type: "buySteed", player: "day", steedType: SteedType.boat, housePosition: dock, targetPosition: { row: 2, column: 4 } }).result.success).toBe(true);
+    expect(handleBuySteed(withDock, { type: "buySteed", player: "day", steedType: SteedType.horse, housePosition: dock, targetPosition: { row: 1, column: 3 } }).result.success).toBe(false);
   });
 });

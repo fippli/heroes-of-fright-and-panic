@@ -112,6 +112,7 @@ export class Game {
       { key: "tower", label: "Towers", type: BuildingType.tower, level: 1 },
       { key: "castle", label: "Castles", type: BuildingType.castle, level: 1 },
       { key: "church", label: "Churches", type: BuildingType.church, level: 1 },
+      { key: "dock", label: "Docks", type: BuildingType.dock, level: 1 },
       { key: "wall", label: "Walls", type: BuildingType.wall, level: 1 },
     ];
     return order.map((entry) => ({
@@ -303,13 +304,17 @@ export class Game {
     }
   }
 
-  /** Tiles a building could go on right now: explored grass without a building */
+  /** Tiles the pending building could go on: explored sand by water for docks, explored grass otherwise */
   private buildableTiles(): Tile[] {
+    const dock = this.pendingBuild === BuildingType.dock;
     return this.tiles.filter(
       (tile) =>
         tile.explored &&
-        tile.landscape?.type === LandscapeType.grass &&
-        tile.building === undefined,
+        tile.building === undefined &&
+        (dock
+          ? tile.landscape?.type === LandscapeType.sand &&
+            tile.getNeighbors(this.tiles).some((n) => n.landscape?.type === LandscapeType.water)
+          : tile.landscape?.type === LandscapeType.grass),
     );
   }
 

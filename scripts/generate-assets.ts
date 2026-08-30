@@ -147,6 +147,10 @@ const BUILDINGS: Record<string, Record<"day" | "night", string>> = {
     "a small stone chapel with a steeple and a golden cross",
     "a dark shrine with a spire and a violet flame on top",
   ),
+  dock: piece(
+    "a wooden pier on posts with a mooring rope and a small boat",
+    "a rotten dark pier with a skull lantern and a black boat",
+  ),
 };
 
 const LANDSCAPE: Record<string, string> = {
@@ -236,6 +240,10 @@ const PAPER_BUILDINGS: Record<string, Record<"day" | "night", string>> = {
   church: paperPiece(
     "a hand-drawn map icon of a small stone chapel with a steeple and cross",
     "a hand-drawn map icon of a dark shrine with a spire",
+  ),
+  dock: paperPiece(
+    "a hand-drawn map icon of a wooden pier on posts with a mooring rope",
+    "a hand-drawn map icon of a rotten dark pier with a skull lantern",
   ),
 };
 

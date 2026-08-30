@@ -198,7 +198,18 @@ export const handleBuild = (
     return { game, result: { success: false, error: "Invalid tile position" } };
   }
 
-  if (tile.landscape?.type !== LandscapeType.grass) {
+  if (action.buildingType === BuildingType.dock) {
+    // Docks stand on the shore: sand with water next to it
+    if (tile.landscape?.type !== LandscapeType.sand) {
+      return { game, result: { success: false, error: "A dock must be built on sand" } };
+    }
+    const touchesWater = findNeighborTiles(game.tiles, action.position).some(
+      (neighbor) => neighbor.landscape?.type === LandscapeType.water,
+    );
+    if (!touchesWater) {
+      return { game, result: { success: false, error: "A dock must be next to water" } };
+    }
+  } else if (tile.landscape?.type !== LandscapeType.grass) {
     return {
       game,
       result: { success: false, error: "Can only build on grass" },
@@ -422,21 +433,26 @@ export const handleBuySteed = (
     return { game, result: { success: false, error: "Invalid tile position" } };
   }
 
+  // Horses come from houses, boats are built at docks
+  const sourceType = action.steedType === SteedType.boat ? BuildingType.dock : BuildingType.house;
   if (
     houseTile.building === null ||
-    houseTile.building.type !== BuildingType.house ||
+    houseTile.building.type !== sourceType ||
     houseTile.building.owner !== action.player
   ) {
     return {
       game,
-      result: { success: false, error: "Must buy steed from your house" },
+      result: {
+        success: false,
+        error: action.steedType === SteedType.boat ? "Boats are built at your dock" : "Horses are bought at your house",
+      },
     };
   }
 
   if (!areNeighbors(targetTile, houseTile)) {
     return {
       game,
-      result: { success: false, error: "Target must be adjacent to house" },
+      result: { success: false, error: `Target must be next to the ${sourceType}` },
     };
   }
 

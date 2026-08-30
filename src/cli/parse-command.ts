@@ -337,6 +337,7 @@ const parseBuildingType = (name: string): BuildingType | null => {
     case "tower": return BuildingType.tower;
     case "wall": return BuildingType.wall;
     case "church": return BuildingType.church;
+    case "dock": return BuildingType.dock;
     case "castle": return BuildingType.castle;
     default: return null;
   }

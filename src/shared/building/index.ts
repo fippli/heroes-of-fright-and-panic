@@ -7,6 +7,7 @@ export enum BuildingType {
   castle = "castle",
   wall = "wall",
   church = "church",
+  dock = "dock",
 }
 
 export type Building = {
@@ -49,6 +50,8 @@ export const buildingCostOf = (buildingType: BuildingType): ResourceMap => {
       return createResourceMap({ stone: 1 });
     case BuildingType.church:
       return createResourceMap({ wood: 3, stone: 3 });
+    case BuildingType.dock:
+      return createResourceMap({ wood: 4 });
     case BuildingType.castle:
       return createResourceMap();
     default:
@@ -107,11 +110,23 @@ export const createChurchBuilding = (owner: PlayerType): Building => ({
   walkableByEnemy: true,
 });
 
+export const createDockBuilding = (owner: PlayerType): Building => ({
+  type: BuildingType.dock,
+  owner,
+  cost: buildingCostOf(BuildingType.dock),
+  viewRange: 1,
+  defense: 1,
+  walkableByOwner: true,
+  walkableByEnemy: true,
+});
+
 export const createBuilding = (
   buildingType: BuildingType,
   owner: PlayerType,
 ): Building => {
   switch (buildingType) {
+    case BuildingType.dock:
+      return createDockBuilding(owner);
     case BuildingType.house:
       return createHouseBuilding(owner);
     case BuildingType.tower:

@@ -68,8 +68,9 @@ const generateBuildActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
   const playerData = getPlayer(game, player);
   const buildableTypes = [BuildingType.house, BuildingType.tower, BuildingType.wall, BuildingType.church]
     .filter((buildingType) => canAfford(playerData.resources, buildingCostOf(buildingType)));
+  const canDock = canAfford(playerData.resources, buildingCostOf(BuildingType.dock));
 
-  if (buildableTypes.length === 0) return [];
+  if (buildableTypes.length === 0 && !canDock) return [];
 
   const myPiecePositions = game.tiles.filter(
     (tile) => tile.piece !== null && tile.piece.owner === player,
@@ -89,14 +90,38 @@ const generateBuildActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
     return true;
   });
 
-  return uniqueGrass.flatMap((grassTile) =>
-    buildableTypes.map((buildingType): GameAction => ({
+  const dockSites = !canDock
+    ? []
+    : myPiecePositions.flatMap((pieceTile) =>
+        findNeighborTiles(game.tiles, pieceTile).filter(
+          (neighbor) =>
+            neighbor.landscape?.type === LandscapeType.sand &&
+            neighbor.building === null &&
+            findNeighborTiles(game.tiles, neighbor).some((n) => n.landscape?.type === LandscapeType.water),
+        ),
+      ).filter((tile) => {
+        const key = `dock:${tile.row},${tile.column}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+  return [
+    ...uniqueGrass.flatMap((grassTile) =>
+      buildableTypes.map((buildingType): GameAction => ({
+        type: "build",
+        player,
+        buildingType,
+        position: { row: grassTile.row, column: grassTile.column },
+      })),
+    ),
+    ...dockSites.map((tile): GameAction => ({
       type: "build",
       player,
-      buildingType,
-      position: { row: grassTile.row, column: grassTile.column },
+      buildingType: BuildingType.dock,
+      position: { row: tile.row, column: tile.column },
     })),
-  );
+  ];
 };
 
 const generateSpawnActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
@@ -290,14 +315,15 @@ const generateEnterTowerActions = (game: Game, player: PlayerType): ReadonlyArra
 
 const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
   const playerData = getPlayer(game, player);
-  const houses = game.tiles.filter(
+  // Horses from houses, boats from docks
+  const sources = game.tiles.filter(
     (tile) =>
       tile.building !== null &&
-      tile.building.type === BuildingType.house &&
+      (tile.building.type === BuildingType.house || tile.building.type === BuildingType.dock) &&
       tile.building.owner === player,
   );
 
-  if (houses.length === 0) return [];
+  if (sources.length === 0) return [];
 
   const affordableSteeds = [SteedType.horse, SteedType.boat].filter((steedType) =>
     canAfford(playerData.resources, createSteed(steedType).cost),
@@ -305,16 +331,16 @@ const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
 
   if (affordableSteeds.length === 0) return [];
 
-  return houses.flatMap((houseTile) =>
+  return sources.flatMap((houseTile) =>
     findNeighborTiles(game.tiles, houseTile)
       .filter((neighbor) => neighbor.piece === null)
       .flatMap((neighbor) =>
         affordableSteeds
           .filter((steedType) => {
             if (steedType === SteedType.boat) {
-              return neighbor.landscape?.type === LandscapeType.water;
+              return houseTile.building?.type === BuildingType.dock && neighbor.landscape?.type === LandscapeType.water;
             }
-            return true;
+            return houseTile.building?.type === BuildingType.house;
           })
           .map((steedType): GameAction => ({
             type: "buySteed",

@@ -9,7 +9,7 @@ import { costEntries, type GameUiState, type TargetMode } from "../../core/ui-st
 import { ActionButton, affordable } from "./ActionButton";
 
 const KIND_LABEL: Record<string, string> = { peasant: "Peasant", king: "King", priest: "Priest", archAngel: "Archangel" };
-const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower", castle: "Castle", wall: "Wall", church: "Church" };
+const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower", castle: "Castle", wall: "Wall", church: "Church", dock: "Dock" };
 const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", bow: "Bow", horse: "Horse", boat: "Boat" };
 
 const RESEARCH: readonly { readonly type: ResearchType; readonly label: string; readonly key: string }[] = [
@@ -203,7 +203,13 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
               )}
               <ActionButton label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost())} onClick={() => void game.spawnPeasantAt(at)} />
               {targetButton("Buy horse", "O", "horse", createSteed(SteedType.horse).cost, "Placed on a tile next to the house")}
-              {targetButton("Buy boat", "F", "boat", createSteed(SteedType.boat).cost, "Placed on water next to the house")}
+            </section>
+          )}
+
+          {ownBuilding === BuildingType.dock && at !== null && (
+            <section className="selection__actions">
+              <h3>Dock</h3>
+              {targetButton("Build boat", "F", "boat", createSteed(SteedType.boat).cost, "Placed on water next to the dock; a piece mounts it by moving onto it")}
             </section>
           )}
 

@@ -35,6 +35,8 @@ const buildingAssetKey = (player: Player, type: BuildingType, level: number = 1)
       return `wall_${playerSuffix}`;
     case BuildingType.church:
       return `church_${playerSuffix}`;
+    case BuildingType.dock:
+      return `dock_${playerSuffix}`;
     default:
       return "";
   }

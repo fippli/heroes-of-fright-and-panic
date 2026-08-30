@@ -159,6 +159,7 @@ export const GamePage = () => {
           t: () => game.setPendingBuild(BuildingType.tower),
           w: () => game.setPendingBuild(BuildingType.wall),
           r: () => game.setPendingBuild(BuildingType.church),
+          k: () => game.setPendingBuild(BuildingType.dock),
           escape: () => game.cancel(),
           u: () => {
             const selected = game.uiState().selected;

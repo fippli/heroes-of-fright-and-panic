@@ -3,13 +3,13 @@ import { useEffect } from "react";
 const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["Click", "Select your piece or building; click again to move, attack, or open its menu"],
   ["Drag / wheel / + −", "Pan and zoom the map (touch: drag and pinch)"],
-  ["H T W R", "Pick a building to place, then click a tile in your kingdom"],
+  ["H T W R K", "Pick a building to place (house, tower, wall, church, dock), then click a tile in your kingdom"],
   ["P", "Spawn a peasant (house selected)"],
   ["S D B", "Sword, shield, bow for the selected peasant"],
   ["N M", "Train a priest / summon an archangel (church selected)"],
   ["G", "Heal: select your priest, then click an ally"],
   ["E", "Enter tower: select your king, then click the tower"],
-  ["O F", "Buy a horse / boat next to the selected house"],
+  ["O F", "Buy a horse next to the selected house / build a boat next to the selected dock"],
   ["4 7", "Research at the castle: Speed, Queen"],
   ["U", "Upgrade the selected house (homestead, then manor)"],
   ["Space", "Wait an hour · Shift+Space ends your phase"],
@@ -42,7 +42,7 @@ export const HelpOverlay = ({ open, onClose }: { readonly open: boolean; readonl
             <p>Two alliances share an island: <strong>Day</strong> plays from 06:00 to 18:00, <strong>Night</strong> from 18:00 to 06:00. Every action takes one hour, so a phase is twelve actions — wait or end your phase when you have nothing to do.</p>
             <p><strong>Win</strong> by killing the other king. A king inside a castle dies when the castle falls.</p>
             <h2>Your kingdom</h2>
-            <p>Your kingdom is what your pieces can see. You may only build on grass inside it. Forests and mountains cannot be entered; there is always a pass around them. Water needs a boat.</p>
+            <p>Your kingdom is what your pieces can see. You may only build on grass inside it. Forests and mountains cannot be entered; there is always a pass around them. Water needs a boat, built at a dock (docks go on sand by the shore).</p>
             <h2>Economy</h2>
             <p>At dawn (Day) and dusk (Night) your <strong>houses</strong> produce: +1 wood per adjacent forest tile, +1 food per adjacent farm (grass next to a house becomes farm), +1 stone per adjacent mountain. <strong>Upgrade</strong> a house (3 wood + 2 stone) into a homestead to get +2 stone and +1 iron per mountain, then (5 wood + 5 stone + 1 iron) into a manor for +1 gold per mountain and double wood and food. A priest in a church makes faith; a peasant in a boat on open water fishes.</p>
             <h2>Pieces</h2>
