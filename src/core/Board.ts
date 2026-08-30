@@ -16,6 +16,7 @@ import { amplifiedView } from "@shared/piece";
 import { createPlayer, type Player } from "@shared/player";
 import type { TilePosition } from "@shared/map/tile";
 import { calculateProduction } from "@shared/production";
+import { populationOf } from "@shared/game/population";
 import { phaseOf } from "./ui-state";
 import { Tile } from "./Tile";
 import { LandscapeType } from "./Landscape";
@@ -83,6 +84,47 @@ export class Game {
     this.noticeCounter += 1;
     this.notice = { id: this.noticeCounter, text, tone };
     this.notify();
+  }
+
+  /** Farms next to a homestead or manor get livestock */
+  private markPastures(): void {
+    const upgraded = this.tiles.filter(
+      (tile) => tile.building?.type === BuildingType.house && (tile.building?.level ?? 1) >= 2,
+    );
+    const pasture = new Set<string>();
+    upgraded.forEach((house) => {
+      house.getNeighbors(this.tiles).forEach((tile) => {
+        if (tile.landscape?.type === LandscapeType.farm) pasture.add(`${tile.row},${tile.column}`);
+      });
+    });
+    this.tiles.forEach((tile) => {
+      tile.pasture = pasture.has(`${tile.row},${tile.column}`);
+    });
+  }
+
+  /** Own buildings grouped for the header, in a fixed display order */
+  private buildingCounts(): GameUiState["buildings"] {
+    if (this.myPlayerType === null) return [];
+    const order: ReadonlyArray<{ key: string; label: string; type: BuildingType; level: number }> = [
+      { key: "house", label: "Houses", type: BuildingType.house, level: 1 },
+      { key: "homestead", label: "Homesteads", type: BuildingType.house, level: 2 },
+      { key: "manor", label: "Manors", type: BuildingType.house, level: 3 },
+      { key: "tower", label: "Towers", type: BuildingType.tower, level: 1 },
+      { key: "castle", label: "Castles", type: BuildingType.castle, level: 1 },
+      { key: "church", label: "Churches", type: BuildingType.church, level: 1 },
+      { key: "wall", label: "Walls", type: BuildingType.wall, level: 1 },
+    ];
+    return order.map((entry) => ({
+      key: entry.key,
+      label: entry.label,
+      count: this.tiles.filter(
+        (tile) =>
+          tile.building?.owner?.type === this.myPlayerType &&
+          tile.building.type === entry.type &&
+          (entry.type !== BuildingType.house || tile.building.level === entry.level),
+      ).length,
+      sprite: this.imageAssets.buildingImage(this.player, entry.type, entry.level).image.src,
+    }));
   }
 
   /** Whether this client can currently see a tile (fog of war) */
@@ -166,7 +208,7 @@ export class Game {
       icons: this.imageAssets.iconUrls(),
       sprites: {
         piece: selected?.piece !== undefined ? this.imageAssets.pieceImage(selected.piece.owner, selected.piece.kind).image.src : null,
-        building: selected?.building !== undefined ? this.imageAssets.buildingImage(selected.building.owner, selected.building.type).image.src : null,
+        building: selected?.building !== undefined ? this.imageAssets.buildingImage(selected.building.owner, selected.building.type, selected.building.level).image.src : null,
         items,
       },
       isPlayer: this.myPlayerType !== null,
@@ -175,6 +217,11 @@ export class Game {
       resources: this.player.resources,
       production,
       research: this.player.research,
+      population:
+        this.myPlayerType !== null
+          ? populationOf(engineTiles as never, this.myPlayerType)
+          : { peasants: 0, capacity: 0 },
+      buildings: this.buildingCounts(),
       clock: { time: this.clock.time, ...phaseOf(this.clock.time) },
       pendingBuild: this.pendingBuild,
       pendingTarget: this.pendingTarget,
@@ -277,6 +324,7 @@ export class Game {
     this.dayPlayer = parsed.dayPlayer;
     this.nightPlayer = parsed.nightPlayer;
     this.tiles = parsed.tiles;
+    this.markPastures();
     this.gameOver = parsed.gameOver;
     this.winner = parsed.winner;
 

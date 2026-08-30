@@ -28,6 +28,10 @@ export type GameUiState = {
   /** What the next dawn/dusk will bring, given the current board */
   readonly production: ResourceMap;
   readonly research: Research;
+  /** Own peasants and the housing for them */
+  readonly population: { readonly peasants: number; readonly capacity: number };
+  /** Own buildings by kind ("house", "homestead", "manor", "tower", ...) with a sprite for each */
+  readonly buildings: ReadonlyArray<{ readonly key: string; readonly label: string; readonly count: number; readonly sprite: string }>;
   readonly clock: {
     readonly time: number;
     readonly isDay: boolean;

@@ -22,11 +22,11 @@ const pieceAssetKey = (player: Player, kind: PieceKind): string => {
   }
 };
 
-const buildingAssetKey = (player: Player, type: BuildingType): string => {
+const buildingAssetKey = (player: Player, type: BuildingType, level: number = 1): string => {
   const playerSuffix = player.type === "day" ? "day" : "night";
   switch (type) {
     case BuildingType.house:
-      return `house_${playerSuffix}`;
+      return `${level >= 3 ? "manor" : level === 2 ? "homestead" : "house"}_${playerSuffix}`;
     case BuildingType.castle:
       return `castle_${playerSuffix}`;
     case BuildingType.tower:
@@ -92,9 +92,17 @@ export class ThemeImageAssets {
     return this.imageCache.get(key);
   }
 
-  buildingImage(player: Player, type: BuildingType): GameImage | undefined {
-    const key = `building/${buildingAssetKey(player, type)}`;
-    return this.imageCache.get(key);
+  buildingImage(player: Player, type: BuildingType, level: number = 1): GameImage | undefined {
+    // Upgraded houses use their own sprite when the theme has one
+    return (
+      this.imageCache.get(`building/${buildingAssetKey(player, type, level)}`) ??
+      this.imageCache.get(`building/${buildingAssetKey(player, type, 1)}`)
+    );
+  }
+
+  /** Any landscape slot by key, e.g. "pasture" */
+  landscapeImageByKey(key: string): GameImage | undefined {
+    return this.imageCache.get(`landscape/${key}`);
   }
 
   landscapeImage(type: LandscapeType): GameImage | undefined {

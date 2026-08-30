@@ -17,6 +17,8 @@ export class Tile {
   readonly row: number;
   readonly column: number;
   explored: boolean = false;
+  /** A farm next to a homestead or manor: drawn with livestock */
+  pasture: boolean = false;
   readonly landscape: Landscape | null;
   readonly building?: Building;
   readonly piece?: Piece;

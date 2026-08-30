@@ -10,6 +10,7 @@ import type { Tile } from "@shared/map/tile.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
 import { BuildingType, buildingLevel, houseUpgradeCost } from "@shared/building/index.ts";
 import { processAction } from "@shared/game/actions.ts";
+import { hasRoomForPeasant } from "@shared/game/population.ts";
 import type { ActionResult } from "@shared/actions/index.ts";
 import { EquipmentType, createEquipment } from "@shared/equipment/index.ts";
 import { ResearchType, canResearch, researchCostOf } from "@shared/research/index.ts";
@@ -101,6 +102,7 @@ const generateBuildActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
 const generateSpawnActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
   const playerData = getPlayer(game, player);
   if (!canAfford(playerData.resources, { wood: 0, stone: 0, iron: 0, gold: 0, food: 1, faith: 0 })) return [];
+  if (!hasRoomForPeasant(game.tiles, player)) return [];
 
   return game.tiles
     .filter(

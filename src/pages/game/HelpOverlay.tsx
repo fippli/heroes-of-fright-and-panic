@@ -46,7 +46,7 @@ export const HelpOverlay = ({ open, onClose }: { readonly open: boolean; readonl
             <h2>Economy</h2>
             <p>At dawn (Day) and dusk (Night) your <strong>houses</strong> produce: +1 wood per adjacent forest tile, +1 food per adjacent farm (grass next to a house becomes farm), +1 stone per adjacent mountain. <strong>Upgrade</strong> a house (3 wood + 2 stone) into a homestead to get +2 stone and +1 iron per mountain, then (5 wood + 5 stone + 1 iron) into a manor for +1 gold per mountain and double wood and food. A priest in a church makes faith; a peasant in a boat on open water fishes.</p>
             <h2>Pieces</h2>
-            <p>Peasants work, fight and can carry a sword (+1 attack), shield (+1 defense) or bow (+1 range). Priests heal. The king turns a tower into a castle, which unlocks research. Archangels are summoned with faith and ten praying priests.</p>
+            <p>Peasants need housing: each house holds one, a homestead two, a manor three — the header shows peasants housed / room. Peasants work, fight and can carry a sword (+1 attack), shield (+1 defense) or bow (+1 range). Priests heal. The king turns a tower into a castle, which unlocks research. Archangels are summoned with faith and ten praying priests.</p>
           </section>
           <section>
             <h2>Controls</h2>

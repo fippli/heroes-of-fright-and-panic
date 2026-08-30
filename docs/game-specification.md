@@ -248,7 +248,7 @@ There are thirteen actions available:
 |-------------------|------------|------|
 | Move              | Move piece to adjacent walkable tile. Can mount steeds on arrival. | - |
 | Build             | Place building on grass inside your kingdom (a tile you can see). | Varies by building |
-| SpawnPeasant      | Create peasant in an empty friendly house. | 1 food |
+| SpawnPeasant      | Create peasant in an empty friendly house, if there is housing for it (1 slot per house, 2 per homestead, 3 per manor). | 1 food |
 | CraftEquipment    | Equip a peasant with sword, shield, or bow. | Varies by equipment |
 | BuySteed          | Place horse or boat adjacent to a friendly house. | Varies by steed |
 | TrainPriest       | Create priest in an empty friendly church. | 1 gold |

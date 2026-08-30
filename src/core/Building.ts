@@ -59,7 +59,7 @@ export class Building {
 
     ctx.clip(Hexagon.path(x, y, Hexagon.clipRadius));
 
-    imageAssets.buildingImage(this.owner, this.type).renderCentered(ctx, x, y);
+    imageAssets.buildingImage(this.owner, this.type, this.level).renderCentered(ctx, x, y);
 
     // Upgraded houses wear their level as gold pips in the top-right corner
     if (this.level > 1) {

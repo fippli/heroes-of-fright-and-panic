@@ -23,6 +23,7 @@ import { Banner } from "./Banner";
 import { EconomyPanel } from "./EconomyPanel";
 import { HelpOverlay } from "./HelpOverlay";
 import { SelectionPanel } from "./SelectionPanel";
+import { TopBar } from "./TopBar";
 import { EventFeed } from "./EventFeed";
 import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
 import { installErrorReporting, reportClientError } from "../../lib/error-report";
@@ -322,6 +323,7 @@ export const GamePage = () => {
     <div className="game-body">
       <div id="app">
         <div className="board">
+          {ui !== null && <TopBar ui={ui} />}
           <Banner notice={ui?.notice ?? null} />
           <button type="button" className="action-btn help-toggle" onClick={() => setHelpOpen(true)} title="How to play (?)">?</button>
           <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />

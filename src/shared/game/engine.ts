@@ -32,6 +32,7 @@ import {
   unexplored as unexploredLandscape,
 } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
+import { populationOf } from "./population.ts";
 import type { PlayerType } from "../piece/index.ts";
 import {
   PieceKind,
@@ -306,6 +307,17 @@ export const handleSpawnPeasant = (
     return {
       game,
       result: { success: false, error: "House already has a unit" },
+    };
+  }
+
+  const population = populationOf(game.tiles, action.player);
+  if (population.peasants >= population.capacity) {
+    return {
+      game,
+      result: {
+        success: false,
+        error: `No room: ${population.peasants}/${population.capacity} peasants housed. Build or upgrade houses.`,
+      },
     };
   }
 

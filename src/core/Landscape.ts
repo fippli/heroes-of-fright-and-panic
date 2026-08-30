@@ -35,6 +35,9 @@ export class Landscape {
     } else if (this.type === LandscapeType.mountain) {
       imageAssets.landscapeImage(LandscapeType.grass).renderCentered(ctx, x, y);
       imageAssets.landscapeImage(LandscapeType.mountain).renderCentered(ctx, x, y);
+    } else if (this.type === LandscapeType.farm && (tilePosition as { pasture?: boolean }).pasture === true) {
+      imageAssets.landscapeImage(LandscapeType.farm).renderCentered(ctx, x, y);
+      imageAssets.landscapeImageByKey("pasture")?.renderCentered(ctx, x, y);
     } else {
       imageAssets.landscapeImage(this.type).renderCentered(ctx, x, y);
     }

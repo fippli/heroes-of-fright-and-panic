@@ -123,6 +123,14 @@ const BUILDINGS: Record<string, Record<"day" | "night", string>> = {
     "a small medieval cottage with a thatched roof and a chimney",
     "a crooked haunted hut with a sagging roof and glowing violet windows",
   ),
+  homestead: piece(
+    "a medieval farmhouse with a barn and a fenced yard",
+    "a haunted farmstead with a dark barn and a crooked fence",
+  ),
+  manor: piece(
+    "a grand stone manor house with two chimneys and a walled garden",
+    "a dark gothic manor with spires and glowing violet windows",
+  ),
   castle: piece(
     "a stone castle keep with towers, battlements and a golden banner",
     "a dark gothic castle with jagged black towers and violet banners",
@@ -145,6 +153,7 @@ const LANDSCAPE: Record<string, string> = {
   unexplored: "dark swirling fog and clouds, seamless top-down terrain tile texture, muted grey",
   grass: "uniform lush green meadow grass with a few tiny flowers, seamless repeating top-down terrain texture filling the entire canvas edge to edge, no border, no frame",
   farm: "tilled farmland with rows of golden wheat, seamless top-down terrain tile texture",
+  pasture: "a fenced pasture with two grazing sheep and a cow, top-down terrain tile texture",
   tree: "dense forest canopy of green trees seen from above, seamless top-down terrain tile texture",
   sand: "golden desert sand with soft dunes, seamless top-down terrain tile texture",
   water: "deep blue sea water with light ripples and foam, seamless top-down terrain tile texture",
@@ -204,6 +213,14 @@ const PAPER_BUILDINGS: Record<string, Record<"day" | "night", string>> = {
     "a hand-drawn map icon of a small thatched cottage with a chimney",
     "a hand-drawn map icon of a crooked haunted hut with a sagging roof",
   ),
+  homestead: paperPiece(
+    "a hand-drawn map icon of a farmhouse with a barn and a fence",
+    "a hand-drawn map icon of a haunted farmstead with a dark barn",
+  ),
+  manor: paperPiece(
+    "a hand-drawn map icon of a grand stone manor with two chimneys",
+    "a hand-drawn map icon of a dark gothic manor with spires",
+  ),
   castle: paperPiece(
     "a hand-drawn map icon of a stone castle with towers, battlements and a banner",
     "a hand-drawn map icon of a dark gothic castle with jagged towers",
@@ -226,13 +243,14 @@ const PAPER_LANDSCAPE: Record<string, string> = {
   unexplored: `blank aged parchment paper with faint ink fog swirls, seamless texture filling the entire canvas, ${PAPER_SUFFIX}`,
   grass: `open meadow covering the entire canvas: aged parchment with a uniform faint green wash and scattered small hand-drawn ink grass tufts everywhere, no border, no frame, ${PAPER_SUFFIX}`,
   farm: `aged parchment paper with hand-drawn ink crop rows and a faint ochre wash, seamless texture filling the entire canvas, no border, ${PAPER_SUFFIX}`,
+  pasture: `two small hand-drawn ink sheep and a cow grazing, map icon, ${PAPER_SUFFIX}`,
   tree: `a cluster of hand-drawn ink pine and oak trees with a muted green wash, map icon, ${PAPER_SUFFIX}`,
   sand: `open desert covering the entire canvas: aged parchment with a uniform faint ochre wash and scattered small hand-drawn ink dune strokes and dots everywhere, no border, no frame, ${PAPER_SUFFIX}`,
   water: `open sea covering the entire canvas: aged parchment with a uniform muted blue-grey wash and small hand-drawn ink wave marks everywhere, no land, no coastline, no border, ${PAPER_SUFFIX}`,
   mountain: `a cluster of hand-drawn ink mountain peaks with hatched shaded sides, map icon, ${PAPER_SUFFIX}`,
 };
 
-const PAPER_ICON_TERRAIN = new Set(["tree", "mountain"]);
+const PAPER_ICON_TERRAIN = new Set(["tree", "mountain", "pasture"]);
 
 const paperPromptFor = (category: AssetCategory, key: string): Prompt => {
   if (category === "icon") {

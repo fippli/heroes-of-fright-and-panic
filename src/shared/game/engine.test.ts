@@ -1348,3 +1348,27 @@ describe("handleUpgradeBuilding", () => {
     expect(handleUpgradeBuilding(houseAt(1), { type: "upgradeBuilding", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(false);
   });
 });
+
+describe("population cap", () => {
+  const withHouses = (levels: number[], peasants: number) => {
+    let tiles: ReadonlyArray<Tile> = make5x5GrassTiles();
+    levels.forEach((level, index) => {
+      const tile = tiles.find((t) => t.row === 0 && t.column === index)!;
+      tiles = replaceTile(tiles, { ...tile, building: { ...createBuilding(BuildingType.house, "day"), level } });
+    });
+    for (let index = 0; index < peasants; index += 1) tiles = placePiece(tiles, 4, index, createPeasant("day"));
+    return makeGame({ tiles });
+  };
+
+  it("refuses a peasant when every house slot is taken", () => {
+    const { result } = handleSpawnPeasant(withHouses([1], 1), { type: "spawnPeasant", player: "day", position: { row: 0, column: 0 } });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("No room");
+  });
+
+  it("a homestead houses two, a manor three", () => {
+    expect(handleSpawnPeasant(withHouses([2], 1), { type: "spawnPeasant", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(true);
+    expect(handleSpawnPeasant(withHouses([3], 2), { type: "spawnPeasant", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(true);
+    expect(handleSpawnPeasant(withHouses([3], 3), { type: "spawnPeasant", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(false);
+  });
+});

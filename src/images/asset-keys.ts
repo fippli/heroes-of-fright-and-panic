@@ -29,6 +29,10 @@ export const ASSET_SLOTS: readonly AssetSlot[] = [
   // Buildings
   { category: "building", key: "house_day", label: "House (Day)" },
   { category: "building", key: "house_night", label: "House (Night)" },
+  { category: "building", key: "homestead_day", label: "Homestead (Day)" },
+  { category: "building", key: "homestead_night", label: "Homestead (Night)" },
+  { category: "building", key: "manor_day", label: "Manor (Day)" },
+  { category: "building", key: "manor_night", label: "Manor (Night)" },
   { category: "building", key: "castle_day", label: "Castle (Day)" },
   { category: "building", key: "castle_night", label: "Castle (Night)" },
   { category: "building", key: "tower_day", label: "Tower (Day)" },
@@ -50,6 +54,7 @@ export const ASSET_SLOTS: readonly AssetSlot[] = [
   { category: "landscape", key: "unexplored", label: "Unexplored" },
   { category: "landscape", key: "grass", label: "Grass" },
   { category: "landscape", key: "farm", label: "Farm" },
+  { category: "landscape", key: "pasture", label: "Pasture (farm next to a homestead)" },
   { category: "landscape", key: "tree", label: "Tree" },
   { category: "landscape", key: "sand", label: "Sand" },
   { category: "landscape", key: "water", label: "Water" },

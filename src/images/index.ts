@@ -201,10 +201,15 @@ export class ImageAssets {
     return staticPieceImage(player, kind);
   }
 
-  buildingImage(player: Player, type: BuildingType): GameImage {
-    const themeImage = this.theme?.buildingImage(player, type);
+  buildingImage(player: Player, type: BuildingType, level: number = 1): GameImage {
+    const themeImage = this.theme?.buildingImage(player, type, level);
     if (themeImage !== undefined) return themeImage;
     return staticBuildingImage(type);
+  }
+
+  /** Extra landscape looks (pasture); undefined when the theme has none */
+  landscapeImageByKey(key: string): GameImage | undefined {
+    return this.theme?.landscapeImageByKey(key);
   }
 
   landscapeImage(type: LandscapeType): GameImage {
