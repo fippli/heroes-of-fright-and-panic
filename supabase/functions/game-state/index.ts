@@ -70,15 +70,32 @@ Deno.serve(async (request) => {
         ? "night"
         : null;
 
+  const dayOpen = game.dayPlayerEmail === null || game.dayPlayerEmail === undefined;
+  const nightOpen = game.nightPlayerEmail === null || game.nightPlayerEmail === undefined;
+
   if (playerType !== null) {
     const filteredGame = getFilteredGameState(game, playerType);
+    const opponentOpen = playerType === "day" ? nightOpen : dayOpen;
 
     return new Response(
       JSON.stringify({
         ...filteredGame,
         id: filteredGame.id,
         viewingAs: playerType,
+        opponentOpen,
       }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // Not a participant. If a seat is free, offer it instead of the board.
+  const canJoin: PlayerType | null = dayOpen ? "day" : nightOpen ? "night" : null;
+  if (canJoin !== null) {
+    return new Response(
+      JSON.stringify({ id: game.id, name: game.name ?? null, size: game.size, viewingAs: null, canJoin }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -91,6 +108,8 @@ Deno.serve(async (request) => {
     JSON.stringify({
       ...game,
       id: game.id,
+      viewingAs: null,
+      canJoin: null,
     }),
     {
       status: 200,

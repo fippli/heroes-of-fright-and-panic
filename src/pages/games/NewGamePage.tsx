@@ -213,7 +213,7 @@ export const NewGamePage = () => {
       });
       const newGameId = game.id ?? game._id;
       if (newGameId !== undefined) {
-        navigate(`/game/${newGameId}?player=${formState.alliance}`);
+        navigate(`/game/${newGameId}`);
       }
     } catch (err) {
       const message =

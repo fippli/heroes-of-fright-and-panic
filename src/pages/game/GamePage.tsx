@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Button,
@@ -34,27 +34,44 @@ export const GamePage = () => {
   const canvasInstanceRef = useRef<Canvas | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const { id: gameId } = useParams();
-  const [searchParams] = useSearchParams();
-  const playerParam = searchParams.get("player");
   const [error, setError] = useState<string | null>(null);
   const [ui, setUi] = useState<GameUiState | null>(null);
   const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
+  // Side is decided by the server from the signed-in user, never by the URL
+  const [role, setRole] = useState<"day" | "night" | null>(null);
+  const [joinOffer, setJoinOffer] = useState<{ side: "day" | "night"; name: string | null } | null>(null);
+  const [opponentOpen, setOpponentOpen] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const isSpectator = playerParam === "spectator";
+  const joinGame = async (side: "day" | "night") => {
+    setJoining(true);
+    try {
+      const { error: joinError } = await supabase.functions.invoke("game-join", { body: { gameId, side } });
+      if (joinError !== null) throw new Error(await getEdgeFunctionError(joinError));
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not join the game");
+      setJoining(false);
+    }
+  };
 
-  // Validate player param
-  const myPlayerType: "day" | "night" | null =
-    playerParam === "day" || playerParam === "night" ? playerParam : null;
+  const inviteLink = `${window.location.origin}/game/${gameId ?? ""}`;
+  const copyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this link", inviteLink);
+    }
+  };
 
   useEffect(() => {
-    if (
-      canvasRef.current === null ||
-      wrapperRef.current === null ||
-      gameId === undefined ||
-      (myPlayerType === null && !isSpectator)
-    ) {
+    if (canvasRef.current === null || wrapperRef.current === null || gameId === undefined) {
       return;
     }
+    let myPlayerType: "day" | "night" | null = null;
 
     const canvasElement = canvasRef.current;
     const wrapperElement = wrapperRef.current;
@@ -63,7 +80,7 @@ export const GamePage = () => {
     const canvas = new Canvas(canvasElement, wrapperElement);
     canvasInstanceRef.current = canvas;
 
-    const uninstallErrorReporting = installErrorReporting({ gameId, player: myPlayerType });
+    let uninstallErrorReporting = () => undefined as void;
 
     // Render loop. A throwing frame is reported once and skipped; the loop
     // must keep running or the board freezes.
@@ -105,6 +122,16 @@ export const GamePage = () => {
         if (invokeError !== null) {
           throw new Error(await getEdgeFunctionError(invokeError));
         }
+
+        // Who am I in this game? A free seat is offered instead of a board.
+        myPlayerType = data.viewingAs ?? null;
+        if (myPlayerType === null && (data.canJoin === "day" || data.canJoin === "night")) {
+          setJoinOffer({ side: data.canJoin, name: data.name ?? null });
+          return;
+        }
+        setRole(myPlayerType);
+        setOpponentOpen(data.opponentOpen === true);
+        uninstallErrorReporting = installErrorReporting({ gameId, player: myPlayerType });
 
         // Theme: a per-game preference from Settings wins over the game's own theme
         const gameThemeId: string | null = data.themeId ?? data.theme_id ?? null;
@@ -172,7 +199,7 @@ export const GamePage = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [gameId, myPlayerType, isSpectator]);
+  }, [gameId]);
 
   // Show error state
   if (error !== null) {
@@ -254,64 +281,30 @@ export const GamePage = () => {
     );
   }
 
-  // Player selection
-  if (myPlayerType === null && !isSpectator) {
+  // Offered a free seat
+  if (joinOffer !== null) {
     return (
       <Flex className="game-body" align="center" justify="center">
         <VStack gap="4" textAlign="center" maxW="600px" p="10">
-          <Heading
-            fontSize="3rem"
-            bgGradient="to-r"
-            gradientFrom="#ffd54f"
-            gradientTo="#ff6f00"
-            bgClip="text"
-          >
+          <Heading fontSize="3rem" bgGradient="to-r" gradientFrom="#ffd54f" gradientTo="#ff6f00" bgClip="text">
             Dusk and Dawn
           </Heading>
-          <Text fontSize="1.5rem">Choose your side</Text>
-          <HStack gap="4">
-            <ChakraLink
-              asChild
-              textDecoration="none"
-              _hover={{ textDecoration: "none" }}
-            >
-              <Link to={`?player=day`}>
-                <Button
-                  bg="#ffd54f"
-                  color="#0b0906"
-                  fontWeight="700"
-                  size="lg"
-                  boxShadow="0 4px 0 #b68c1d"
-                  _hover={{ transform: "translateY(-2px)" }}
-                >
-                  Day Player
-                </Button>
-              </Link>
-            </ChakraLink>
-            <ChakraLink
-              asChild
-              textDecoration="none"
-              _hover={{ textDecoration: "none" }}
-            >
-              <Link to={`?player=night`}>
-                <Button
-                  bg="#b39ddb"
-                  color="#0b0906"
-                  fontWeight="700"
-                  size="lg"
-                  boxShadow="0 4px 0 #664f91"
-                  _hover={{ transform: "translateY(-2px)" }}
-                >
-                  Night Player
-                </Button>
-              </Link>
-            </ChakraLink>
-          </HStack>
-          <Text color="rgba(255, 255, 255, 0.7)" mt="6">
-            Share the other link with your opponent!
+          <Text fontSize="1.4rem">
+            {joinOffer.name !== null ? `"${joinOffer.name}"` : "This game"} has a free seat on the{" "}
+            <strong>{joinOffer.side}</strong> side.
           </Text>
+          <Button
+            bg={joinOffer.side === "day" ? "#ffd54f" : "#b39ddb"}
+            color="#0b0906"
+            fontWeight="700"
+            size="lg"
+            disabled={joining}
+            onClick={() => void joinGame(joinOffer.side)}
+          >
+            {joining ? "Joining…" : `Join as ${joinOffer.side}`}
+          </Button>
           <ChakraLink asChild color="rgba(255, 255, 255, 0.7)" mt="2">
-            <Link to={`?player=spectator`}>Spectate</Link>
+            <Link to="/games">Back to games</Link>
           </ChakraLink>
         </VStack>
       </Flex>
@@ -335,6 +328,18 @@ export const GamePage = () => {
             <div id="time" className="time-display" />
             <div id="turn" className="turn-indicator" />
           </section>
+          {opponentOpen && (
+            <section className="panel">
+              <h2>Invite</h2>
+              <p className="hint">The other seat is empty. Send this link — whoever opens it while signed in can take it.</p>
+              <div className="invite">
+                <input className="invite__link" readOnly value={inviteLink} onFocus={(event) => event.target.select()} />
+                <button type="button" className="action-btn invite__copy" onClick={() => void copyInvite()}>
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+            </section>
+          )}
           <section className="panel">
             <h2>Resources</h2>
             <div id="resources" className="stat-grid">
@@ -361,7 +366,7 @@ export const GamePage = () => {
             <BuildMenu game={gameRef.current} ui={ui} />
           )}
           {gameRef.current !== null && (
-            <EventFeed game={gameRef.current} gameId={gameId} player={myPlayerType} />
+            <EventFeed game={gameRef.current} gameId={gameId} player={role} />
           )}
           {gameRef.current !== null && (
             <GameSettings game={gameRef.current} gameId={gameId} initialThemeId={activeThemeId} />

@@ -3,8 +3,11 @@ import { supabase, getEdgeFunctionError } from "./supabase";
 export type Game = {
   id: string;
   _id?: string;
+  name?: string | null;
   size: number;
   currentPlayer: "day" | "night";
+  gameOver?: boolean;
+  winner?: "day" | "night" | null;
   createdAt: string;
   updatedAt: string;
   creatorEmail?: string | null;
@@ -26,7 +29,7 @@ export const gamesApi = {
     const { data, error } = await supabase
       .from("games")
       .select(
-        "id, size, current_player, created_at, updated_at, creator_email, day_player_email, night_player_email, day_player_last_move, night_player_last_move",
+        "id, name, size, current_player, game_over, winner, created_at, updated_at, creator_email, day_player_email, night_player_email, day_player_last_move, night_player_last_move",
       )
       .or(
         `creator_email.eq.${email},day_player_email.eq.${email},night_player_email.eq.${email},invited_email.eq.${email}`,
@@ -40,8 +43,11 @@ export const gamesApi = {
 
     return (data ?? []).map((row) => ({
       id: row.id,
+      name: row.name ?? null,
       size: row.size,
       currentPlayer: row.current_player,
+      gameOver: row.game_over ?? false,
+      winner: row.winner ?? null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       creatorEmail: row.creator_email ?? null,

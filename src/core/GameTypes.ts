@@ -69,6 +69,13 @@ export type ServerGameState = {
   nightPlayer: ServerPlayer;
   tiles: ServerTile[];
   themeId?: string | null;
+  name?: string | null;
+  /** Which side this client plays, from the server; null for spectators */
+  viewingAs?: PlayerType | null;
+  /** A free seat this user could take (non-participants only) */
+  canJoin?: PlayerType | null;
+  /** Whether the opponent's seat is still empty (participants only) */
+  opponentOpen?: boolean;
 };
 
 export type ActionResponse = {

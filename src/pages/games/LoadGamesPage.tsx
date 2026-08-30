@@ -102,7 +102,13 @@ export const LoadGamesPage = () => {
       );
     }
 
-    return games.map((game) => (
+    const email = user?.email ?? "";
+    const rank = (game: Game): number => {
+      if (game.gameOver === true) return 2;
+      const mine = game.dayPlayerEmail === email ? "day" : game.nightPlayerEmail === email ? "night" : null;
+      return mine !== null && mine === game.currentPlayer ? 0 : 1;
+    };
+    return [...games].sort((a, b) => rank(a) - rank(b)).map((game) => (
       <GameCard
         key={game.id ?? game._id}
         game={game}
@@ -144,7 +150,16 @@ const GameCard = ({ game, userEmail, onDelete }: GameCardProps) => {
         ? "night"
         : null;
   const isCreator = game.creatorEmail === userEmail;
-  const turnText = game.currentPlayer === "day" ? "Day" : "Night";
+  const isMyTurn = playerType !== null && playerType === game.currentPlayer;
+  const status =
+    game.gameOver === true
+      ? `Finished — ${game.winner === "day" ? "Day" : game.winner === "night" ? "Night" : "nobody"} won`
+      : playerType === null
+        ? `${game.currentPlayer === "day" ? "Day" : "Night"}'s turn`
+        : isMyTurn
+          ? "Your turn"
+          : "Waiting for opponent";
+  const statusBg = game.gameOver === true ? "rgba(0,0,0,0.3)" : isMyTurn ? "#9ccc65" : game.currentPlayer === "day" ? "day.500" : "night.500";
 
   const dayLastMove =
     game.dayPlayerLastMove != null
@@ -165,6 +180,9 @@ const GameCard = ({ game, userEmail, onDelete }: GameCardProps) => {
     >
       <VStack gap="2" align="stretch">
         <HStack gap="3" flexWrap="wrap">
+          <Text fontWeight="900" color="brand.contrast" fontSize="md">
+            {game.name ?? "Untitled game"}
+          </Text>
           <Text fontWeight="700" color="brand.contrast" fontSize="sm">
             created: {formatDate(game.createdAt)}
           </Text>
@@ -191,26 +209,24 @@ const GameCard = ({ game, userEmail, onDelete }: GameCardProps) => {
 
         <Flex justify="space-between" align="center" mt="1">
           <Badge
-            bg={game.currentPlayer === "day" ? "day.500" : "night.500"}
-            color={game.currentPlayer === "day" ? "brand.contrast" : "white"}
+            bg={statusBg}
+            color={isMyTurn || game.currentPlayer === "day" ? "brand.contrast" : "white"}
             px="2"
             py="1"
             borderRadius="sm"
             fontWeight="900"
             fontSize="xs"
           >
-            {turnText} player&apos;s turn
+            {status}
           </Badge>
           <HStack gap="2">
-            {playerType !== null && (
-              <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
-                <Link to={`/game/${gameId}?player=${playerType}`}>
-                  <Button size="sm" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
-                    Play
-                  </Button>
-                </Link>
-              </ChakraLink>
-            )}
+            <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+              <Link to={`/game/${gameId}`}>
+                <Button size="sm" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+                  {playerType !== null ? "Play" : "Open"}
+                </Button>
+              </Link>
+            </ChakraLink>
             {isCreator && (
               <Button
                 size="sm"

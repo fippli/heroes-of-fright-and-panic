@@ -51,34 +51,30 @@ Deno.serve(async (request) => {
 
   const game = rowToGame(gameRow as GameRow);
 
-  if (
-    game.nightPlayerEmail !== undefined &&
-    game.nightPlayerEmail !== null &&
-    game.nightPlayerEmail !== user.email
-  ) {
-    return new Response(
-      JSON.stringify({ error: "Night player slot is already taken" }),
-      {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+  if (game.dayPlayerEmail === user.email || game.nightPlayerEmail === user.email) {
+    return new Response(JSON.stringify({ error: "You are already in this game" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  if (game.dayPlayerEmail === user.email) {
-    return new Response(
-      JSON.stringify({ error: "You are already the day player" }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+  const dayOpen = game.dayPlayerEmail === null || game.dayPlayerEmail === undefined;
+  const nightOpen = game.nightPlayerEmail === null || game.nightPlayerEmail === undefined;
+  const requested: "day" | "night" | undefined =
+    body.side === "day" || body.side === "night" ? body.side : undefined;
+  const side = requested ?? (dayOpen ? "day" : nightOpen ? "night" : null);
+
+  if (side === null || (side === "day" && !dayOpen) || (side === "night" && !nightOpen)) {
+    return new Response(JSON.stringify({ error: "That seat is already taken" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const { error: updateError } = await supabase
     .from("games")
     .update({
-      night_player_email: user.email,
+      [side === "day" ? "day_player_email" : "night_player_email"]: user.email,
       updated_at: new Date().toISOString(),
     })
     .eq("id", gameId);
@@ -92,7 +88,7 @@ Deno.serve(async (request) => {
   }
 
   return new Response(
-    JSON.stringify({ success: true, message: "Joined game as night player" }),
+    JSON.stringify({ success: true, side, message: `Joined game as ${side} player` }),
     {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
