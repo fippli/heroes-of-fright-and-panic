@@ -7,7 +7,53 @@ import { createResourceMap, type ResourceMap } from "@shared/player/resource-map
 import { canAffordCost } from "@shared/resource";
 import { createPlayer } from "@shared/player";
 import type { Game } from "../../core/Board";
-import { costEntries, type GameUiState } from "../../core/ui-state";
+import { costEntries, type GameUiState, type TargetMode } from "../../core/ui-state";
+
+const KIND_LABEL: Record<string, string> = { peasant: "Peasant", king: "King", priest: "Priest", archAngel: "Archangel" };
+
+const Inspector = ({ ui }: { readonly ui: GameUiState }) => {
+  const selected = ui.selected;
+  if (selected === null) return null;
+  const piece = selected.pieceInfo;
+  const building = selected.buildingInfo;
+  return (
+    <section className="panel">
+      <h2>Selected</h2>
+      <dl className="inspector">
+        <dt>Tile</dt>
+        <dd>{selected.row},{selected.column} · {selected.landscape ?? "unknown"}</dd>
+        {building !== null && (
+          <>
+            <dt>Building</dt>
+            <dd>{building.type} · {building.owner} · view {building.viewRange}</dd>
+          </>
+        )}
+        {piece !== null && (
+          <>
+            <dt>Piece</dt>
+            <dd>{KIND_LABEL[piece.kind] ?? piece.kind} · {piece.owner}</dd>
+            <dt>Hearts</dt>
+            <dd>
+              <span className="hearts" aria-label={`${piece.hearts} of ${piece.maxHearts}`}>
+                {"♥".repeat(piece.hearts)}<span className="hearts--lost">{"♥".repeat(Math.max(0, piece.maxHearts - piece.hearts))}</span>
+              </span>
+            </dd>
+            <dt>Attack / Defense</dt>
+            <dd>{piece.attack} / {piece.defense}</dd>
+            <dt>Range / View / Move</dt>
+            <dd>{piece.attackRange} / {piece.viewRange} / {piece.move}</dd>
+            {(piece.equipment.length > 0 || piece.steed !== null) && (
+              <>
+                <dt>Carrying</dt>
+                <dd>{[...piece.equipment, ...(piece.steed !== null ? [piece.steed] : [])].join(", ")}</dd>
+              </>
+            )}
+          </>
+        )}
+      </dl>
+    </section>
+  );
+};
 
 const RESOURCE_ICON: Record<string, string> = {
   wood: "/img/wood.png",
@@ -46,14 +92,16 @@ type ActionButtonProps = {
   readonly active?: boolean;
   readonly enabled: boolean;
   readonly onClick: () => void;
+  readonly title?: string;
 };
 
-const ActionButton = ({ label, hotkey, cost, icon, active, enabled, onClick }: ActionButtonProps) => (
+const ActionButton = ({ label, hotkey, cost, icon, active, enabled, onClick, title }: ActionButtonProps) => (
   <button
     type="button"
     className={`action-btn${active === true ? " action-btn--active" : ""}`}
     disabled={!enabled}
     onClick={onClick}
+    title={title}
   >
     {icon !== undefined && <img className="action-btn__icon" src={icon} alt="" />}
     <span className="action-btn__label">{label}</span>
@@ -82,9 +130,21 @@ export const BuildMenu = ({ game, ui }: { readonly game: Game; readonly ui: Game
   const sprite = (type: BuildingType): string => game.imageAssets.buildingImage(game.player, type).image.src;
   const selected = ui.selected;
   const at = selected !== null ? { row: selected.row, column: selected.column } : null;
+  const targetButton = (label: string, hotkey: string, mode: TargetMode, cost: ResourceMap, hint: string) => (
+    <ActionButton
+      label={ui.pendingTarget === mode ? `${label} — click a tile` : label}
+      hotkey={hotkey}
+      cost={cost}
+      active={ui.pendingTarget === mode}
+      enabled={can(cost)}
+      onClick={() => game.setPendingTarget(mode)}
+      title={hint}
+    />
+  );
 
   return (
     <>
+      <Inspector ui={ui} />
       <section className="panel">
         <h2>Turn</h2>
         <div className="action-list">
@@ -140,22 +200,10 @@ export const BuildMenu = ({ game, ui }: { readonly game: Game; readonly ui: Game
               enabled={can(peasantSpawnCost())}
               onClick={() => void game.spawnPeasantAt(at)}
             />
-            <ActionButton
-              label="Buy horse"
-              hotkey="O"
-              cost={createSteed(SteedType.horse).cost}
-              enabled={false}
-              onClick={() => undefined}
-            />
-            <ActionButton
-              label="Buy boat"
-              hotkey="F"
-              cost={createSteed(SteedType.boat).cost}
-              enabled={false}
-              onClick={() => undefined}
-            />
+            {targetButton("Buy horse", "O", "horse", createSteed(SteedType.horse).cost, "Placed on a tile next to the house")}
+            {targetButton("Buy boat", "F", "boat", createSteed(SteedType.boat).cost, "Placed on water next to the house")}
           </div>
-          <p className="hint">Steeds: with the house selected, press O (horse) or F (boat) over the tile to place it on.</p>
+          <p className="hint">Steeds are placed on a tile next to the house; a piece mounts one by moving onto it.</p>
         </section>
       )}
 
@@ -203,6 +251,24 @@ export const BuildMenu = ({ game, ui }: { readonly game: Game; readonly ui: Game
         <section className="panel">
           <h2>Tower</h2>
           <p className="hint">Select your king, then press E over this tower to turn it into a castle.</p>
+        </section>
+      )}
+
+      {selected !== null && selected.piece === PieceKind.king && (
+        <section className="panel">
+          <h2>King</h2>
+          <div className="action-list">
+            {targetButton("Enter tower", "E", "enterTower", createResourceMap({}), "Turns an adjacent tower into your castle")}
+          </div>
+        </section>
+      )}
+
+      {selected !== null && selected.piece === PieceKind.priest && (
+        <section className="panel">
+          <h2>Priest</h2>
+          <div className="action-list">
+            {targetButton("Heal", "G", "heal", createResourceMap({ faith: 1 }), "Restores one heart to an adjacent ally")}
+          </div>
         </section>
       )}
 

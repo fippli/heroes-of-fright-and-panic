@@ -20,7 +20,7 @@ import { Tile } from "./Tile";
 import { LandscapeType } from "./Landscape";
 import { boundsOfTiles, focusPoint } from "./viewport";
 import { predictAction } from "./predict";
-import type { GameUiState, Notice } from "./ui-state";
+import type { GameUiState, Notice, TargetMode } from "./ui-state";
 
 /**
  * Game class - Client-side render-only implementation
@@ -66,6 +66,9 @@ export class Game {
 
   // Build mode: the building type waiting for a tile click
   pendingBuild: BuildingType | null = null;
+
+  // Target mode: heal / enter tower / place a steed, waiting for a tile click
+  pendingTarget: TargetMode | null = null;
 
   // Sidebar subscribers, notified with a fresh snapshot on every change
   private readonly listeners = new Set<(ui: GameUiState) => void>();
@@ -153,14 +156,36 @@ export class Game {
       isMyTurn: this.isMyTurn,
       resources: this.player.resources,
       pendingBuild: this.pendingBuild,
+      pendingTarget: this.pendingTarget,
       selected:
         selected === null
           ? null
           : {
               row: selected.row,
               column: selected.column,
+              landscape: selected.landscape?.type ?? null,
               building: mine(selected.building?.owner) ? (selected.building?.type ?? null) : null,
               piece: mine(selected.piece?.owner) ? (selected.piece?.kind ?? null) : null,
+              pieceInfo:
+                selected.piece === undefined
+                  ? null
+                  : {
+                      kind: selected.piece.kind,
+                      owner: selected.piece.owner.type,
+                      hearts: selected.piece.hearts,
+                      maxHearts: selected.piece.maxHearts,
+                      attack: selected.piece.attack,
+                      defense: selected.piece.defense,
+                      attackRange: selected.piece.attackRange,
+                      viewRange: selected.piece.viewRange,
+                      move: selected.piece.move,
+                      equipment: selected.piece.equipment,
+                      steed: selected.piece.steed,
+                    },
+              buildingInfo:
+                selected.building === undefined
+                  ? null
+                  : { type: selected.building.type, owner: selected.building.owner.type, viewRange: selected.building.viewRange },
             },
     };
   }
@@ -172,11 +197,41 @@ export class Game {
     this.notify();
   }
 
-  /** Escape: leave build mode and clear the selection */
+  /** Pick a target for the selected piece/building on the next click; same mode again cancels */
+  setPendingTarget(mode: TargetMode | null): void {
+    this.pendingTarget = mode === null || mode === this.pendingTarget ? null : mode;
+    if (this.pendingTarget !== null) this.pendingBuild = null;
+    this.notify();
+  }
+
+  /** Escape: leave build/target mode and clear the selection */
   cancel(): void {
     this.pendingBuild = null;
+    this.pendingTarget = null;
     this.selectedTile = undefined;
     this.notify();
+  }
+
+  /** Resolve a target-mode click into the matching action */
+  private async resolveTarget(mode: TargetMode, target: TilePosition): Promise<boolean> {
+    const source = this.getSelectedPosition();
+    if (this.myPlayerType === null || source === undefined) {
+      this.say("Select the acting piece or building first.", "error");
+      return false;
+    }
+    const player = this.myPlayerType;
+    switch (mode) {
+      case "heal":
+        return this.sendAction({ type: "heal", player, priestPosition: source, targetPosition: target });
+      case "enterTower":
+        return this.sendAction({ type: "enterTower", player, kingPosition: source, towerPosition: target });
+      case "horse":
+        return this.sendAction({ type: "buySteed", player, steedType: SteedType.horse, housePosition: source, targetPosition: target });
+      case "boat":
+        return this.sendAction({ type: "buySteed", player, steedType: SteedType.boat, housePosition: source, targetPosition: target });
+      default:
+        return false;
+    }
   }
 
   /** Tiles a building could go on right now: explored grass without a building */
@@ -374,6 +429,13 @@ export class Game {
       tile.render(canvas.ctx, this.imageAssets);
     });
 
+    // Target mode: outline the tiles next to the acting piece/building
+    if (this.pendingTarget !== null && this.selectedTile != null) {
+      this.selectedTile.getNeighbors(this.tiles).forEach((tile) => {
+        Hexagon.render(canvas.ctx, tile.x, tile.y, "#80deea99");
+      });
+    }
+
     // Build mode: outline every tile the building could go on
     if (this.pendingBuild !== null) {
       this.buildableTiles().forEach((tile) => {
@@ -551,6 +613,15 @@ export class Game {
 
     const clickedTile = this.findTile(tilePosition);
     if (clickedTile === undefined) return;
+
+    // Target mode: the click is the target of a heal / enter tower / steed
+    if (this.pendingTarget !== null && this.myPlayerType !== null) {
+      const mode = this.pendingTarget;
+      const done = await this.resolveTarget(mode, tilePosition);
+      if (done) this.pendingTarget = null;
+      this.notify();
+      return;
+    }
 
     // Build mode: the click places the pending building
     if (this.pendingBuild !== null && this.myPlayerType !== null) {

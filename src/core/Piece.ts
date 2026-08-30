@@ -21,6 +21,11 @@ export class Piece {
   // Item keys (sword, shield, bow) and steed key (horse, boat) for overlays
   readonly equipment: readonly string[];
   readonly steed: string | null;
+  readonly hearts: number;
+  readonly maxHearts: number;
+  readonly attack: number;
+  readonly defense: number;
+  readonly move: number;
 
   constructor({
     kind,
@@ -30,6 +35,11 @@ export class Piece {
     walkableLandscape,
     equipment,
     steed,
+    hearts,
+    maxHearts,
+    attack,
+    defense,
+    move,
   }: {
     kind: PieceKind;
     viewRange?: number;
@@ -38,6 +48,11 @@ export class Piece {
     walkableLandscape?: LandscapeType[];
     equipment?: readonly string[];
     steed?: string | null;
+    hearts?: number;
+    maxHearts?: number;
+    attack?: number;
+    defense?: number;
+    move?: number;
   }) {
     this.kind = kind;
     this.viewRange = viewRange ?? 1;
@@ -46,6 +61,11 @@ export class Piece {
     this.walkableLandscape = walkableLandscape ?? [];
     this.equipment = equipment ?? [];
     this.steed = steed ?? null;
+    this.hearts = hearts ?? 1;
+    this.maxHearts = maxHearts ?? Math.max(1, hearts ?? 1);
+    this.attack = attack ?? 1;
+    this.defense = defense ?? 0;
+    this.move = move ?? 1;
   }
 
   render(
@@ -72,7 +92,22 @@ export class Piece {
       const [dx, dy] = corner[item] ?? [badge, badge];
       imageAssets.itemImage(item)?.renderScaled(ctx, x + dx, y + dy, 0.5);
     });
+    this.renderHearts(ctx, x, y);
     ctx.restore();
+  }
+
+  /** Heart pips along the bottom of the hex, only once a piece is hurt */
+  private renderHearts(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    if (this.hearts >= this.maxHearts || this.maxHearts <= 0) return;
+    const pip = Math.max(2, Math.round(Hexagon.height / 12));
+    const gap = 1;
+    const total = this.maxHearts * pip + (this.maxHearts - 1) * gap;
+    const startX = x - total / 2;
+    const top = y + Hexagon.height / 2 - pip - 2;
+    for (let index = 0; index < this.maxHearts; index += 1) {
+      ctx.fillStyle = index < this.hearts ? "#e53935" : "rgba(0,0,0,0.55)";
+      ctx.fillRect(startX + index * (pip + gap), top, pip, pip);
+    }
   }
 
   isOwnedBy(player: Player): boolean {

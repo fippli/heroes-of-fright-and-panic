@@ -141,12 +141,12 @@ export const GamePage = () => {
           x: (position) => game.attack(position),
 
           // Building / unit actions (some need a selected source first)
-          e: (position) => game.enterTower(position), // king selected → tower
+          e: () => game.setPendingTarget("enterTower"), // king selected → click tower
           n: (position) => game.trainPriest(position), // on church
           m: (position) => game.summonArchAngel(position), // on church
-          g: (position) => game.heal(position), // priest selected → ally
-          o: (position) => game.buySteed(SteedType.horse, position), // house → tile
-          f: (position) => game.buySteed(SteedType.boat, position), // house → water
+          g: () => game.setPendingTarget("heal"), // priest selected → click ally
+          o: () => game.setPendingTarget("horse"), // house selected → click tile
+          f: () => game.setPendingTarget("boat"), // house selected → click water
           "4": (position) => game.research(ResearchType.speed, position), // castle
           "5": (position) => game.research(ResearchType.miningII, position),
           "6": (position) => game.research(ResearchType.miningIII, position),

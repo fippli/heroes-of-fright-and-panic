@@ -12,6 +12,9 @@ import {
   createPriest,
   getPieceView,
   getPieceAttackRange,
+  getPieceAttack,
+  getPieceDefense,
+  getPieceMove,
   getWalkableLandscape,
 } from "@shared/piece";
 import { Tile } from "./Tile";
@@ -94,6 +97,11 @@ const parsePiece = (serverPiece: ServerPiece): Piece => {
     walkableLandscape: [...getWalkableLandscape(enginePiece)],
     equipment: enginePiece.equipment.map((item) => item.type),
     steed: enginePiece.steed?.type ?? null,
+    hearts: enginePiece.hearts,
+    maxHearts: enginePiece.maxHearts,
+    attack: getPieceAttack(enginePiece),
+    defense: getPieceDefense(enginePiece),
+    move: getPieceMove(enginePiece),
   });
 };
 
