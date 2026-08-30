@@ -1,5 +1,24 @@
+import { createPeasant, pieceWithEquipment, getPieceDefense } from "@shared/piece/index.ts";
 import { describe, it, expect } from "vitest";
-import { createSword, createShield, createBow, EquipmentType } from "./index.ts";
+import { createSword, createShield, createBow, EquipmentType, createEquipment } from "./index.ts";
+
+describe("armour", () => {
+  it("each piece adds one defence and costs iron", () => {
+    expect(createEquipment(EquipmentType.helmet).defenseBonus).toBe(1);
+    expect(createEquipment(EquipmentType.torso).defenseBonus).toBe(1);
+    expect(createEquipment(EquipmentType.legs).defenseBonus).toBe(1);
+    expect(createEquipment(EquipmentType.helmet).cost.iron).toBe(1);
+    expect(createEquipment(EquipmentType.torso).cost.iron).toBe(2);
+    expect(createEquipment(EquipmentType.legs).cost.iron).toBe(1);
+  });
+
+  it("a fully armoured peasant with a shield has 4 defence", () => {
+    const armoured = [EquipmentType.helmet, EquipmentType.torso, EquipmentType.legs, EquipmentType.shield]
+      .map(createEquipment)
+      .reduce((piece, item) => pieceWithEquipment(piece, item), createPeasant("day"));
+    expect(getPieceDefense(armoured)).toBe(4);
+  });
+});
 
 describe("Equipment", () => {
   describe("sword", () => {

@@ -10,7 +10,7 @@ import { ActionButton, affordable } from "./ActionButton";
 
 const KIND_LABEL: Record<string, string> = { peasant: "Peasant", king: "King", priest: "Priest", archAngel: "Archangel" };
 const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower", castle: "Castle", wall: "Wall", church: "Church", dock: "Dock" };
-const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", bow: "Bow", horse: "Horse", boat: "Boat" };
+const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", bow: "Bow", helmet: "Helmet", torso: "Cuirass", legs: "Greaves", horse: "Horse", boat: "Boat" };
 
 const RESEARCH: readonly { readonly type: ResearchType; readonly label: string; readonly key: string }[] = [
   { type: ResearchType.speed, label: "Speed", key: "4" },
@@ -104,7 +104,7 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
       ? {
           cost: createEquipment(type).cost,
           enabled: can(createEquipment(type).cost),
-          hotkey,
+          hotkey: hotkey === "" ? "click" : hotkey,
           onBuy: () => void game.craftEquipmentAt(type, at),
         }
       : undefined;
@@ -127,8 +127,9 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
           {piece !== null && (
             <section className="doll">
               <div className="doll__column">
-                <Slot label="Sword" item={has("sword")} sprite={ui.sprites.items.sword} side="left" icons={icons} buy={buyFor(EquipmentType.sword, "S")} />
-                <Slot label="Shield" item={has("shield")} sprite={ui.sprites.items.shield} side="left" icons={icons} buy={buyFor(EquipmentType.shield, "D")} />
+                <Slot label="Helmet" item={has("helmet")} sprite={ui.sprites.items.helmet} side="left" icons={icons} buy={buyFor(EquipmentType.helmet, "")} />
+                <Slot label="Cuirass" item={has("torso")} sprite={ui.sprites.items.torso} side="left" icons={icons} buy={buyFor(EquipmentType.torso, "")} />
+                <Slot label="Greaves" item={has("legs")} sprite={ui.sprites.items.legs} side="left" icons={icons} buy={buyFor(EquipmentType.legs, "")} />
               </div>
               <div className="doll__figure">
                 {ui.sprites.piece !== null && <img src={ui.sprites.piece} alt={title} />}
@@ -139,7 +140,11 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
                 </div>
               </div>
               <div className="doll__column">
+                <Slot label="Sword" item={has("sword")} sprite={ui.sprites.items.sword} side="right" icons={icons} buy={buyFor(EquipmentType.sword, "S")} />
+                <Slot label="Shield" item={has("shield")} sprite={ui.sprites.items.shield} side="right" icons={icons} buy={buyFor(EquipmentType.shield, "D")} />
                 <Slot label="Bow" item={has("bow")} sprite={ui.sprites.items.bow} side="right" icons={icons} buy={buyFor(EquipmentType.bow, "B")} />
+              </div>
+              <div className="doll__foot">
                 <Slot label="Steed" item={piece.steed} sprite={piece.steed !== null ? ui.sprites.items[piece.steed] : undefined} side="right" icons={icons} />
               </div>
             </section>

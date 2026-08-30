@@ -155,7 +155,7 @@ const generateCraftActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
 
   return myEquippable.flatMap((tile) => {
     const piece = tile.piece!;
-    return [EquipmentType.sword, EquipmentType.shield, EquipmentType.bow]
+    return [EquipmentType.sword, EquipmentType.shield, EquipmentType.bow, EquipmentType.helmet, EquipmentType.torso, EquipmentType.legs]
       .filter((equipType) => {
         if (pieceHasEquipment(piece, equipType)) return false;
         const equip = createEquipment(equipType);

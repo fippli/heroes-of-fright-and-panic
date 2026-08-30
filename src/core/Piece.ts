@@ -75,12 +75,22 @@ export class Piece {
     ctx.save();
     const x = Hexagon.x(position.row, position.column);
     const y = Hexagon.y(position.row);
-    // Steed underneath at full size, then the piece, then equipment as
-    // half-size badges in the hex corners so the figure stays readable.
-    if (this.steed !== null) {
-      imageAssets.itemImage(this.steed)?.renderCentered(ctx, x, y);
+    // Prefer a dedicated sprite: mounted (horse/boat) beats armoured beats
+    // base. Without one, layer the steed underneath the base figure.
+    const mounted = this.steed === "horse" || this.steed === "boat" ? this.steed : null;
+    const armored = this.equipment.includes("torso");
+    const sprite =
+      (mounted !== null ? imageAssets.pieceVariantImage(this.owner, this.kind, mounted) : undefined) ??
+      (armored ? imageAssets.pieceVariantImage(this.owner, this.kind, "armored") : undefined);
+    if (sprite !== undefined) {
+      sprite.renderCentered(ctx, x, y);
+    } else {
+      if (this.steed !== null) {
+        imageAssets.itemImage(this.steed)?.renderCentered(ctx, x, y);
+      }
+      imageAssets.pieceImage(this.owner, this.kind).renderCentered(ctx, x, y);
     }
-    imageAssets.pieceImage(this.owner, this.kind).renderCentered(ctx, x, y);
+    // Weapons as half-size badges in the hex corners; armour shows through the sprite
     const badge = Hexagon.height / 4;
     const corner: Record<string, readonly [number, number]> = {
       sword: [badge, badge],
@@ -88,8 +98,9 @@ export class Piece {
       bow: [badge, -badge],
     };
     this.equipment.forEach((item) => {
-      const [dx, dy] = corner[item] ?? [badge, badge];
-      imageAssets.itemImage(item)?.renderScaled(ctx, x + dx, y + dy, 0.5);
+      const spot = corner[item];
+      if (spot === undefined) return;
+      imageAssets.itemImage(item)?.renderScaled(ctx, x + spot[0], y + spot[1], 0.5);
     });
     this.renderHearts(ctx, x, y);
     ctx.restore();

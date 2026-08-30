@@ -6,20 +6,25 @@ import { PieceKind } from "../core/Piece";
 import type { Player } from "@shared/player";
 import { themesApi, type ThemeAsset } from "../lib/theme-api";
 
-const pieceAssetKey = (player: Player, kind: PieceKind): string => {
+export type PieceVariant = "horse" | "boat" | "armored";
+
+const pieceAssetKey = (player: Player, kind: PieceKind, variant?: PieceVariant): string => {
   const playerSuffix = player.type === "day" ? "day" : "night";
-  switch (kind) {
-    case PieceKind.peasant:
-      return `peasant_${playerSuffix}`;
-    case PieceKind.king:
-      return `king_${playerSuffix}`;
-    case PieceKind.priest:
-      return `priest_${playerSuffix}`;
-    case PieceKind.archAngel:
-      return `archAngel_${playerSuffix}`;
-    default:
-      return "";
-  }
+  const base = (() => {
+    switch (kind) {
+      case PieceKind.peasant:
+        return "peasant";
+      case PieceKind.king:
+        return "king";
+      case PieceKind.priest:
+        return "priest";
+      case PieceKind.archAngel:
+        return "archAngel";
+      default:
+        return "";
+    }
+  })();
+  return variant !== undefined ? `${base}_${variant}_${playerSuffix}` : `${base}_${playerSuffix}`;
 };
 
 const buildingAssetKey = (player: Player, type: BuildingType, level: number = 1): string => {
@@ -92,6 +97,11 @@ export class ThemeImageAssets {
   pieceImage(player: Player, kind: PieceKind): GameImage | undefined {
     const key = `piece/${pieceAssetKey(player, kind)}`;
     return this.imageCache.get(key);
+  }
+
+  /** A mounted or armoured variant of a piece; undefined when the theme has none */
+  pieceVariantImage(player: Player, kind: PieceKind, variant: PieceVariant): GameImage | undefined {
+    return this.imageCache.get(`piece/${pieceAssetKey(player, kind, variant)}`);
   }
 
   buildingImage(player: Player, type: BuildingType, level: number = 1): GameImage | undefined {

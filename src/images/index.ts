@@ -5,6 +5,7 @@ import { LandscapeType } from "../core/Landscape";
 import { PieceKind } from "../core/Piece";
 import type { Player } from "@shared/player";
 import type { ThemeImageAssets } from "./theme-image-assets";
+import type { PieceVariant } from "./theme-image-assets";
 
 //
 // Pieces
@@ -199,6 +200,11 @@ export class ImageAssets {
     const themeImage = this.theme?.pieceImage(player, kind);
     if (themeImage !== undefined) return themeImage;
     return staticPieceImage(player, kind);
+  }
+
+  /** Mounted/armoured sprite if the theme provides one, else undefined (caller layers instead) */
+  pieceVariantImage(player: Player, kind: PieceKind, variant: PieceVariant): GameImage | undefined {
+    return this.theme?.pieceVariantImage(player, kind, variant);
   }
 
   buildingImage(player: Player, type: BuildingType, level: number = 1): GameImage {

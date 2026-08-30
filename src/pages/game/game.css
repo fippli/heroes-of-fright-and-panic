@@ -612,7 +612,14 @@ canvas {
 .doll__column {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+}
+
+.doll__foot {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
 }
 
 .doll__figure {

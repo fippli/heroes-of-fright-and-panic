@@ -200,7 +200,7 @@ export class Game {
         ? calculateProduction(this.myPlayerType, engineTiles as never, this.player.research)
         : this.player.resources;
     const items: Record<string, string> = {};
-    ["sword", "shield", "bow", "horse", "boat"].forEach((key) => {
+    ["sword", "shield", "bow", "helmet", "torso", "legs", "horse", "boat"].forEach((key) => {
       const src = this.imageAssets.itemImage(key)?.image.src;
       if (src !== undefined) items[key] = src;
     });
@@ -208,7 +208,18 @@ export class Game {
       notice: this.notice,
       icons: this.imageAssets.iconUrls(),
       sprites: {
-        piece: selected?.piece !== undefined ? this.imageAssets.pieceImage(selected.piece.owner, selected.piece.kind).image.src : null,
+        piece:
+          selected?.piece !== undefined
+            ? (
+                (selected.piece.steed === "horse" || selected.piece.steed === "boat"
+                  ? this.imageAssets.pieceVariantImage(selected.piece.owner, selected.piece.kind, selected.piece.steed)
+                  : undefined) ??
+                (selected.piece.equipment.includes("torso")
+                  ? this.imageAssets.pieceVariantImage(selected.piece.owner, selected.piece.kind, "armored")
+                  : undefined) ??
+                this.imageAssets.pieceImage(selected.piece.owner, selected.piece.kind)
+              ).image.src
+            : null,
         building: selected?.building !== undefined ? this.imageAssets.buildingImage(selected.building.owner, selected.building.type, selected.building.level).image.src : null,
         items,
       },

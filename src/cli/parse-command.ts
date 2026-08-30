@@ -192,7 +192,7 @@ export const parseCommand = (
       }
       const equipmentType = parseEquipmentType(equipName);
       if (equipmentType === null) {
-        return { type: "error", message: `Unknown equipment: ${equipName}. Options: sword, shield, bow` };
+        return { type: "error", message: `Unknown equipment: ${equipName}. Options: sword, shield, bow, helmet, torso, legs` };
       }
       return {
         type: "action",
@@ -348,6 +348,11 @@ const parseEquipmentType = (name: string): EquipmentType | null => {
     case "sword": return EquipmentType.sword;
     case "shield": return EquipmentType.shield;
     case "bow": return EquipmentType.bow;
+    case "helmet": return EquipmentType.helmet;
+    case "torso":
+    case "cuirass": return EquipmentType.torso;
+    case "legs":
+    case "greaves": return EquipmentType.legs;
     default: return null;
   }
 };

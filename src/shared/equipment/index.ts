@@ -4,7 +4,13 @@ export enum EquipmentType {
   sword = "sword",
   shield = "shield",
   bow = "bow",
+  helmet = "helmet",
+  torso = "torso",
+  legs = "legs",
 }
+
+/** Armour pieces: one defence each, paid in iron */
+export const ARMOR_TYPES: ReadonlyArray<EquipmentType> = [EquipmentType.helmet, EquipmentType.torso, EquipmentType.legs];
 
 export type Equipment = {
   readonly type: EquipmentType;
@@ -38,6 +44,18 @@ export const createBow = (): Equipment => ({
   attackRangeBonus: 1,
 });
 
+const armor = (type: EquipmentType, iron: number): Equipment => ({
+  type,
+  cost: createResourceMap({ iron }),
+  attackBonus: 0,
+  defenseBonus: 1,
+  attackRangeBonus: 0,
+});
+
+export const createHelmet = (): Equipment => armor(EquipmentType.helmet, 1);
+export const createTorso = (): Equipment => armor(EquipmentType.torso, 2);
+export const createLegs = (): Equipment => armor(EquipmentType.legs, 1);
+
 export const createEquipment = (equipmentType: EquipmentType): Equipment => {
   switch (equipmentType) {
     case EquipmentType.sword:
@@ -46,5 +64,11 @@ export const createEquipment = (equipmentType: EquipmentType): Equipment => {
       return createShield();
     case EquipmentType.bow:
       return createBow();
+    case EquipmentType.helmet:
+      return createHelmet();
+    case EquipmentType.torso:
+      return createTorso();
+    case EquipmentType.legs:
+      return createLegs();
   }
 };

@@ -142,6 +142,9 @@ Equipment is for peasants only. Each peasant can carry at most one of each type.
 | Sword  | 1 iron         | +1 attack |
 | Shield | 1 wood         | +1 defense |
 | Bow    | 1 wood + 1 iron | +1 attack range. In a tower: range becomes tower view range (4). |
+| Helmet | 1 iron | +1 defense (armour). |
+| Cuirass | 2 iron | +1 defense (armour). A peasant wearing one is drawn in plate. |
+| Greaves | 1 iron | +1 defense (armour). |
 
 ---
 

@@ -16,11 +16,28 @@ export const ASSET_SLOTS: readonly AssetSlot[] = [
   { category: "piece", key: "priest_night", label: "Priest (Night)" },
   { category: "piece", key: "archAngel_day", label: "Arch Angel (Day)" },
   { category: "piece", key: "archAngel_night", label: "Arch Angel (Night)" },
+  { category: "piece", key: "peasant_armored_day", label: "Armoured peasant (Day)" },
+  { category: "piece", key: "peasant_armored_night", label: "Armoured peasant (Night)" },
+  { category: "piece", key: "peasant_horse_day", label: "Peasant on horse (Day)" },
+  { category: "piece", key: "peasant_horse_night", label: "Peasant on horse (Night)" },
+  { category: "piece", key: "peasant_boat_day", label: "Peasant in boat (Day)" },
+  { category: "piece", key: "peasant_boat_night", label: "Peasant in boat (Night)" },
+  { category: "piece", key: "king_horse_day", label: "King on horse (Day)" },
+  { category: "piece", key: "king_horse_night", label: "King on horse (Night)" },
+  { category: "piece", key: "king_boat_day", label: "King in boat (Day)" },
+  { category: "piece", key: "king_boat_night", label: "King in boat (Night)" },
+  { category: "piece", key: "priest_horse_day", label: "Priest on horse (Day)" },
+  { category: "piece", key: "priest_horse_night", label: "Priest on horse (Night)" },
+  { category: "piece", key: "priest_boat_day", label: "Priest in boat (Day)" },
+  { category: "piece", key: "priest_boat_night", label: "Priest in boat (Night)" },
 
   // Equipment
   { category: "piece", key: "sword", label: "Sword" },
   { category: "piece", key: "shield", label: "Shield" },
   { category: "piece", key: "bow", label: "Bow" },
+  { category: "piece", key: "helmet", label: "Helmet" },
+  { category: "piece", key: "torso", label: "Cuirass" },
+  { category: "piece", key: "legs", label: "Greaves" },
 
   // Steeds
   { category: "piece", key: "horse", label: "Horse" },

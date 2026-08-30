@@ -108,9 +108,22 @@ const PIECES: Record<string, Record<"day" | "night", string>> = {
     "an armoured archangel with large white feathered wings and a flaming sword, full body",
     "a fallen angel with tattered bat wings and a dark flaming sword, full body",
   ),
+  peasant_armored: piece(
+    "a peasant soldier in full iron plate armour with helmet and greaves, full body",
+    "a skeleton in dark rusted plate armour with a helmet, full body",
+  ),
+  peasant_horse: piece("a peasant riding a brown horse, full body", "a skeleton peasant riding a skeletal horse, full body"),
+  peasant_boat: piece("a peasant rowing a small wooden boat", "a skeleton peasant in a dark rotten boat"),
+  king_horse: piece("a crowned king in gilded armour riding a white horse, full body", "a skeletal lich king riding a skeletal horse, full body"),
+  king_boat: piece("a crowned king in gilded armour standing in a small boat", "a skeletal lich king in a dark boat"),
+  priest_horse: piece("a hooded priest in white robes riding a horse, full body", "a hooded skeletal cultist riding a skeletal horse, full body"),
+  priest_boat: piece("a hooded priest in white robes in a small boat", "a hooded skeletal cultist in a dark boat"),
 };
 
 const ITEMS: Record<string, string> = {
+  helmet: "an iron great helm, item icon",
+  torso: "an iron breastplate cuirass, item icon",
+  legs: "iron leg greaves, item icon",
   sword: "a steel longsword with a leather grip, item icon",
   shield: "a round wooden shield with an iron boss, item icon",
   bow: "a curved wooden recurve bow with a taut bowstring, no arrow, held upright, item icon",
@@ -193,6 +206,16 @@ const PAPER_PIECES: Record<string, Record<"day" | "night", string>> = {
     "a small map figure of an armoured angel with feathered wings and a flaming sword, full body",
     "a small map figure of a fallen angel with tattered bat wings and a dark sword, full body",
   ),
+  peasant_armored: paperPiece(
+    "a small map figure of a peasant soldier in full iron plate armour with a helmet, full body",
+    "a small map figure of a skeleton in dark rusted plate armour with a helmet, full body",
+  ),
+  peasant_horse: paperPiece("a small map figure of a peasant riding a brown horse", "a small map figure of a skeleton peasant riding a skeletal horse"),
+  peasant_boat: paperPiece("a small map figure of a peasant rowing a small wooden boat", "a small map figure of a skeleton peasant in a dark rotten boat"),
+  king_horse: paperPiece("a small map figure of a crowned king riding a white horse", "a small map figure of a skeletal lich king riding a skeletal horse"),
+  king_boat: paperPiece("a small map figure of a crowned king standing in a small boat", "a small map figure of a skeletal lich king in a dark boat"),
+  priest_horse: paperPiece("a small map figure of a hooded priest riding a horse", "a small map figure of a hooded skeletal cultist riding a skeletal horse"),
+  priest_boat: paperPiece("a small map figure of a hooded priest in a small boat", "a small map figure of a hooded skeletal cultist in a dark boat"),
 };
 
 const ICONS: Record<string, string> = {
@@ -205,6 +228,9 @@ const ICONS: Record<string, string> = {
 };
 
 const PAPER_ITEMS: Record<string, string> = {
+  helmet: `an ink-drawn map icon of an iron great helm, ${PAPER_SUFFIX}`,
+  torso: `an ink-drawn map icon of an iron breastplate, ${PAPER_SUFFIX}`,
+  legs: `an ink-drawn map icon of iron leg greaves, ${PAPER_SUFFIX}`,
   sword: `an ink-drawn map icon of a longsword, ${PAPER_SUFFIX}`,
   shield: `an ink-drawn map icon of a round wooden shield, ${PAPER_SUFFIX}`,
   bow: `a single curved wooden recurve bow with a taut bowstring, no arrow, isolated object on a fully transparent background, no paper, no parchment, no frame, ${PAPER_SUFFIX}`,
