@@ -37,18 +37,35 @@ export const clampTranslation = (
   bounds: Bounds,
   viewport: Viewport,
   padding: number = 0,
+  scale: number = 1,
 ): Coordinate => ({
-  x: clampAxis(translation.x, bounds.minX, bounds.maxX, viewport.width, padding),
-  y: clampAxis(translation.y, bounds.minY, bounds.maxY, viewport.height, padding),
+  x: clampAxis(translation.x, bounds.minX * scale, bounds.maxX * scale, viewport.width, padding),
+  y: clampAxis(translation.y, bounds.minY * scale, bounds.maxY * scale, viewport.height, padding),
 });
+
+/**
+ * Translation that keeps the world point under `anchor` (screen space) fixed
+ * while the scale changes from `from` to `to`.
+ */
+export const zoomTranslation = (
+  translation: Coordinate,
+  from: number,
+  to: number,
+  anchor: Coordinate,
+): Coordinate => {
+  const worldX = (anchor.x - translation.x) / from;
+  const worldY = (anchor.y - translation.y) / from;
+  return { x: anchor.x - worldX * to, y: anchor.y - worldY * to };
+};
 
 /** Translation that puts the given world point in the middle of the viewport */
 export const translationCenteredOn = (
   point: Coordinate,
   viewport: Viewport,
+  scale: number = 1,
 ): Coordinate => ({
-  x: viewport.width / 2 - point.x,
-  y: viewport.height / 2 - point.y,
+  x: viewport.width / 2 - point.x * scale,
+  y: viewport.height / 2 - point.y * scale,
 });
 
 /**

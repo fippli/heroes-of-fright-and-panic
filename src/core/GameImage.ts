@@ -29,9 +29,10 @@ export class GameImage {
       return;
     }
 
-    // Pixel-art sprites smaller than their drawn size must scale with hard
-    // pixels; larger sources (photos, 1024px defaults) look better smoothed.
-    const upscaling = this.image.naturalWidth < this.width;
+    // Pixel-art sprites smaller than their drawn size (zoom included) must
+    // scale with hard pixels; larger sources look better smoothed.
+    const zoom = ctx.getTransform().a || 1;
+    const upscaling = this.image.naturalWidth < this.width * zoom;
     ctx.imageSmoothingEnabled = !upscaling;
     ctx.drawImage(this.image, x, y, this.width, this.height);
   }
@@ -48,7 +49,8 @@ export class GameImage {
     }
     const w = this.width * scale;
     const h = this.height * scale;
-    ctx.imageSmoothingEnabled = this.image.naturalWidth >= w;
+    const zoom = ctx.getTransform().a || 1;
+    ctx.imageSmoothingEnabled = this.image.naturalWidth >= w * zoom;
     ctx.drawImage(this.image, cx - w / 2, cy - h / 2, w, h);
   }
 }

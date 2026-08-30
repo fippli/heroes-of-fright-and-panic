@@ -5,6 +5,7 @@ import {
   formatViewParam,
   parseViewParam,
   translationCenteredOn,
+  zoomTranslation,
 } from "./viewport";
 
 const bounds = { minX: 0, minY: 0, maxX: 2000, maxY: 1500 };
@@ -78,5 +79,25 @@ describe("view URL param", () => {
     expect(parseViewParam("a,b")).toBeNull();
     expect(parseViewParam("1,2,3")).toBeNull();
     expect(parseViewParam("Infinity,3")).toBeNull();
+  });
+});
+
+describe("zoom", () => {
+  it("keeps the world point under the cursor fixed while zooming", () => {
+    const translation = { x: -100, y: -50 };
+    const anchor = { x: 300, y: 200 };
+    const worldBefore = { x: (anchor.x - translation.x) / 1, y: (anchor.y - translation.y) / 1 };
+    const zoomed = zoomTranslation(translation, 1, 2, anchor);
+    const worldAfter = { x: (anchor.x - zoomed.x) / 2, y: (anchor.y - zoomed.y) / 2 };
+    expect(worldAfter).toEqual(worldBefore);
+  });
+
+  it("clamps against scaled bounds", () => {
+    // 2000px world at 2x = 4000px on screen; far edge limit is width - 4000
+    expect(clampTranslation({ x: -9999, y: 0 }, bounds, viewport, 0, 2)).toEqual({ x: viewport.width - 4000, y: 0 });
+  });
+
+  it("centers with scale applied", () => {
+    expect(translationCenteredOn({ x: 100, y: 100 }, viewport, 2)).toEqual({ x: 200, y: 100 });
   });
 });
