@@ -6,7 +6,7 @@ import {
 import { rowToGame } from "@shared/game/converters.ts";
 import type { GameRow } from "@shared/game/types.ts";
 import type { PlayerType } from "@shared/actions/index.ts";
-import { getFilteredGameState } from "@shared/game/engine.ts";
+import { getFilteredGameState, getSpectatorGameState } from "@shared/game/engine.ts";
 import { isAiTurn, runAiPhase } from "../_shared/ai-turn.ts";
 
 Deno.serve(async (request) => {
@@ -103,10 +103,11 @@ Deno.serve(async (request) => {
     );
   }
 
-  // No player match — return full state (spectator)
+  // Spectator: only what either side can see
+  const spectatorGame = getSpectatorGameState(game);
   return new Response(
     JSON.stringify({
-      ...game,
+      ...spectatorGame,
       id: game.id,
       viewingAs: null,
       canJoin: null,

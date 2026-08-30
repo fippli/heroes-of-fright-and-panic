@@ -1,9 +1,11 @@
 /**
  * game-debug — open, read-only inspection of game state for development.
  *
- * No authentication. All personal data (emails) is stripped; seats are
- * reported as "human" / "ai" / "open". Every response carries the
- * engineVersion the function was deployed from.
+ * Open by default. Set the DEBUG_API_KEY secret to require it in an
+ * `x-debug-key` header (or `key` query param) once the game has real
+ * players. All personal data (emails) is stripped; seats are reported as
+ * "human" / "ai" / "open". Every response carries the engineVersion the
+ * function was deployed from.
  *
  *   GET  ?action=list[&limit=10]
  *   GET  ?action=get&gameId=<id>[&as=day|night]
@@ -65,6 +67,15 @@ Deno.serve(async (request) => {
 
   if (request.method !== "GET" && request.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
+  }
+
+  const requiredKey = Deno.env.get("DEBUG_API_KEY");
+  if (requiredKey !== undefined && requiredKey !== "") {
+    const url = new URL(request.url);
+    const given = request.headers.get("x-debug-key") ?? url.searchParams.get("key");
+    if (given !== requiredKey) {
+      return json({ error: "Debug access requires a key" }, 401);
+    }
   }
 
   const params = await readParams(request);

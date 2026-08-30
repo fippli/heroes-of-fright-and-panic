@@ -883,6 +883,21 @@ export const handleAttack = (
   return { game, result: { success: false, error: "No valid target" } };
 };
 
+/**
+ * What a spectator may see: the union of both players' fields of vision.
+ * Anything neither side can currently see stays fog.
+ */
+export const getSpectatorGameState = (game: Game): Game => {
+  const day = getVisibleTiles(game, "day");
+  const night = getVisibleTiles(game, "night");
+  const filteredTiles = game.tiles.map((tile) => {
+    const key = `${tile.row},${tile.column}`;
+    if (day.has(key) || night.has(key)) return tile;
+    return { ...tile, piece: null, building: null, landscape: unexploredLandscape() } as Tile;
+  });
+  return { ...game, tiles: filteredTiles };
+};
+
 // ============================================
 // PASS
 // ============================================

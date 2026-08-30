@@ -116,7 +116,7 @@ Edge functions import game logic from `@shared/` which maps to `supabase/functio
 
 ### game-debug (development only)
 
-Open, read-only inspection endpoint — **no authentication**. All emails are stripped; each seat is reported as `human`, `ai` or `open`. Every response carries `engineVersion`, the git SHA the function was deployed from (stamped by `pnpm copy:shared`).
+Open, read-only inspection endpoint — **no authentication by default**. Set the `DEBUG_API_KEY` function secret to require it (`x-debug-key` header or `key` query param; `pnpm debug:game` reads it from `.env`) before the game has real players. All emails are stripped; each seat is reported as `human`, `ai` or `open`. Every response carries `engineVersion`, the git SHA the function was deployed from (stamped by `pnpm copy:shared`).
 
 Accepts `GET` query parameters or a `POST` JSON body with the same keys.
 
@@ -130,4 +130,4 @@ Accepts `GET` query parameters or a `POST` JSON body with the same keys.
 
 From the terminal: `pnpm debug:game list` or `pnpm debug:game get <id> --as night --summary`.
 
-Anyone can read any game's full state through this endpoint. That is acceptable while the game is in development; gate it behind `admin_users` before onboarding real players.
+Anyone can read any game's full state through this endpoint while no key is set. Spectators of a game (via `game-state`) only ever see the union of both players' vision.

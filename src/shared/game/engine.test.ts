@@ -48,6 +48,7 @@ import {
   handleSummonArchAngel,
   handleAttack,
   handlePass,
+  getSpectatorGameState,
   checkWinCondition,
   handleAction,
   getVisibleTiles,
@@ -1328,5 +1329,18 @@ describe("handlePass", () => {
     const game = makeGame({});
     const { result } = handlePass(game, { type: "pass", player: "night" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("getSpectatorGameState", () => {
+  it("shows only tiles either side can see", () => {
+    const tiles = placePiece(placePiece(make5x5GrassTiles(), 0, 0, createPeasant("day")), 4, 4, createPeasant("night"));
+    const game = makeGame({ tiles });
+    const view = getSpectatorGameState(game);
+    const at = (row: number, column: number) => view.tiles.find((t) => t.row === row && t.column === column)!;
+    expect(at(0, 0).piece?.owner).toBe("day");
+    expect(at(4, 4).piece?.owner).toBe("night");
+    // Two tiles from both peasants (view 1): fog
+    expect(at(2, 2).landscape?.type).toBe(LandscapeType.unexplored);
   });
 });

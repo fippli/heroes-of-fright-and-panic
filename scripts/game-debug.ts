@@ -47,7 +47,8 @@ if (action === "list") {
   process.exit(2);
 }
 
-const response = await fetch(url);
+const debugKey = process.env.DEBUG_API_KEY;
+const response = await fetch(url, debugKey !== undefined && debugKey !== "" ? { headers: { "x-debug-key": debugKey } } : undefined);
 const data = (await response.json()) as Record<string, unknown>;
 if (!response.ok) {
   console.error(JSON.stringify(data, null, 2));
