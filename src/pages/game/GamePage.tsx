@@ -23,6 +23,7 @@ import type { GameUiState } from "../../core/ui-state";
 import { BuildMenu } from "./BuildMenu";
 import { Banner } from "./Banner";
 import { EconomyPanel } from "./EconomyPanel";
+import { HelpOverlay } from "./HelpOverlay";
 import { EventFeed } from "./EventFeed";
 import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
 import { installErrorReporting, reportClientError } from "../../lib/error-report";
@@ -44,6 +45,7 @@ export const GamePage = () => {
   const [opponentOpen, setOpponentOpen] = useState(false);
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const joinGame = async (side: "day" | "night") => {
     setJoining(true);
@@ -158,6 +160,8 @@ export const GamePage = () => {
           w: () => game.setPendingBuild(BuildingType.wall),
           r: () => game.setPendingBuild(BuildingType.church),
           escape: () => game.cancel(),
+          "?": () => setHelpOpen(true),
+          "shift+?": () => setHelpOpen(true),
           " ": () => void game.passTurn(false),
           "shift+ ": () => void game.passTurn(true),
 
@@ -318,6 +322,8 @@ export const GamePage = () => {
       <div id="app">
         <div className="board">
           <Banner notice={ui?.notice ?? null} />
+          <button type="button" className="action-btn help-toggle" onClick={() => setHelpOpen(true)} title="How to play (?)">?</button>
+          <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
           <div className="canvas-wrapper" ref={wrapperRef}>
             <canvas id="canvas" ref={canvasRef} width="600" height="600" />
           </div>
