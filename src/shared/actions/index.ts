@@ -70,6 +70,12 @@ export type SummonArchAngelAction = BaseAction & {
   readonly churchPosition: TilePosition;
 };
 
+/** Let time pass: one clock tick, or the rest of the phase */
+export type PassAction = BaseAction & {
+  readonly type: "pass";
+  readonly toPhaseEnd?: boolean;
+};
+
 export type AttackAction = BaseAction & {
   readonly type: "attack";
   readonly attackerPosition: TilePosition;
@@ -87,7 +93,8 @@ export type GameAction =
   | ResearchAction
   | EnterTowerAction
   | SummonArchAngelAction
-  | AttackAction;
+  | AttackAction
+  | PassAction;
 
 export type ActionResult = {
   readonly success: boolean;

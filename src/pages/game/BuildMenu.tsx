@@ -3,7 +3,7 @@ import { EquipmentType, createEquipment } from "@shared/equipment";
 import { PieceKind, peasantSpawnCost, priestTrainCost, archAngelSummonCost } from "@shared/piece";
 import { ResearchType, researchCostOf } from "@shared/research";
 import { SteedType, createSteed } from "@shared/steed";
-import type { ResourceMap } from "@shared/player/resource-map";
+import { createResourceMap, type ResourceMap } from "@shared/player/resource-map";
 import { canAffordCost } from "@shared/resource";
 import { createPlayer } from "@shared/player";
 import type { Game } from "../../core/Board";
@@ -85,6 +85,27 @@ export const BuildMenu = ({ game, ui }: { readonly game: Game; readonly ui: Game
 
   return (
     <>
+      <section className="panel">
+        <h2>Turn</h2>
+        <div className="action-list">
+          <ActionButton
+            label="Wait an hour"
+            hotkey="Space"
+            cost={createResourceMap({})}
+            enabled={ui.isMyTurn}
+            onClick={() => void game.passTurn(false)}
+          />
+          <ActionButton
+            label="End phase"
+            hotkey="⇧Space"
+            cost={createResourceMap({})}
+            enabled={ui.isMyTurn}
+            onClick={() => void game.passTurn(true)}
+          />
+        </div>
+        <p className="hint">Every action takes an hour; a phase is 12 hours. Waiting lets the clock run when there is nothing useful to do.</p>
+      </section>
+
       <section className="panel">
         <h2>Build</h2>
         <div className="action-list">

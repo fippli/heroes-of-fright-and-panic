@@ -49,6 +49,7 @@ import {
   handleEnterTower,
   handleSummonArchAngel,
   handleAttack,
+  handlePass,
   checkWinCondition,
   handleAction,
   getVisibleTiles,
@@ -1302,6 +1303,32 @@ describe("handleAction", () => {
       to: { row: 2, column: 3 },
     });
 
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("handlePass", () => {
+  it("advances the clock one tick without moving anything", () => {
+    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const game = makeGame({ tiles });
+    const { game: after, result } = handlePass(game, { type: "pass", player: "day" });
+    expect(result.success).toBe(true);
+    expect(after.clock.time).toBe(game.clock.time + 1);
+    expect(after.tiles).toEqual(game.tiles);
+  });
+
+  it("ends the phase in one action with toPhaseEnd", () => {
+    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const game = makeGame({ tiles });
+    const { game: after, result } = handlePass(game, { type: "pass", player: "day", toPhaseEnd: true });
+    expect(result.success).toBe(true);
+    expect(after.currentPlayer).toBe("night");
+    expect(after.clock.time).toBe(18);
+  });
+
+  it("is rejected out of turn", () => {
+    const game = makeGame({});
+    const { result } = handlePass(game, { type: "pass", player: "night" });
     expect(result.success).toBe(false);
   });
 });

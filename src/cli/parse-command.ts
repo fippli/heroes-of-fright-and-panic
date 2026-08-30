@@ -291,6 +291,13 @@ export const parseCommand = (
       };
     }
 
+    case "pass":
+    case "wait":
+    case "end": {
+      const toPhaseEnd = command === "end" || parts.at(1) === "phase";
+      return { type: "action", action: { type: "pass", player: currentPlayer, toPhaseEnd } };
+    }
+
     case "summon": {
       const posStr = parts.at(1);
       if (posStr === undefined) {

@@ -669,6 +669,12 @@ export class Game {
     return this.sendAction({ type: "research", player: this.myPlayerType, researchType, castlePosition });
   }
 
+  /** Let an hour pass, or end the whole phase */
+  async passTurn(toPhaseEnd: boolean): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "pass", player: this.myPlayerType, toPhaseEnd });
+  }
+
   async craftEquipmentAt(equipmentType: EquipmentType, piecePosition: TilePosition): Promise<boolean> {
     if (this.myPlayerType === null) return false;
     return this.sendAction({ type: "craftEquipment", player: this.myPlayerType, equipmentType, piecePosition });

@@ -12,6 +12,7 @@ import type {
   EnterTowerAction,
   SummonArchAngelAction,
   AttackAction,
+  PassAction,
   GameAction,
 } from "../actions/index.ts";
 import {
@@ -883,6 +884,41 @@ export const handleAttack = (
 };
 
 // ============================================
+// PASS
+// ============================================
+
+/** Advance the clock without acting: one tick, or until the phase changes */
+export const handlePass = (
+  game: Game,
+  action: PassAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  if (action.toPhaseEnd !== true) {
+    return {
+      game: advanceClock(game, action.player),
+      result: { success: true, message: "Waited an hour" },
+    };
+  }
+
+  // Tick until the other side's phase begins (bounded: a phase is at most
+  // 12 hours at 60 minutes per action, more with Speed research)
+  let current = game;
+  let ticks = 0;
+  while (current.currentPlayer === action.player && ticks < 1000) {
+    current = advanceClock(current, action.player);
+    ticks += 1;
+  }
+  return {
+    game: current,
+    result: { success: true, message: `Ended the ${action.player} phase` },
+  };
+};
+
+// ============================================
 // WIN CONDITION
 // ============================================
 
@@ -1038,6 +1074,8 @@ export const handleAction = (
       return handleSummonArchAngel(game, action);
     case "attack":
       return handleAttack(game, action);
+    case "pass":
+      return handlePass(game, action);
     default:
       return { game, result: { success: false, error: "Unknown action type" } };
   }

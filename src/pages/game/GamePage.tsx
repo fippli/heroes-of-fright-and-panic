@@ -128,6 +128,8 @@ export const GamePage = () => {
           w: () => game.setPendingBuild(BuildingType.wall),
           r: () => game.setPendingBuild(BuildingType.church),
           escape: () => game.cancel(),
+          " ": () => void game.passTurn(false),
+          "shift+ ": () => void game.passTurn(true),
 
           // Unit actions
           p: (position) => game.spawnPeasant(position),

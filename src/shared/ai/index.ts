@@ -326,18 +326,23 @@ const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
 /**
  * Generate all legal actions for a player in the given game state.
  */
-export const generateAllActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => [
-  ...generateMoveActions(game, player),
-  ...generateBuildActions(game, player),
-  ...generateSpawnActions(game, player),
-  ...generateCraftActions(game, player),
-  ...generateAttackActions(game, player),
-  ...generateTrainActions(game, player),
-  ...generateHealActions(game, player),
-  ...generateResearchActions(game, player),
-  ...generateEnterTowerActions(game, player),
-  ...generateSteedActions(game, player),
-];
+export const generateAllActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
+  const actions: ReadonlyArray<GameAction> = [
+    ...generateMoveActions(game, player),
+    ...generateBuildActions(game, player),
+    ...generateSpawnActions(game, player),
+    ...generateCraftActions(game, player),
+    ...generateAttackActions(game, player),
+    ...generateTrainActions(game, player),
+    ...generateHealActions(game, player),
+    ...generateResearchActions(game, player),
+    ...generateEnterTowerActions(game, player),
+    ...generateSteedActions(game, player),
+  ];
+  // A player with nothing to do can always let the hour pass, so a phase
+  // never gets stuck
+  return actions.length > 0 ? actions : [{ type: "pass", player }];
+};
 
 /**
  * Strategic weights for action types. Higher = more likely to be chosen.
@@ -354,6 +359,7 @@ const ACTION_WEIGHTS: Record<string, number> = {
   enterTower: 5,
   buySteed: 5,
   summonArchAngel: 30,
+  pass: 1,
 };
 
 /**

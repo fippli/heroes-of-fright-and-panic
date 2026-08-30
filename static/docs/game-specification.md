@@ -238,7 +238,7 @@ When attacking a tile:
 
 ## Actions
 
-There are eleven actions available:
+There are twelve actions available:
 
 | Action            | Description | Cost |
 |-------------------|------------|------|
@@ -253,6 +253,7 @@ There are eleven actions available:
 | EnterTower        | King enters adjacent tower, creating a castle. | - |
 | SummonArchAngel   | Summon in an empty friendly church. | 100 faith + 10 praying priests |
 | Attack            | Damage enemy piece or building within attack range. | - |
+| Pass              | Let one hour pass, or (`toPhaseEnd`) end your whole phase. Always legal on your turn, so a phase can never get stuck. | - |
 
 ---
 

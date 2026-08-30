@@ -204,7 +204,9 @@ export class Canvas {
 
   keydown(keymap: { [key: string]: (position: Coordinate) => void }) {
     const handler = (event: KeyboardEvent) => {
-      const fn = keymap[event.key.toLowerCase()];
+      const name = event.key.toLowerCase();
+      const fn = keymap[event.shiftKey ? `shift+${name}` : name] ?? keymap[name];
+      if (fn !== undefined && name === " ") event.preventDefault();
       fn?.(this.mousePosition);
     };
 
