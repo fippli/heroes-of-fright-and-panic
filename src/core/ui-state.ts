@@ -1,6 +1,7 @@
 import type { BuildingType } from "@shared/building";
 import type { PieceKind } from "@shared/piece";
 import type { ResourceMap } from "@shared/player/resource-map";
+import type { Research } from "@shared/research";
 
 export type Notice = {
   readonly id: number;
@@ -14,7 +15,19 @@ export type GameUiState = {
   readonly notice: Notice | null;
   readonly isPlayer: boolean;
   readonly isMyTurn: boolean;
+  readonly currentPlayer: string;
   readonly resources: ResourceMap;
+  /** What the next dawn/dusk will bring, given the current board */
+  readonly production: ResourceMap;
+  readonly research: Research;
+  readonly clock: {
+    readonly time: number;
+    readonly isDay: boolean;
+    /** Hours until the phase changes */
+    readonly hoursLeft: number;
+    /** 0–1 through the current phase */
+    readonly progress: number;
+  };
   readonly pendingBuild: BuildingType | null;
   /** A target-picking mode waiting for a tile click */
   readonly pendingTarget: TargetMode | null;
@@ -61,3 +74,19 @@ export const costEntries = (cost: ResourceMap): readonly ResourceEntry[] =>
   (["wood", "stone", "food", "gold", "iron", "faith"] as const)
     .map((resource) => ({ resource, amount: cost[resource] ?? 0 }))
     .filter((entry) => entry.amount > 0);
+
+/** 6.5 → "06:30" */
+export const formatClock = (time: number): string => {
+  const wrapped = ((time % 24) + 24) % 24;
+  const hours = Math.floor(wrapped);
+  const minutes = Math.round((wrapped - hours) * 60);
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+};
+
+/** Phase timing for a clock time: day is 06:00–18:00, night wraps midnight */
+export const phaseOf = (time: number): { isDay: boolean; hoursLeft: number; progress: number } => {
+  const wrapped = ((time % 24) + 24) % 24;
+  const isDay = wrapped >= 6 && wrapped < 18;
+  const elapsed = isDay ? wrapped - 6 : wrapped >= 18 ? wrapped - 18 : wrapped + 6;
+  return { isDay, hoursLeft: 12 - elapsed, progress: elapsed / 12 };
+};

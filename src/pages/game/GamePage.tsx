@@ -22,6 +22,7 @@ import type { Coordinate } from "../../types/coordinate";
 import type { GameUiState } from "../../core/ui-state";
 import { BuildMenu } from "./BuildMenu";
 import { Banner } from "./Banner";
+import { EconomyPanel } from "./EconomyPanel";
 import { EventFeed } from "./EventFeed";
 import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
 import { installErrorReporting, reportClientError } from "../../lib/error-report";
@@ -323,11 +324,7 @@ export const GamePage = () => {
         </div>
 
         <aside className="sidebar">
-          <section className="panel">
-            <h2>Time</h2>
-            <div id="time" className="time-display" />
-            <div id="turn" className="turn-indicator" />
-          </section>
+          {ui !== null && <EconomyPanel ui={ui} />}
           {opponentOpen && (
             <section className="panel">
               <h2>Invite</h2>
@@ -340,28 +337,6 @@ export const GamePage = () => {
               </div>
             </section>
           )}
-          <section className="panel">
-            <h2>Resources</h2>
-            <div id="resources" className="stat-grid">
-              <div>
-                <img src="/img/wood.png" alt="wood" />
-                <div id="wood" />
-              </div>
-              <div>
-                <img src="/img/stone.png" alt="stone" />
-                <div id="stone" />
-              </div>
-              <div>
-                <img src="/img/food.png" alt="food" />
-                <div id="food" />
-              </div>
-              <div>
-                <img src="/img/gold.png" alt="gold" />
-                <div id="gold" />
-              </div>
-            </div>
-          </section>
-
           {ui !== null && gameRef.current !== null && (
             <BuildMenu game={gameRef.current} ui={ui} />
           )}

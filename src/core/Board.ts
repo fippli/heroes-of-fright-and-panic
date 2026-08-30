@@ -15,7 +15,8 @@ import { ResearchType } from "@shared/research";
 import { amplifiedView } from "@shared/piece";
 import { createPlayer, type Player } from "@shared/player";
 import type { TilePosition } from "@shared/map/tile";
-import { renderResourcesInDOM } from "./render-resources";
+import { calculateProduction } from "@shared/production";
+import { phaseOf } from "./ui-state";
 import { Tile } from "./Tile";
 import { LandscapeType } from "./Landscape";
 import { boundsOfTiles, focusPoint } from "./viewport";
@@ -150,11 +151,20 @@ export class Game {
     const selected = this.selectedTile ?? null;
     const mine = (owner: { type: PlayerType } | undefined): boolean =>
       owner !== undefined && owner.type === this.myPlayerType;
+    const engineTiles = this.lastServerState?.tiles ?? [];
+    const production =
+      this.myPlayerType !== null
+        ? calculateProduction(this.myPlayerType, engineTiles as never, this.player.research)
+        : this.player.resources;
     return {
       notice: this.notice,
       isPlayer: this.myPlayerType !== null,
       isMyTurn: this.isMyTurn,
+      currentPlayer: this.currentPlayer,
       resources: this.player.resources,
+      production,
+      research: this.player.research,
+      clock: { time: this.clock.time, ...phaseOf(this.clock.time) },
       pendingBuild: this.pendingBuild,
       pendingTarget: this.pendingTarget,
       selected:
@@ -468,9 +478,6 @@ export class Game {
 
     canvas.ctx.restore();
 
-    // Render UI
-    renderResourcesInDOM(this.player.resources);
-    this.clock.render(this.currentPlayer, this.myPlayerType ?? undefined);
   }
 
   /**

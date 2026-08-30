@@ -19,6 +19,12 @@ type GameClock = {
 
 export type ServerPlayer = {
   type: PlayerType;
+  research?: {
+    speedLevel?: number;
+    hasMiningII?: boolean;
+    hasMiningIII?: boolean;
+    hasQueen?: boolean;
+  };
   resources: {
     wood: number;
     gold: number;

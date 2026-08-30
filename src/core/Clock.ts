@@ -3,7 +3,7 @@
  * Time is managed by the server, this just displays it
  */
 export class Clock {
-  private readonly time: number;
+  readonly time: number;
 
   constructor(initialTime: number = 6) {
     this.time = initialTime;

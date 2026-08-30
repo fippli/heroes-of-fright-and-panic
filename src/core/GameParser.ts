@@ -27,6 +27,12 @@ const parsePlayer = (serverPlayer: ServerPlayer): Player =>
   createPlayer({
     type: serverPlayer.type,
     resources: serverPlayer.resources,
+    research: {
+      speedLevel: serverPlayer.research?.speedLevel ?? 0,
+      hasMiningII: serverPlayer.research?.hasMiningII ?? false,
+      hasMiningIII: serverPlayer.research?.hasMiningIII ?? false,
+      hasQueen: serverPlayer.research?.hasQueen ?? false,
+    },
   });
 
 const parseTile = (tile: ServerTile): Tile =>
