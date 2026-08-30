@@ -19,6 +19,7 @@ export class Building {
   readonly populated: boolean = false;
   readonly walkable: boolean = false;
   readonly viewRange: number;
+  readonly level: number;
 
   constructor({
     type,
@@ -27,6 +28,7 @@ export class Building {
     walkable,
     viewRange,
     owner,
+    level,
   }: {
     type: BuildingType;
     walkable?: boolean;
@@ -34,7 +36,9 @@ export class Building {
     cost?: ResourceMap;
     viewRange?: number;
     owner: Player;
+    level?: number;
   }) {
+    this.level = level ?? 1;
     this.walkable = walkable ?? true;
     this.viewRange = viewRange ?? 1;
     this.type = type;
@@ -56,6 +60,18 @@ export class Building {
     ctx.clip(Hexagon.path(x, y, Hexagon.clipRadius));
 
     imageAssets.buildingImage(this.owner, this.type).renderCentered(ctx, x, y);
+
+    // Upgraded houses wear their level as gold pips in the top-right corner
+    if (this.level > 1) {
+      const pip = Math.max(2, Math.round(Hexagon.height / 12));
+      const gap = 1;
+      const right = x + Hexagon.width / 2 - 2;
+      const top = y - Hexagon.height / 2 + 2;
+      for (let index = 0; index < this.level; index += 1) {
+        ctx.fillStyle = "#ffd54f";
+        ctx.fillRect(right - (index + 1) * pip - index * gap, top, pip, pip);
+      }
+    }
 
     ctx.restore();
   }

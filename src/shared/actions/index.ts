@@ -70,6 +70,12 @@ export type SummonArchAngelAction = BaseAction & {
   readonly churchPosition: TilePosition;
 };
 
+/** Raise one of your houses to the next level (homestead, manor) */
+export type UpgradeBuildingAction = BaseAction & {
+  readonly type: "upgradeBuilding";
+  readonly position: TilePosition;
+};
+
 /** Let time pass: one clock tick, or the rest of the phase */
 export type PassAction = BaseAction & {
   readonly type: "pass";
@@ -94,7 +100,8 @@ export type GameAction =
   | EnterTowerAction
   | SummonArchAngelAction
   | AttackAction
-  | PassAction;
+  | PassAction
+  | UpgradeBuildingAction;
 
 export type ActionResult = {
   readonly success: boolean;

@@ -10,7 +10,8 @@ const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["G", "Heal: select your priest, then click an ally"],
   ["E", "Enter tower: select your king, then click the tower"],
   ["O F", "Buy a horse / boat next to the selected house"],
-  ["4 5 6 7", "Research at the castle: Speed, Mining II, Mining III, Queen"],
+  ["4 7", "Research at the castle: Speed, Queen"],
+  ["U", "Upgrade the selected house (homestead, then manor)"],
   ["Space", "Wait an hour · Shift+Space ends your phase"],
   ["Esc", "Cancel build or target mode"],
   ["?", "This help"],
@@ -43,7 +44,7 @@ export const HelpOverlay = ({ open, onClose }: { readonly open: boolean; readonl
             <h2>Your kingdom</h2>
             <p>Your kingdom is what your pieces can see. You may only build on grass inside it. Forests and mountains cannot be entered; there is always a pass around them. Water needs a boat.</p>
             <h2>Economy</h2>
-            <p>At dawn (Day) and dusk (Night) your <strong>houses</strong> produce: +1 wood per adjacent forest tile, +1 food per adjacent farm (grass next to a house becomes farm), +1 stone per adjacent mountain (iron once you research Mining II, gold with Mining III). A priest in a church makes faith; a peasant in a boat on open water fishes.</p>
+            <p>At dawn (Day) and dusk (Night) your <strong>houses</strong> produce: +1 wood per adjacent forest tile, +1 food per adjacent farm (grass next to a house becomes farm), +1 stone per adjacent mountain. <strong>Upgrade</strong> a house (3 wood + 2 stone) into a homestead to get +2 stone and +1 iron per mountain, then (5 wood + 5 stone + 1 iron) into a manor for +1 gold per mountain and double wood and food. A priest in a church makes faith; a peasant in a boat on open water fishes.</p>
             <h2>Pieces</h2>
             <p>Peasants work, fight and can carry a sword (+1 attack), shield (+1 defense) or bow (+1 range). Priests heal. The king turns a tower into a castle, which unlocks research. Archangels are summoned with faith and ten praying priests.</p>
           </section>

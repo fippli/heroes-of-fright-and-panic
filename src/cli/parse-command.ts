@@ -258,7 +258,7 @@ export const parseCommand = (
       const researchName = parts.at(1);
       const posStr = parts.at(2);
       if (researchName === undefined || posStr === undefined) {
-        return { type: "error", message: "Usage: research <speed|mining2|mining3|queen> <row>,<col>" };
+        return { type: "error", message: "Usage: research <speed|queen> <row>,<col>" };
       }
       const castlePosition = parsePosition(posStr);
       if (castlePosition === null) {
@@ -266,7 +266,7 @@ export const parseCommand = (
       }
       const researchType = parseResearchType(researchName);
       if (researchType === null) {
-        return { type: "error", message: `Unknown research: ${researchName}. Options: speed, mining2, mining3, queen` };
+        return { type: "error", message: `Unknown research: ${researchName}. Options: speed, queen` };
       }
       return {
         type: "action",
@@ -289,6 +289,19 @@ export const parseCommand = (
         type: "action",
         action: { type: "enterTower", player: currentPlayer, kingPosition, towerPosition },
       };
+    }
+
+    case "upgrade":
+    case "up": {
+      const posStr = parts.at(1);
+      if (posStr === undefined) {
+        return { type: "error", message: "Usage: upgrade <row>,<col>" };
+      }
+      const position = parsePosition(posStr);
+      if (position === null) {
+        return { type: "error", message: "Invalid position. Use: row,col" };
+      }
+      return { type: "action", action: { type: "upgradeBuilding", player: currentPlayer, position } };
     }
 
     case "pass":
@@ -349,8 +362,6 @@ const parseSteedType = (name: string): SteedType | null => {
 const parseResearchType = (name: string): ResearchType | null => {
   switch (name) {
     case "speed": return ResearchType.speed;
-    case "mining2": return ResearchType.miningII;
-    case "mining3": return ResearchType.miningIII;
     case "queen": return ResearchType.queen;
     default: return null;
   }

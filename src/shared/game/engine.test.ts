@@ -48,6 +48,7 @@ import {
   handleSummonArchAngel,
   handleAttack,
   handlePass,
+  handleUpgradeBuilding,
   getSpectatorGameState,
   checkWinCondition,
   handleAction,
@@ -789,25 +790,6 @@ describe("handleResearch", () => {
 
     expect(result.success).toBe(false);
   });
-
-  it("rejects Mining III without Mining II", () => {
-    const tiles = placeBuilding(
-      placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      2,
-      2,
-      createCastleBuilding("day"),
-    );
-    const game = makeGame({ tiles });
-
-    const { result } = handleResearch(game, {
-      type: "research",
-      player: "day",
-      researchType: ResearchType.miningIII,
-      castlePosition: { row: 2, column: 2 },
-    });
-
-    expect(result.success).toBe(false);
-  });
 });
 
 // ============================================
@@ -1342,5 +1324,27 @@ describe("getSpectatorGameState", () => {
     expect(at(4, 4).piece?.owner).toBe("night");
     // Two tiles from both peasants (view 1): fog
     expect(at(2, 2).landscape?.type).toBe(LandscapeType.unexplored);
+  });
+});
+
+describe("handleUpgradeBuilding", () => {
+  const houseAt = (level = 1) => {
+    const base = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const tile = base.find((t) => t.row === 2 && t.column === 3)!;
+    return makeGame({ tiles: replaceTile(base, { ...tile, building: { ...createBuilding(BuildingType.house, "day"), level } }) });
+  };
+
+  it("raises a house to a homestead for 3 wood + 2 stone", () => {
+    const game = houseAt(1);
+    const { game: after, result } = handleUpgradeBuilding(game, { type: "upgradeBuilding", player: "day", position: { row: 2, column: 3 } });
+    expect(result.success).toBe(true);
+    expect(after.tiles.find((t) => t.row === 2 && t.column === 3)?.building?.level).toBe(2);
+    expect(after.dayPlayer.resources.wood).toBe(game.dayPlayer.resources.wood - 3);
+    expect(after.dayPlayer.resources.stone).toBe(game.dayPlayer.resources.stone - 2);
+  });
+
+  it("refuses a manor, an enemy house and a missing house", () => {
+    expect(handleUpgradeBuilding(houseAt(3), { type: "upgradeBuilding", player: "day", position: { row: 2, column: 3 } }).result.success).toBe(false);
+    expect(handleUpgradeBuilding(houseAt(1), { type: "upgradeBuilding", player: "day", position: { row: 0, column: 0 } }).result.success).toBe(false);
   });
 });

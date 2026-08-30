@@ -27,7 +27,8 @@ Commands:
   steed <type> <house> <target>  Buy: horse, boat
   train <row>,<col>         Train priest at church
   heal <priest> <target>    Priest heals adjacent piece
-  research <type> <row>,<col>  Research: speed, mining2, mining3, queen
+  research <type> <row>,<col>  Research: speed, queen
+  upgrade <row>,<col>       Upgrade a house (homestead, manor)
   enter <king> <tower>      King enters tower (creates castle)
   summon <row>,<col>        Summon arch angel at church
   pass [phase]              Wait one hour (or the rest of the phase)

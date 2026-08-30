@@ -53,8 +53,7 @@ export const EconomyPanel = ({ ui }: { readonly ui: GameUiState }) => {
           <p className="hint">
             {producer ? "Production arrives at the next " : "Your production arrives at the next "}{clock.isDay ? "dawn" : "dusk"}
             {" · "}Speed {research.speedLevel}
-            {research.hasMiningII ? " · Mining II" : " · iron needs Mining II"}
-            {research.hasMiningIII ? " · Mining III" : ""}
+            {" · iron and gold come from upgraded houses next to mountains"}
             {research.hasQueen ? " · Queen" : ""}
           </p>
         )}

@@ -13,12 +13,16 @@ import type {
   SummonArchAngelAction,
   AttackAction,
   PassAction,
+  UpgradeBuildingAction,
   GameAction,
 } from "../actions/index.ts";
 import {
   createBuilding,
   createCastleBuilding,
   BuildingType,
+  buildingLevel,
+  houseUpgradeCost,
+  HOUSE_LEVEL_NAMES,
 } from "../building/index.ts";
 import { resolveCombat } from "../combat/index.ts";
 import { createEquipment, EquipmentType } from "../equipment/index.ts";
@@ -899,6 +903,54 @@ export const getSpectatorGameState = (game: Game): Game => {
 };
 
 // ============================================
+// UPGRADE
+// ============================================
+
+/** Raise a house one level; higher levels work the surrounding land harder */
+export const handleUpgradeBuilding = (
+  game: Game,
+  action: UpgradeBuildingAction,
+): { readonly game: Game; readonly result: ActionResult } => {
+  const turnError = validateTurn(game, action.player);
+  if (turnError !== null) {
+    return { game, result: turnError };
+  }
+
+  const tile = findTile(game.tiles, action.position);
+  if (tile === undefined) {
+    return { game, result: { success: false, error: "Invalid tile position" } };
+  }
+  if (
+    tile.building === null ||
+    tile.building.type !== BuildingType.house ||
+    tile.building.owner !== action.player
+  ) {
+    return { game, result: { success: false, error: "Only your own houses can be upgraded" } };
+  }
+
+  const level = buildingLevel(tile.building);
+  const cost = houseUpgradeCost(level);
+  if (cost === null) {
+    return { game, result: { success: false, error: "This house is already a manor" } };
+  }
+
+  const player = getPlayer(game, action.player);
+  if (!canAffordCost(player, cost)) {
+    return { game, result: { success: false, error: "Cannot afford this upgrade" } };
+  }
+
+  const upgraded = replaceTile(game.tiles, { ...tile, building: { ...tile.building, level: level + 1 } });
+  const afterUpgrade = advanceClock(
+    withPlayer({ ...game, tiles: upgraded }, action.player, payForCost(player, cost)),
+    action.player,
+  );
+  return {
+    game: afterUpgrade,
+    result: { success: true, message: `Upgraded to ${HOUSE_LEVEL_NAMES[level + 1]}` },
+  };
+};
+
+// ============================================
 // PASS
 // ============================================
 
@@ -1091,6 +1143,8 @@ export const handleAction = (
       return handleAttack(game, action);
     case "pass":
       return handlePass(game, action);
+    case "upgradeBuilding":
+      return handleUpgradeBuilding(game, action);
     default:
       return { game, result: { success: false, error: "Unknown action type" } };
   }

@@ -81,32 +81,6 @@ describe("calculateProduction", () => {
     expect(production.gold).toBe(0);
   });
 
-  it("produces stone + iron from mountain with Mining II", () => {
-    const tiles = makeHouseWithNeighbors("day", [
-      mountainLandscape(),
-      grass(),
-    ]);
-
-    const research = createResearch({ hasMiningII: true });
-    const production = calculateProduction("day", tiles, research);
-    expect(production.stone).toBe(1);
-    expect(production.iron).toBe(1);
-    expect(production.gold).toBe(0);
-  });
-
-  it("produces stone + iron + gold from mountain with Mining III", () => {
-    const tiles = makeHouseWithNeighbors("day", [
-      mountainLandscape(),
-      grass(),
-    ]);
-
-    const research = createResearch({ hasMiningII: true, hasMiningIII: true });
-    const production = calculateProduction("day", tiles, research);
-    expect(production.stone).toBe(1);
-    expect(production.iron).toBe(1);
-    expect(production.gold).toBe(1);
-  });
-
   it("farms and forests produce without a peasant in the house", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, { landscape: farmLandscape() }),
@@ -122,21 +96,18 @@ describe("calculateProduction", () => {
     expect(production.wood).toBe(1);
   });
 
-  it("mountains produce stone for any adjacent house; iron needs Mining II", () => {
-    const tiles: Tile[] = [
+  it("mountains give stone to a house, stone + iron to a homestead, + gold to a manor", () => {
+    const withLevel = (level: number): Tile[] => [
       makeTile(0, 0, { landscape: mountainLandscape() }),
-      makeTile(0, 1, {
-        building: createHouseBuilding("day"),
-        piece: null, // no peasant needed
-      }),
-      makeTile(0, 2, { landscape: grass() }),
+      makeTile(0, 1, { building: { ...createHouseBuilding("day"), level }, piece: null }),
+      makeTile(0, 2, { landscape: treeLandscape() }),
     ];
-
-    const production = calculateProduction("day", tiles, createResearch());
-    expect(production.stone).toBe(1);
-    expect(production.iron).toBe(0);
-    const mined = calculateProduction("day", tiles, { ...createResearch(), hasMiningII: true });
-    expect(mined.iron).toBe(1);
+    const house = calculateProduction("day", withLevel(1), createResearch());
+    expect([house.stone, house.iron, house.gold, house.wood]).toEqual([1, 0, 0, 1]);
+    const homestead = calculateProduction("day", withLevel(2), createResearch());
+    expect([homestead.stone, homestead.iron, homestead.gold, homestead.wood]).toEqual([2, 1, 0, 1]);
+    const manor = calculateProduction("day", withLevel(3), createResearch());
+    expect([manor.stone, manor.iron, manor.gold, manor.wood]).toEqual([2, 1, 1, 2]);
   });
 
   it("does not produce from enemy houses", () => {

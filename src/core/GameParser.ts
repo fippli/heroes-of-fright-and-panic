@@ -30,8 +30,6 @@ const parsePlayer = (serverPlayer: ServerPlayer): Player =>
     resources: createResourceMap(serverPlayer.resources),
     research: {
       speedLevel: serverPlayer.research?.speedLevel ?? 0,
-      hasMiningII: serverPlayer.research?.hasMiningII ?? false,
-      hasMiningIII: serverPlayer.research?.hasMiningIII ?? false,
       hasQueen: serverPlayer.research?.hasQueen ?? false,
     },
   });
@@ -47,6 +45,7 @@ const parseTile = (tile: ServerTile): Tile =>
         ? new Building({
             type: tile.building.type,
             viewRange: tile.building.viewRange ?? 1,
+            level: tile.building.level ?? 1,
             owner: createPlayer({
               type: tile.building.owner ?? "day",
             }),

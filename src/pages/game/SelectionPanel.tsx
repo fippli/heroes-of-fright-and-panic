@@ -1,11 +1,11 @@
-import { BuildingType } from "@shared/building";
+import { BuildingType, HOUSE_LEVEL_NAMES, houseUpgradeCost } from "@shared/building";
 import { EquipmentType, createEquipment } from "@shared/equipment";
 import { PieceKind, peasantSpawnCost, priestTrainCost, archAngelSummonCost } from "@shared/piece";
 import { ResearchType, researchCostOf } from "@shared/research";
 import { SteedType, createSteed } from "@shared/steed";
 import { createResourceMap, type ResourceMap } from "@shared/player/resource-map";
 import type { Game } from "../../core/Board";
-import type { GameUiState, TargetMode } from "../../core/ui-state";
+import { costEntries, type GameUiState, type TargetMode } from "../../core/ui-state";
 import { ActionButton, affordable } from "./ActionButton";
 
 const KIND_LABEL: Record<string, string> = { peasant: "Peasant", king: "King", priest: "Priest", archAngel: "Archangel" };
@@ -14,8 +14,6 @@ const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", b
 
 const RESEARCH: readonly { readonly type: ResearchType; readonly label: string; readonly key: string }[] = [
   { type: ResearchType.speed, label: "Speed", key: "4" },
-  { type: ResearchType.miningII, label: "Mining II", key: "5" },
-  { type: ResearchType.miningIII, label: "Mining III", key: "6" },
   { type: ResearchType.queen, label: "Queen", key: "7" },
 ];
 
@@ -24,17 +22,40 @@ type SlotProps = {
   readonly item: string | null;
   readonly sprite: string | undefined;
   readonly side: "left" | "right";
+  /** When set, an empty slot shows a + that buys the item */
+  readonly buy?: {
+    readonly cost: ResourceMap;
+    readonly enabled: boolean;
+    readonly hotkey: string;
+    readonly onBuy: () => void;
+  };
+  readonly icons: Record<string, string>;
 };
 
-/** One paper-doll slot: the item's sprite when carried, an empty diamond otherwise */
-const Slot = ({ label, item, sprite, side }: SlotProps) => (
-  <div className={`doll__slot doll__slot--${side}${item !== null ? " doll__slot--filled" : ""}`} title={item !== null ? ITEM_LABEL[item] ?? item : `${label}: empty`}>
-    <div className="doll__diamond">
-      {item !== null && sprite !== undefined && <img src={sprite} alt={ITEM_LABEL[item] ?? item} />}
+/** One paper-doll slot: the item's sprite when carried, otherwise an empty diamond with a + to buy it */
+const Slot = ({ label, item, sprite, side, buy, icons }: SlotProps) => {
+  const costText = buy !== undefined ? costEntries(buy.cost).map((entry) => `${entry.amount} ${entry.resource}`).join(", ") : "";
+  return (
+    <div className={`doll__slot doll__slot--${side}${item !== null ? " doll__slot--filled" : ""}`}>
+      <div className="doll__diamond" title={item !== null ? ITEM_LABEL[item] ?? item : buy !== undefined ? `Buy ${label.toLowerCase()} — ${costText} (${buy.hotkey})` : `${label}: empty`}>
+        {item !== null && sprite !== undefined && <img src={sprite} alt={ITEM_LABEL[item] ?? item} />}
+        {item === null && buy !== undefined && (
+          <button type="button" className="doll__buy" disabled={!buy.enabled} onClick={buy.onBuy} aria-label={`Buy ${label.toLowerCase()}`}>
+            +
+          </button>
+        )}
+      </div>
+      <span className="doll__label">{item !== null ? ITEM_LABEL[item] ?? item : label}</span>
+      {item === null && buy !== undefined && (
+        <span className="doll__cost">
+          {costEntries(buy.cost).map(({ resource, amount }) => (
+            <span key={resource}><img src={icons[resource]} alt={resource} />{amount}</span>
+          ))}
+        </span>
+      )}
     </div>
-    <span className="doll__label">{item !== null ? ITEM_LABEL[item] ?? item : label}</span>
-  </div>
-);
+  );
+};
 
 /**
  * Slides in from the left of the board when a tile is selected. Pieces get a
@@ -68,12 +89,25 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
     piece !== null
       ? KIND_LABEL[piece.kind] ?? piece.kind
       : building !== null
-        ? BUILDING_LABEL[building.type] ?? building.type
+        ? building.type === BuildingType.house
+          ? HOUSE_LEVEL_NAMES[building.level] ?? "House"
+          : BUILDING_LABEL[building.type] ?? building.type
         : selected?.landscape ?? "Tile";
   const owner = piece?.owner ?? building?.owner ?? null;
 
   const has = (item: string): string | null =>
     piece !== null && (piece.equipment.includes(item) || piece.steed === item) ? item : null;
+
+  // Only your own peasant can be equipped; the + buys the item straight away
+  const buyFor = (type: EquipmentType, hotkey: string) =>
+    ownPiece === PieceKind.peasant && at !== null
+      ? {
+          cost: createEquipment(type).cost,
+          enabled: can(createEquipment(type).cost),
+          hotkey,
+          onBuy: () => void game.craftEquipmentAt(type, at),
+        }
+      : undefined;
 
   return (
     <aside className={`selection${open ? " selection--open" : ""}`} aria-hidden={!open}>
@@ -93,8 +127,8 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
           {piece !== null && (
             <section className="doll">
               <div className="doll__column">
-                <Slot label="Weapon" item={has("sword")} sprite={ui.sprites.items.sword} side="left" />
-                <Slot label="Shield" item={has("shield")} sprite={ui.sprites.items.shield} side="left" />
+                <Slot label="Sword" item={has("sword")} sprite={ui.sprites.items.sword} side="left" icons={icons} buy={buyFor(EquipmentType.sword, "S")} />
+                <Slot label="Shield" item={has("shield")} sprite={ui.sprites.items.shield} side="left" icons={icons} buy={buyFor(EquipmentType.shield, "D")} />
               </div>
               <div className="doll__figure">
                 {ui.sprites.piece !== null && <img src={ui.sprites.piece} alt={title} />}
@@ -105,8 +139,8 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
                 </div>
               </div>
               <div className="doll__column">
-                <Slot label="Bow" item={has("bow")} sprite={ui.sprites.items.bow} side="right" />
-                <Slot label="Steed" item={piece.steed} sprite={piece.steed !== null ? ui.sprites.items[piece.steed] : undefined} side="right" />
+                <Slot label="Bow" item={has("bow")} sprite={ui.sprites.items.bow} side="right" icons={icons} buy={buyFor(EquipmentType.bow, "B")} />
+                <Slot label="Steed" item={piece.steed} sprite={piece.steed !== null ? ui.sprites.items[piece.steed] : undefined} side="right" icons={icons} />
               </div>
             </section>
           )}
@@ -121,28 +155,8 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
             </dl>
           )}
 
-          {ownPiece === PieceKind.peasant && at !== null && (
-            <section className="selection__actions">
-              <h3>Equip</h3>
-              {[
-                { type: EquipmentType.sword, label: "Craft sword", key: "S" },
-                { type: EquipmentType.shield, label: "Craft shield", key: "D" },
-                { type: EquipmentType.bow, label: "Craft bow", key: "B" },
-              ]
-                .filter(({ type }) => !(piece?.equipment.includes(type) ?? false))
-                .map(({ type, label, key }) => (
-                  <ActionButton
-                    key={type}
-                    label={label}
-                    hotkey={key}
-                    cost={createEquipment(type).cost}
-                    icons={icons}
-                    enabled={can(createEquipment(type).cost)}
-                    onClick={() => void game.craftEquipmentAt(type, at)}
-                  />
-                ))}
-              <p className="hint">Steeds are bought at a house and mounted by walking onto them.</p>
-            </section>
+          {ownPiece === PieceKind.peasant && (
+            <p className="hint">Steeds are bought at a house and mounted by walking onto them.</p>
           )}
 
           {ownPiece === PieceKind.king && (
@@ -166,9 +180,20 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
             </div>
           )}
 
-          {ownBuilding === BuildingType.house && at !== null && (
+          {ownBuilding === BuildingType.house && at !== null && building !== null && (
             <section className="selection__actions">
-              <h3>House</h3>
+              <h3>{HOUSE_LEVEL_NAMES[building.level] ?? "House"}</h3>
+              {houseUpgradeCost(building.level) !== null && (
+                <ActionButton
+                  label={`Upgrade to ${HOUSE_LEVEL_NAMES[building.level + 1]}`}
+                  hotkey="U"
+                  cost={houseUpgradeCost(building.level) as ResourceMap}
+                  icons={icons}
+                  enabled={can(houseUpgradeCost(building.level) as ResourceMap)}
+                  onClick={() => void game.upgradeBuildingAt(at)}
+                  title={building.level === 1 ? "Homestead: +2 stone and +1 iron per adjacent mountain" : "Manor: +1 gold per mountain, double wood and food"}
+                />
+              )}
               <ActionButton label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost())} onClick={() => void game.spawnPeasantAt(at)} />
               {targetButton("Buy horse", "O", "horse", createSteed(SteedType.horse).cost, "Placed on a tile next to the house")}
               {targetButton("Buy boat", "F", "boat", createSteed(SteedType.boat).cost, "Placed on water next to the house")}

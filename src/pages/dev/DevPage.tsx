@@ -112,8 +112,6 @@ export const DevPage = () => {
           o: (position) => game.buySteed(SteedType.horse, position), // house selected → tile
           f: (position) => game.buySteed(SteedType.boat, position), // house selected → water
           "4": (position) => game.research(ResearchType.speed, position), // on castle
-          "5": (position) => game.research(ResearchType.miningII, position),
-          "6": (position) => game.research(ResearchType.miningIII, position),
           "7": (position) => game.research(ResearchType.queen, position),
         });
       });
@@ -260,7 +258,7 @@ export const DevPage = () => {
                 tile)
               </div>
               <div>
-                <strong>4/5/6/7</strong> — Research speed / miningII / miningIII
+                <strong>4/7</strong> — Research speed / queen
                 / queen (hover castle)
               </div>
               <div>

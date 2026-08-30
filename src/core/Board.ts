@@ -206,7 +206,7 @@ export class Game {
               buildingInfo:
                 selected.building === undefined
                   ? null
-                  : { type: selected.building.type, owner: selected.building.owner.type, viewRange: selected.building.viewRange },
+                  : { type: selected.building.type, owner: selected.building.owner.type, viewRange: selected.building.viewRange, level: selected.building.level },
             },
     };
   }
@@ -779,6 +779,11 @@ export class Game {
   async passTurn(toPhaseEnd: boolean): Promise<boolean> {
     if (this.myPlayerType === null) return false;
     return this.sendAction({ type: "pass", player: this.myPlayerType, toPhaseEnd });
+  }
+
+  async upgradeBuildingAt(position: TilePosition): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "upgradeBuilding", player: this.myPlayerType, position });
   }
 
   async craftEquipmentAt(equipmentType: EquipmentType, piecePosition: TilePosition): Promise<boolean> {

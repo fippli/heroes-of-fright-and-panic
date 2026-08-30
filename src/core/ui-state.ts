@@ -73,6 +73,7 @@ export type BuildingInfo = {
   readonly type: BuildingType;
   readonly owner: string;
   readonly viewRange: number;
+  readonly level: number;
 };
 
 export type ResourceEntry = { readonly resource: string; readonly amount: number };

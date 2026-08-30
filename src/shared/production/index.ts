@@ -1,4 +1,4 @@
-import { BuildingType } from "@shared/building/index.ts";
+import { BuildingType, buildingLevel } from "@shared/building/index.ts";
 import * as hex from "@shared/map/hex.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
 import type { Tile } from "@shared/map/tile.ts";
@@ -11,10 +11,10 @@ import type { Research } from "@shared/research/index.ts";
  * Calculate total resource production for a player.
  *
  * Production sources:
- * - House: produces from adjacent terrain tiles
- *   - Farm → +1 food (always)
- *   - Tree → +1 wood (always; forests are worked from the house)
- *   - Mountain → +1 stone (+ iron with Mining II, + gold with Mining III)
+ * - House: produces from adjacent terrain tiles, scaled by its level
+ *   - level 1 house:     farm +1 food, tree +1 wood, mountain +1 stone
+ *   - level 2 homestead: farm +1 food, tree +1 wood, mountain +2 stone +1 iron
+ *   - level 3 manor:     farm +2 food, tree +2 wood, mountain +2 stone +1 iron +1 gold
  * - Church with priest: +1 faith per praying priest
  * - Boat with peasant surrounded by water: +1 food (fishing)
  *
@@ -23,9 +23,9 @@ import type { Research } from "@shared/research/index.ts";
 export const calculateProduction = (
   playerType: PlayerType,
   tiles: ReadonlyArray<Tile>,
-  research: Research,
+  _research: Research,
 ): ResourceMap => {
-  const houseProduction = calculateHouseProduction(playerType, tiles, research);
+  const houseProduction = calculateHouseProduction(playerType, tiles);
   const churchProduction = calculateChurchProduction(playerType, tiles);
   const fishingProduction = calculateFishingProduction(playerType, tiles);
 
@@ -35,7 +35,6 @@ export const calculateProduction = (
 const calculateHouseProduction = (
   playerType: PlayerType,
   tiles: ReadonlyArray<Tile>,
-  research: Research,
 ): ResourceMap => {
   const houses = tiles.filter(
     (tile) =>
@@ -47,13 +46,14 @@ const calculateHouseProduction = (
   const producedTileKeys = new Set<string>();
 
   return houses.reduce((total, houseTile) => {
+    const level = houseTile.building !== null ? buildingLevel(houseTile.building) : 1;
     const neighbors = hex.findNeighbors(houseTile, tiles as Tile[]);
     return neighbors.reduce((acc, neighbor) => {
       const tileKey = `${neighbor.row},${neighbor.column}`;
       if (producedTileKeys.has(tileKey)) {
         return acc;
       }
-      const production = tileProduction(neighbor, research);
+      const production = tileProduction(neighbor, level);
       if (production !== null) {
         producedTileKeys.add(tileKey);
         return addResources(acc, production);
@@ -63,23 +63,21 @@ const calculateHouseProduction = (
   }, createResourceMap({}));
 };
 
-const tileProduction = (
-  tile: Tile,
-  research: Research,
-): ResourceMap | null => {
+const tileProduction = (tile: Tile, level: number): ResourceMap | null => {
   if (tile.landscape === null) {
     return null;
   }
+  const manor = level >= 3;
   switch (tile.landscape.type) {
     case LandscapeType.farm:
-      return createResourceMap({ food: 1 });
+      return createResourceMap({ food: manor ? 2 : 1 });
     case LandscapeType.tree:
-      return createResourceMap({ wood: 1 });
+      return createResourceMap({ wood: manor ? 2 : 1 });
     case LandscapeType.mountain:
       return createResourceMap({
-        stone: 1,
-        iron: research.hasMiningII ? 1 : 0,
-        gold: research.hasMiningIII ? 1 : 0,
+        stone: level >= 2 ? 2 : 1,
+        iron: level >= 2 ? 1 : 0,
+        gold: manor ? 1 : 0,
       });
     default:
       return null;

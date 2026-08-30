@@ -610,6 +610,44 @@ canvas {
   image-rendering: pixelated;
 }
 
+.doll__buy {
+  transform: rotate(-45deg);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  background: rgba(255, 213, 79, 0.15);
+  color: var(--game-text-color);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.doll__buy:hover:not(:disabled) {
+  background: rgba(255, 213, 79, 0.4);
+}
+
+.doll__buy:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.doll__cost {
+  display: flex;
+  gap: 4px;
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.doll__cost img {
+  width: 12px;
+  height: 12px;
+  image-rendering: pixelated;
+  vertical-align: -2px;
+  margin-right: 1px;
+}
+
 .doll__label {
   font-size: 0.65rem;
   letter-spacing: 0.08em;

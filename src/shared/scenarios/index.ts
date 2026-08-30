@@ -235,7 +235,7 @@ export const scenarios: ReadonlyArray<Scenario> = [
     id: "castle-research",
     name: "Castle: research",
     description:
-      "Hover the castle and press 4/5/6/7 to research speed / miningII / miningIII / queen.",
+      "Hover the castle and press 4 (speed) or 7 (queen) to research.",
     map: `
       . . . . .
       . . . . .

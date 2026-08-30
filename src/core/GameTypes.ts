@@ -21,8 +21,6 @@ export type ServerPlayer = {
   type: PlayerType;
   research?: {
     speedLevel?: number;
-    hasMiningII?: boolean;
-    hasMiningIII?: boolean;
     hasQueen?: boolean;
   };
   resources: {
@@ -47,6 +45,7 @@ export type ServerTile = {
     viewRange?: number;
     defense?: number;
     owner?: PlayerType;
+    level?: number;
   } | null;
   piece: {
     kind: PieceKind;

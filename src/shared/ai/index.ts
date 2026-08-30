@@ -8,7 +8,7 @@ import type { Game } from "@shared/game/types.ts";
 import type { GameAction, PlayerType } from "@shared/actions/index.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
-import { BuildingType } from "@shared/building/index.ts";
+import { BuildingType, buildingLevel, houseUpgradeCost } from "@shared/building/index.ts";
 import { processAction } from "@shared/game/actions.ts";
 import type { ActionResult } from "@shared/actions/index.ts";
 import { EquipmentType, createEquipment } from "@shared/equipment/index.ts";
@@ -244,7 +244,7 @@ const generateResearchActions = (game: Game, player: PlayerType): ReadonlyArray<
   // Speed beyond level 2 makes a phase take hundreds of actions; the AI
   // does not need it and it only slows the game for the human
   const AI_MAX_SPEED_LEVEL = 2;
-  const researchable = [ResearchType.speed, ResearchType.miningII, ResearchType.miningIII, ResearchType.queen]
+  const researchable = [ResearchType.speed, ResearchType.queen]
     .filter((researchType) =>
       !(researchType === ResearchType.speed && playerData.research.speedLevel >= AI_MAX_SPEED_LEVEL) &&
       canResearch(playerData.research, researchType) &&
@@ -332,6 +332,17 @@ const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
 /**
  * Generate all legal actions for a player in the given game state.
  */
+const generateUpgradeActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
+  const playerData = getPlayer(game, player);
+  return game.tiles
+    .filter((tile) => tile.building !== null && tile.building.type === BuildingType.house && tile.building.owner === player)
+    .filter((tile) => {
+      const cost = houseUpgradeCost(buildingLevel(tile.building as NonNullable<typeof tile.building>));
+      return cost !== null && canAfford(playerData.resources, cost);
+    })
+    .map((tile): GameAction => ({ type: "upgradeBuilding", player, position: { row: tile.row, column: tile.column } }));
+};
+
 export const generateAllActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
   const actions: ReadonlyArray<GameAction> = [
     ...generateMoveActions(game, player),
@@ -344,6 +355,7 @@ export const generateAllActions = (game: Game, player: PlayerType): ReadonlyArra
     ...generateResearchActions(game, player),
     ...generateEnterTowerActions(game, player),
     ...generateSteedActions(game, player),
+    ...generateUpgradeActions(game, player),
   ];
   // A player with nothing to do can always let the hour pass, so a phase
   // never gets stuck
@@ -365,6 +377,7 @@ const ACTION_WEIGHTS: Record<string, number> = {
   enterTower: 5,
   buySteed: 5,
   summonArchAngel: 30,
+  upgradeBuilding: 12,
   pass: 1,
 };
 

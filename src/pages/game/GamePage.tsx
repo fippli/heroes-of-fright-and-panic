@@ -159,6 +159,10 @@ export const GamePage = () => {
           w: () => game.setPendingBuild(BuildingType.wall),
           r: () => game.setPendingBuild(BuildingType.church),
           escape: () => game.cancel(),
+          u: () => {
+            const selected = game.uiState().selected;
+            if (selected !== null) void game.upgradeBuildingAt({ row: selected.row, column: selected.column });
+          },
           "?": () => setHelpOpen(true),
           "shift+?": () => setHelpOpen(true),
           " ": () => void game.passTurn(false),
@@ -179,8 +183,6 @@ export const GamePage = () => {
           o: () => game.setPendingTarget("horse"), // house selected → click tile
           f: () => game.setPendingTarget("boat"), // house selected → click water
           "4": (position) => game.research(ResearchType.speed, position), // castle
-          "5": (position) => game.research(ResearchType.miningII, position),
-          "6": (position) => game.research(ResearchType.miningIII, position),
           "7": (position) => game.research(ResearchType.queen, position),
         });
       })

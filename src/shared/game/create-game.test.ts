@@ -243,8 +243,6 @@ describe("createGame", () => {
     });
 
     expect(game.dayPlayer.research.speedLevel).toBe(0);
-    expect(game.dayPlayer.research.hasMiningII).toBe(false);
-    expect(game.dayPlayer.research.hasMiningIII).toBe(false);
     expect(game.dayPlayer.research.hasQueen).toBe(false);
 
     expect(game.nightPlayer.research.speedLevel).toBe(0);
