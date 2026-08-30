@@ -85,15 +85,17 @@ The game uses an **odd-r offset coordinate system**. Even rows are flush left, o
 
 ## Landscape Types
 
-| Type       | Walkable | Buildable | Loot        | Notes |
-|------------|----------|-----------|-------------|-------|
-| grass      | Yes      | Yes       | -           | Default buildable terrain |
-| farm       | Yes      | No        | -           | Created when a house is built adjacent to grass. Produces food. |
-| tree       | No       | No        | 1 wood      | Bow equipment enables walking on trees |
-| sand       | Yes      | No        | -           | Shoreline transition between grass and water |
-| water      | No       | No        | -           | Boat steed enables water travel |
-| mountain   | No       | No        | 1 stone     | Can yield iron (Mining II) and gold (Mining III) |
-| unexplored | -        | -         | -           | Fog of war placeholder for non-visible tiles |
+| Type       | Walkable | Buildable | Notes |
+|------------|----------|-----------|-------|
+| grass      | Yes      | Yes       | Default buildable terrain |
+| farm       | Yes      | No        | Created when a house is built adjacent to grass. Produces food for the house. |
+| tree       | No       | No        | Impassable. Produces wood for an adjacent house. |
+| sand       | Yes      | No        | Shoreline transition between grass and water |
+| water      | No       | No        | Boat steed enables water travel |
+| mountain   | No       | No        | Impassable. Produces stone for an adjacent house with a peasant inside (iron with Mining II, gold with Mining III). |
+| unexplored | -        | -         | Fog of war placeholder for non-visible tiles |
+
+Terrain is never cleared or harvested by pieces; resources come from houses working the land around them.
 
 ---
 
@@ -142,7 +144,7 @@ Equipment is for peasants only. Each peasant can carry at most one of each type.
 |--------|---------------|--------|
 | Sword  | 1 iron         | +1 attack |
 | Shield | 1 wood         | +1 defense |
-| Bow    | 1 wood + 1 iron | +1 attack range. Enables walking on trees. In a tower: range becomes tower view range (4). |
+| Bow    | 1 wood + 1 iron | +1 attack range. In a tower: range becomes tower view range (4). |
 
 ---
 
@@ -201,9 +203,10 @@ Resource production triggers at dawn (for day player) and dusk (for night player
 
 ### Production Rules
 
-- **House with adjacent peasant on farm**: +1 food
-- **House with adjacent peasant on tree**: +1 wood
-- **House with adjacent peasant on mountain**: +1 stone (+1 iron if Mining II, +1 gold if Mining III)
+- **House next to a farm**: +1 food per adjacent farm tile
+- **House next to a forest**: +1 wood per adjacent tree tile
+- **House with a peasant inside, next to a mountain**: +1 stone per adjacent mountain tile (+1 iron if Mining II, +1 gold if Mining III)
+- Each terrain tile produces once per cycle even if several houses touch it
 - **Priest in church**: +1 faith
 - **Peasant in boat on water**: +1 food
 
@@ -244,7 +247,7 @@ There are eleven actions available:
 | Action            | Description | Cost |
 |-------------------|------------|------|
 | Move              | Move piece to adjacent walkable tile. Can mount steeds on arrival. | - |
-| Build             | Place building on grass adjacent to a friendly unit. | Varies by building |
+| Build             | Place building on grass inside your kingdom (a tile you can see). | Varies by building |
 | SpawnPeasant      | Create peasant in an empty friendly house. | 1 food |
 | CraftEquipment    | Equip a peasant with sword, shield, or bow. | Varies by equipment |
 | BuySteed          | Place horse or boat adjacent to a friendly house. | Varies by steed |
@@ -294,12 +297,13 @@ Each player begins with: **5 wood, 2 stone**.
 - **Day player**: King + peasant placed near bottom-left of the map.
 - **Night player**: King + peasant placed near top-right of the map.
 - Trees and mountains are cleared from the starting area around each king.
+- Pieces may walk onto and through their own buildings; enemy walls block.
 
 ---
 
 ## Map Generation
 
-Maps are procedurally generated using noise-based generation with two noise layers (elevation and vegetation) combined with a hexagonal island mask.
+Maps are procedurally generated using noise-based generation with three noise layers (elevation, forest, mountain) combined with a hexagonal island mask. Forests and mountains form small clusters, and after generation every patch of walkable land is joined to the rest by carving grass corridors through the nearest trees or mountains, so there is always a pass — only water separates land.
 
 Configurable parameters:
 - Forest density

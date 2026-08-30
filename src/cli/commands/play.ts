@@ -30,7 +30,6 @@ Commands:
   research <type> <row>,<col>  Research: speed, mining2, mining3, queen
   enter <king> <tower>      King enters tower (creates castle)
   summon <row>,<col>        Summon arch angel at church
-  loot <row>,<col>          Loot adjacent resource (l)
   inspect <row>,<col>       Show tile details (i)
   status                    Show resources and clock (st)
   board                     Redraw the board (show)

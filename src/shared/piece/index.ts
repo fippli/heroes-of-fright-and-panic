@@ -172,13 +172,9 @@ export const getWalkableLandscape = (
   piece: Piece,
 ): ReadonlyArray<LandscapeType> => {
   const base = [LandscapeType.grass, LandscapeType.sand, LandscapeType.farm];
-  const canWalkTrees = piece.equipment.some((equip) => equip.canWalkOnTrees);
+  // Forests and mountains are never passable; a boat opens up water.
   const canWalkWater = piece.steed?.enablesWaterTravel === true;
-  return [
-    ...base,
-    ...(canWalkTrees ? [LandscapeType.tree] : []),
-    ...(canWalkWater ? [LandscapeType.water] : []),
-  ];
+  return [...base, ...(canWalkWater ? [LandscapeType.water] : [])];
 };
 
 export const isPieceAlive = (piece: Piece): boolean => piece.hearts > 0;

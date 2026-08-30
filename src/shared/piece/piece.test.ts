@@ -123,11 +123,11 @@ describe("Piece", () => {
       expect(getPieceDefense(defender)).toBe(1);
     });
 
-    it("bow gives +1 attack range and enables tree walking", () => {
+    it("bow gives +1 attack range but forests stay impassable", () => {
       const peasant = createPeasant("day");
       const archer = pieceWithEquipment(peasant, createBow());
       expect(getPieceAttackRange(archer)).toBe(2);
-      expect(getWalkableLandscape(archer)).toContain(LandscapeType.tree);
+      expect(getWalkableLandscape(archer)).not.toContain(LandscapeType.tree);
     });
 
     it("sword + shield = soldier (2 attack, 1 defense)", () => {

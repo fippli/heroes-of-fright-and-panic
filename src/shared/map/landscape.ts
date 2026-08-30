@@ -12,7 +12,6 @@ export enum LandscapeType {
 
 export type Landscape = {
   readonly type: LandscapeType;
-  readonly lootDrop?: ResourceMap;
 };
 
 export const grass = (): Landscape => ({
@@ -33,12 +32,10 @@ export const sand = (): Landscape => ({
 
 export const mountain = (): Landscape => ({
   type: LandscapeType.mountain,
-  lootDrop: createResourceMap({ stone: 1 }),
 });
 
 export const tree = (): Landscape => ({
   type: LandscapeType.tree,
-  lootDrop: createResourceMap({ wood: 1 }),
 });
 
 export const unexplored = (): Landscape => ({

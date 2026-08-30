@@ -21,6 +21,10 @@ export type MapConfig = {
   readonly forestDensity: number;
   /** Mountain density: 0 = no mountains, 1 = maximum mountain coverage. Default 0.5. */
   readonly mountainDensity: number;
+  /** Noise frequency for forests: higher = smaller, more scattered clusters. Default FOREST_SCALE. */
+  readonly forestScale?: number;
+  /** Noise frequency for mountains: higher = smaller clusters. Default MOUNTAIN_SCALE. */
+  readonly mountainScale?: number;
   /** Water level: 0 = minimal water (large island), 1 = mostly water (tiny island). Default 0.5. */
   readonly waterLevel: number;
 };
@@ -41,8 +45,9 @@ const SAND_THRESHOLD = 0.38;
 
 // Noise scales — lower = larger features
 const ELEVATION_SCALE = 0.12;
-const FOREST_SCALE = 0.18;
-const MOUNTAIN_SCALE = 0.15;
+// Higher = smaller, more scattered clusters (0.18/0.15 gave sprawling blobs)
+const FOREST_SCALE = 0.5;
+const MOUNTAIN_SCALE = 0.45;
 
 // ============================================
 // LANDSCAPE FROM INDEPENDENT NOISE LAYERS
@@ -197,14 +202,10 @@ export const generateMap = (
     const elevation = rawElevation * mask;
 
     // Forest and mountain: independent layers that can cluster anywhere on land
-    const forest = forestNoise(
-      column * FOREST_SCALE,
-      row * FOREST_SCALE,
-    );
-    const mountains = mountainNoise(
-      column * MOUNTAIN_SCALE,
-      row * MOUNTAIN_SCALE,
-    );
+    const forestScale = config.forestScale ?? FOREST_SCALE;
+    const mountainScale = config.mountainScale ?? MOUNTAIN_SCALE;
+    const forest = forestNoise(column * forestScale, row * forestScale);
+    const mountains = mountainNoise(column * mountainScale, row * mountainScale);
 
     const landscape = landscapeFromNoise(elevation, forest, mountains, config);
 
@@ -212,7 +213,142 @@ export const generateMap = (
   });
 
   const withBeaches = createBeaches(tiles);
-  return cleanupSand(withBeaches);
+  return connectLand(cleanupSand(withBeaches));
+};
+
+// ============================================
+// CONNECTIVITY
+// ============================================
+
+const WALKABLE_TYPES: ReadonlyArray<LandscapeType> = [
+  LandscapeType.grass,
+  LandscapeType.sand,
+  LandscapeType.farm,
+];
+
+const tileKey = (tile: TilePosition): string => `${tile.row},${tile.column}`;
+
+const isWalkable = (tile: Tile): boolean =>
+  tile.landscape !== null && WALKABLE_TYPES.includes(tile.landscape.type);
+
+const isLand = (tile: Tile): boolean =>
+  tile.landscape !== null &&
+  tile.landscape.type !== LandscapeType.water &&
+  tile.landscape.type !== LandscapeType.unexplored;
+
+type Lookup = {
+  readonly byKey: ReadonlyMap<string, Tile>;
+  readonly neighborKeys: ReadonlyMap<string, ReadonlyArray<string>>;
+};
+
+/** Index tiles by key; neighbour keys are computed once since positions never change */
+const buildLookup = (
+  tiles: ReadonlyArray<Tile>,
+  neighborKeys?: ReadonlyMap<string, ReadonlyArray<string>>,
+): Lookup => ({
+  byKey: new Map(tiles.map((tile) => [tileKey(tile), tile])),
+  neighborKeys:
+    neighborKeys ??
+    new Map(
+      tiles.map((tile) => [
+        tileKey(tile),
+        findNeighborTiles(tiles, tile).map(tileKey),
+      ]),
+    ),
+});
+
+const neighborsOf = (lookup: Lookup, key: string): ReadonlyArray<Tile> =>
+  (lookup.neighborKeys.get(key) ?? [])
+    .map((neighborKey) => lookup.byKey.get(neighborKey))
+    .filter((tile): tile is Tile => tile !== undefined);
+
+/** Connected components of walkable land, largest first */
+const walkableComponents = (lookup: Lookup): ReadonlyArray<ReadonlyArray<Tile>> => {
+  const seen = new Set<string>();
+  const components: Tile[][] = [];
+  lookup.byKey.forEach((start) => {
+    if (!isWalkable(start) || seen.has(tileKey(start))) return;
+    const component: Tile[] = [];
+    const stack: Tile[] = [start];
+    seen.add(tileKey(start));
+    while (stack.length > 0) {
+      const tile = stack.pop() as Tile;
+      component.push(tile);
+      neighborsOf(lookup, tileKey(tile)).forEach((neighbor) => {
+        if (isWalkable(neighbor) && !seen.has(tileKey(neighbor))) {
+          seen.add(tileKey(neighbor));
+          stack.push(neighbor);
+        }
+      });
+    }
+    components.push(component);
+  });
+  return components.sort((a, b) => b.length - a.length);
+};
+
+/**
+ * Shortest land route (through trees/mountains) from the main component to
+ * any other walkable component. Returns the obstacle tiles to clear, or null
+ * when every other component is only reachable across water.
+ */
+const corridorToNextComponent = (
+  main: ReadonlySet<string>,
+  lookup: Lookup,
+): ReadonlyArray<Tile> | null => {
+  const parent = new Map<string, Tile | null>();
+  const queue: Tile[] = [];
+  lookup.byKey.forEach((tile, key) => {
+    if (main.has(key)) {
+      parent.set(key, null);
+      queue.push(tile);
+    }
+  });
+  let head = 0;
+  while (head < queue.length) {
+    const tile = queue[head];
+    head += 1;
+    for (const neighbor of neighborsOf(lookup, tileKey(tile))) {
+      const key = tileKey(neighbor);
+      if (parent.has(key) || !isLand(neighbor)) continue;
+      parent.set(key, tile);
+      if (isWalkable(neighbor)) {
+        // Reached another component: walk back and collect the obstacles
+        const corridor: Tile[] = [];
+        let step: Tile | null = tile;
+        while (step !== null && !main.has(tileKey(step))) {
+          corridor.push(step);
+          step = parent.get(tileKey(step)) ?? null;
+        }
+        return corridor;
+      }
+      queue.push(neighbor);
+    }
+  }
+  return null;
+};
+
+/**
+ * Guarantee that all walkable land is one connected region: repeatedly join
+ * the largest component to the nearest other one by turning the trees or
+ * mountains on the shortest route between them into grass. Land that is
+ * separated by water is left as islands (boats exist for that).
+ */
+export const connectLand = (tiles: ReadonlyArray<Tile>): Tile[] => {
+  let current: Tile[] = [...tiles];
+  let lookup = buildLookup(current);
+  for (let guard = 0; guard < tiles.length; guard += 1) {
+    const components = walkableComponents(lookup);
+    if (components.length <= 1) break;
+    const main = new Set(components[0].map(tileKey));
+    const corridor = corridorToNextComponent(main, lookup);
+    if (corridor === null) break;
+    const clear = new Set(corridor.map(tileKey));
+    current = current.map((tile) =>
+      clear.has(tileKey(tile)) ? { ...tile, landscape: grass() } : tile,
+    );
+    lookup = buildLookup(current, lookup.neighborKeys);
+  }
+  return current;
 };
 
 /**

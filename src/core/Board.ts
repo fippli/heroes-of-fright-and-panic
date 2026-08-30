@@ -362,8 +362,6 @@ export class Game {
 
     // Render selected tile highlight and valid moves/attacks
     if (this.selectedTile !== undefined && this.selectedTile !== null) {
-      // Show valid moves (green) and lootable tiles (yellow)
-      this.selectedTile.renderValidMoves(canvas.ctx, this.tiles);
       // Show attackable enemies (red)
       this.selectedTile.renderValidAttacks(
         canvas.ctx,
@@ -557,20 +555,34 @@ export class Game {
       return;
     }
 
-    // If clicking on a tile with our building (and no piece), select it
+    // If clicking on a tile with our building (and no piece), select it —
+    // unless a piece is selected and can move there: your own buildings are
+    // walkable, so that click is a move, not a menu.
     if (
       myPlayer !== null &&
       clickedTile.building?.owner?.type === myPlayer &&
       clickedTile.piece === undefined
     ) {
-      this.selectedTile = clickedTile;
-      this.notify();
-      return;
+      const from = this.getSelectedPosition();
+      const canMoveIn =
+        from !== undefined &&
+        this.selectedTile?.piece?.owner?.type === myPlayer &&
+        this.lastServerState !== null &&
+        predictAction(this.lastServerState, {
+          type: "move",
+          player: myPlayer,
+          from,
+          to: tilePosition,
+        }) !== null;
+      if (!canMoveIn) {
+        this.selectedTile = clickedTile;
+        this.notify();
+        return;
+      }
     }
 
     // If we have a selected tile with our own piece, the click resolves to a
-    // concrete engine action: attack an enemy, harvest adjacent terrain
-    // (tree/rock), otherwise move.
+    // concrete engine action: attack an enemy, otherwise move.
     if (
       this.selectedTile !== undefined &&
       this.selectedTile !== null &&
@@ -588,17 +600,6 @@ export class Game {
             type: "attack",
             player: myPlayer,
             attackerPosition: from,
-            targetPosition: tilePosition,
-          };
-        }
-        if (
-          clickedTile.landscape?.lootDrop !== undefined &&
-          clickedTile.isNeighborTo(from)
-        ) {
-          return {
-            type: "loot",
-            player: myPlayer,
-            piecePosition: from,
             targetPosition: tilePosition,
           };
         }

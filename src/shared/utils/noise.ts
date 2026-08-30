@@ -49,7 +49,9 @@ const hash2d = (
   ix: number,
   iy: number,
 ): number => {
-  const index = permutation.at((permutation.at(ix & 255) ?? 0 + iy) & 255) ?? 0;
+  // Parenthesised: the earlier `?? 0 + iy` bound as `?? (0 + iy)`, which
+  // dropped the y term and produced vertically striped terrain.
+  const index = permutation.at(((permutation.at(ix & 255) ?? 0) + iy) & 255) ?? 0;
   return index / 255;
 };
 

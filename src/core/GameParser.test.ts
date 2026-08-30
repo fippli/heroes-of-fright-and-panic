@@ -19,7 +19,7 @@ describe("normalizePiece", () => {
       owner: "day",
       hearts: 0,
       baseAttack: 5,
-      equipment: [{ type: "bow", canWalkOnTrees: true, attackRangeBonus: 1 }],
+      equipment: [{ type: "bow", attackRangeBonus: 1 }],
     });
     expect(piece.hearts).toBe(0);
     expect(piece.baseAttack).toBe(5);

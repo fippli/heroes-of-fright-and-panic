@@ -107,18 +107,33 @@ describe("calculateProduction", () => {
     expect(production.gold).toBe(1);
   });
 
-  it("does not produce from house without peasant", () => {
+  it("farms and forests produce without a peasant in the house", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, { landscape: farmLandscape() }),
       makeTile(0, 1, {
         building: createHouseBuilding("day"),
         piece: null, // no peasant
       }),
-      makeTile(0, 2, { landscape: farmLandscape() }),
+      makeTile(0, 2, { landscape: treeLandscape() }),
     ];
 
     const production = calculateProduction("day", tiles, createResearch());
-    expect(production.food).toBe(0);
+    expect(production.food).toBe(1);
+    expect(production.wood).toBe(1);
+  });
+
+  it("mountains only produce while a peasant lives in the house", () => {
+    const tiles: Tile[] = [
+      makeTile(0, 0, { landscape: mountainLandscape() }),
+      makeTile(0, 1, {
+        building: createHouseBuilding("day"),
+        piece: null, // no peasant
+      }),
+      makeTile(0, 2, { landscape: grass() }),
+    ];
+
+    const production = calculateProduction("day", tiles, createResearch());
+    expect(production.stone).toBe(0);
   });
 
   it("does not produce from enemy houses", () => {

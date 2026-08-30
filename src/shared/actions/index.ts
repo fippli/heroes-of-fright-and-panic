@@ -76,12 +76,6 @@ export type AttackAction = BaseAction & {
   readonly targetPosition: TilePosition;
 };
 
-export type LootAction = BaseAction & {
-  readonly type: "loot";
-  readonly piecePosition: TilePosition;
-  readonly targetPosition: TilePosition;
-};
-
 export type GameAction =
   | MoveAction
   | BuildAction
@@ -93,8 +87,7 @@ export type GameAction =
   | ResearchAction
   | EnterTowerAction
   | SummonArchAngelAction
-  | AttackAction
-  | LootAction;
+  | AttackAction;
 
 export type ActionResult = {
   readonly success: boolean;

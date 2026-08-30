@@ -8,7 +8,7 @@
  * tests, or a CLI playthrough.
  *
  * Token legend:
- *   .  grass        T  tree (loot: wood)     M  mountain (loot: stone)
+ *   .  grass        T  tree (impassable)     M  mountain (impassable)
  *   ~  water        s  sand                  f  farm
  *   p  day peasant  P  night peasant
  *   k  day king     K  night king
@@ -190,28 +190,6 @@ export const scenarios: ReadonlyArray<Scenario> = [
       s s s s ~
       . p s s ~
       . . . s ~
-      . . . . .
-    `,
-  },
-  {
-    id: "harvest-tree",
-    name: "Harvest a tree",
-    description:
-      "Click the adjacent tree to harvest 1 wood — the tile should become walkable grass.",
-    map: `
-      . . . . .
-      . p T . .
-      . . . . .
-    `,
-  },
-  {
-    id: "harvest-mountain",
-    name: "Harvest a mountain",
-    description:
-      "Click the adjacent mountain to harvest 1 stone — the tile should become grass.",
-    map: `
-      . . . . .
-      . p M . .
       . . . . .
     `,
   },

@@ -12,7 +12,6 @@ import type {
   EnterTowerAction,
   SummonArchAngelAction,
   AttackAction,
-  LootAction,
   GameAction,
 } from "../actions/index.ts";
 import {
@@ -25,7 +24,6 @@ import { createEquipment, EquipmentType } from "../equipment/index.ts";
 import {
   LandscapeType,
   farm as farmLandscape,
-  grass as grassLandscape,
   unexplored as unexploredLandscape,
 } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
@@ -66,7 +64,6 @@ import {
   costOfSummonArchAngel,
   costOfResearch,
   costOfHeal,
-  collectResources,
   countPrayingPriests,
   triggerProduction,
 } from "../resource/index.ts";
@@ -885,66 +882,6 @@ export const handleAttack = (
   return { game, result: { success: false, error: "No valid target" } };
 };
 
-export const handleLoot = (
-  game: Game,
-  action: LootAction,
-): { readonly game: Game; readonly result: ActionResult } => {
-  const turnError = validateTurn(game, action.player);
-  if (turnError !== null) {
-    return { game, result: turnError };
-  }
-
-  const pieceTile = findTile(game.tiles, action.piecePosition);
-  const targetTile = findTile(game.tiles, action.targetPosition);
-
-  if (pieceTile === undefined || targetTile === undefined) {
-    return { game, result: { success: false, error: "Invalid tile position" } };
-  }
-
-  if (pieceTile.piece === null || pieceTile.piece.owner !== action.player) {
-    return {
-      game,
-      result: { success: false, error: "No piece or not your piece" },
-    };
-  }
-
-  if (!areNeighbors(pieceTile, targetTile)) {
-    return {
-      game,
-      result: {
-        success: false,
-        error: "Target must be adjacent to your piece",
-      },
-    };
-  }
-
-  if (
-    targetTile.landscape === null ||
-    targetTile.landscape.lootDrop === undefined
-  ) {
-    return {
-      game,
-      result: { success: false, error: "Nothing to harvest here" },
-    };
-  }
-
-  const player = getPlayer(game, action.player);
-  const updatedPlayer = collectResources(player, targetTile.landscape.lootDrop);
-
-  // Harvesting removes the terrain feature, leaving walkable grass behind.
-  const clearedTile: Tile = { ...targetTile, landscape: grassLandscape() };
-  const updatedTiles = replaceTile(game.tiles, clearedTile);
-
-  const afterLoot = advanceClock(
-    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
-    action.player,
-  );
-  return {
-    game: afterLoot,
-    result: { success: true, message: "Harvested terrain" },
-  };
-};
-
 // ============================================
 // WIN CONDITION
 // ============================================
@@ -1101,8 +1038,6 @@ export const handleAction = (
       return handleSummonArchAngel(game, action);
     case "attack":
       return handleAttack(game, action);
-    case "loot":
-      return handleLoot(game, action);
     default:
       return { game, result: { success: false, error: "Unknown action type" } };
   }

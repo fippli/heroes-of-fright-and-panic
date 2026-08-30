@@ -12,7 +12,6 @@ export type Equipment = {
   readonly attackBonus: number;
   readonly defenseBonus: number;
   readonly attackRangeBonus: number;
-  readonly canWalkOnTrees: boolean;
 };
 
 export const createSword = (): Equipment => ({
@@ -21,7 +20,6 @@ export const createSword = (): Equipment => ({
   attackBonus: 1,
   defenseBonus: 0,
   attackRangeBonus: 0,
-  canWalkOnTrees: false,
 });
 
 export const createShield = (): Equipment => ({
@@ -30,7 +28,6 @@ export const createShield = (): Equipment => ({
   attackBonus: 0,
   defenseBonus: 1,
   attackRangeBonus: 0,
-  canWalkOnTrees: false,
 });
 
 export const createBow = (): Equipment => ({
@@ -39,7 +36,6 @@ export const createBow = (): Equipment => ({
   attackBonus: 0,
   defenseBonus: 0,
   attackRangeBonus: 1,
-  canWalkOnTrees: true,
 });
 
 export const createEquipment = (equipmentType: EquipmentType): Equipment => {

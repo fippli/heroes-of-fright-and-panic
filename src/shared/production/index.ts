@@ -11,10 +11,11 @@ import type { Research } from "@shared/research/index.ts";
  * Calculate total resource production for a player.
  *
  * Production sources:
- * - House with peasant: produces from adjacent terrain tiles
- *   - Farm → +1 food
- *   - Tree → +1 wood
- *   - Mountain → +1 stone (+ iron with Mining II, + gold with Mining III)
+ * - House: produces from adjacent terrain tiles
+ *   - Farm → +1 food (always)
+ *   - Tree → +1 wood (always; forests are worked from the house)
+ *   - Mountain → +1 stone (+ iron with Mining II, + gold with Mining III),
+ *     only while a peasant lives in the house (mining is labour)
  * - Church with priest: +1 faith per praying priest
  * - Boat with peasant surrounded by water: +1 food (fishing)
  *
@@ -37,26 +38,27 @@ const calculateHouseProduction = (
   tiles: ReadonlyArray<Tile>,
   research: Research,
 ): ResourceMap => {
-  const housesWithPeasants = tiles.filter(
+  const houses = tiles.filter(
     (tile) =>
       tile.building?.type === BuildingType.house &&
-      tile.building.owner === playerType &&
-      tile.piece !== null &&
-      tile.piece.kind === PieceKind.peasant &&
-      tile.piece.owner === playerType,
+      tile.building.owner === playerType,
   );
 
   // Track which tiles have already produced (each tile produces once)
   const producedTileKeys = new Set<string>();
 
-  return housesWithPeasants.reduce((total, houseTile) => {
+  return houses.reduce((total, houseTile) => {
+    const staffed =
+      houseTile.piece !== null &&
+      houseTile.piece.kind === PieceKind.peasant &&
+      houseTile.piece.owner === playerType;
     const neighbors = hex.findNeighbors(houseTile, tiles as Tile[]);
     return neighbors.reduce((acc, neighbor) => {
       const tileKey = `${neighbor.row},${neighbor.column}`;
       if (producedTileKeys.has(tileKey)) {
         return acc;
       }
-      const production = tileProduction(neighbor, research);
+      const production = tileProduction(neighbor, research, staffed);
       if (production !== null) {
         producedTileKeys.add(tileKey);
         return addResources(acc, production);
@@ -69,6 +71,7 @@ const calculateHouseProduction = (
 const tileProduction = (
   tile: Tile,
   research: Research,
+  staffed: boolean,
 ): ResourceMap | null => {
   if (tile.landscape === null) {
     return null;
@@ -79,6 +82,7 @@ const tileProduction = (
     case LandscapeType.tree:
       return createResourceMap({ wood: 1 });
     case LandscapeType.mountain:
+      if (!staffed) return null;
       return createResourceMap({
         stone: 1,
         iron: research.hasMiningII ? 1 : 0,

@@ -76,26 +76,6 @@ export class Tile {
   }
 
   /**
-   * Render yellow overlay on tiles this piece can loot
-   */
-  renderValidMoves(ctx: CanvasRenderingContext2D, tiles: Tile[]) {
-    if (this.piece === undefined) return;
-
-    ctx.save();
-    const neighbors = this.getNeighbors(tiles);
-
-    // Walkable tiles get no overlay: the green wash hid the map. Only
-    // lootable neighbours are marked.
-    neighbors.forEach((tile) => {
-      if (this.canLoot(tile)) {
-        Hexagon.renderArea(ctx, tile.x, tile.y, "#ffff0044");
-        Hexagon.render(ctx, tile.x, tile.y, "#ffff0088");
-      }
-    });
-    ctx.restore();
-  }
-
-  /**
    * Render red overlay on tiles this piece can attack
    */
   renderValidAttacks(
@@ -193,8 +173,4 @@ export class Tile {
     return this.piece?.walkableLandscape.includes(tile.landscape.type) ?? false;
   }
 
-  canLoot(tile: Tile): boolean {
-    if (this.piece === undefined) return false;
-    return tile.landscape?.lootDrop !== undefined && this.isNeighborTo(tile);
-  }
 }

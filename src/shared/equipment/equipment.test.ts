@@ -48,10 +48,6 @@ describe("Equipment", () => {
       expect(bow.attackRangeBonus).toBe(1);
     });
 
-    it("enables walking on trees", () => {
-      const bow = createBow();
-      expect(bow.canWalkOnTrees).toBe(true);
-    });
 
     it("does not give attack or defense bonus", () => {
       const bow = createBow();

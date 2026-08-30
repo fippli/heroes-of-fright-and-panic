@@ -3,6 +3,10 @@ import path from "path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  test: {
+    // supabase/functions/shared is a generated copy of src/shared (pnpm copy:shared)
+    exclude: ["**/node_modules/**", "**/dist/**", "supabase/functions/shared/**"],
+  },
   plugins: [react()],
   publicDir: "static",
   build: {

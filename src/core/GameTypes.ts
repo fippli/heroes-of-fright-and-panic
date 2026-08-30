@@ -32,7 +32,7 @@ export type ServerPlayer = {
 export type ServerTile = {
   row: number;
   column: number;
-  landscape: { type: LandscapeType; lootDrop?: ResourceMap } | null;
+  landscape: { type: LandscapeType } | null;
   building: {
     type: BuildingType;
     cost?: ResourceMap;

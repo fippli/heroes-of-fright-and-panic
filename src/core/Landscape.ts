@@ -12,17 +12,13 @@ export { LandscapeType };
  */
 export class Landscape {
   readonly type: LandscapeType;
-  readonly lootDrop?: ResourceMap = undefined;
 
   constructor({
     type,
-    lootDrop,
   }: {
     type: LandscapeType;
-    lootDrop?: ResourceMap;
   }) {
     this.type = type;
-    this.lootDrop = lootDrop ? createResourceMap(lootDrop) : undefined;
   }
 
   render(

@@ -306,25 +306,6 @@ export const parseCommand = (
       };
     }
 
-    case "loot":
-    case "l": {
-      const posStr = parts.at(1);
-      if (posStr === undefined) {
-        return { type: "error", message: "Usage: loot <row>,<col>" };
-      }
-      if (selectedPosition === undefined) {
-        return { type: "error", message: "No unit selected. Use: select <row>,<col> first" };
-      }
-      const position = parsePosition(posStr);
-      if (position === null) {
-        return { type: "error", message: "Invalid position. Use: row,col" };
-      }
-      return {
-        type: "action",
-        action: { type: "move", player: currentPlayer, from: selectedPosition, to: position },
-      };
-    }
-
     default:
       return { type: "error", message: `Unknown command: "${command}". Type "help" for commands.` };
   }

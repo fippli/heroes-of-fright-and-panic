@@ -137,7 +137,6 @@ export class DevGame {
     });
 
     if (this.selectedTile !== undefined && this.selectedTile !== null) {
-      this.selectedTile.renderValidMoves(canvas.ctx, this.tiles);
       this.selectedTile.renderValidAttacks(
         canvas.ctx,
         this.tiles,
@@ -225,21 +224,6 @@ export class DevGame {
           type: "attack",
           player: this.currentPlayer,
           attackerPosition: from,
-          targetPosition: pos,
-        });
-        this.selectedTile = undefined;
-        return;
-      }
-
-      // Harvest adjacent tree/rock
-      if (
-        clickedTile.landscape?.lootDrop !== undefined &&
-        this.selectedTile.isNeighborTo(pos)
-      ) {
-        this.dispatch({
-          type: "loot",
-          player: this.currentPlayer,
-          piecePosition: from,
           targetPosition: pos,
         });
         this.selectedTile = undefined;

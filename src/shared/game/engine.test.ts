@@ -22,6 +22,8 @@ import {
   mountain as mountainLandscape,
 } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
+import { replaceTile } from "../tile/index.ts";
+import { createBuilding } from "../building/index.ts";
 import {
   type Piece,
   PieceKind,
@@ -47,7 +49,6 @@ import {
   handleEnterTower,
   handleSummonArchAngel,
   handleAttack,
-  handleLoot,
   checkWinCondition,
   handleAction,
   getVisibleTiles,
@@ -219,7 +220,7 @@ describe("handleMove", () => {
     expect(result.success).toBe(false);
   });
 
-  it("bow-equipped piece can walk on trees", () => {
+  it("forests are impassable even with a bow", () => {
     const archer = pieceWithEquipment(createPeasant("day"), createBow());
     const tiles = setLandscape(
       placePiece(make5x5GrassTiles(), 2, 2, archer),
@@ -236,7 +237,34 @@ describe("handleMove", () => {
       to: { row: 2, column: 3 },
     });
 
+    expect(result.success).toBe(false);
+  });
+
+  it("moves onto a tile holding one of your own buildings", () => {
+    const base = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const houseTile = base.find((t) => t.row === 2 && t.column === 3)!;
+    const tiles = replaceTile(base, { ...houseTile, building: createBuilding(BuildingType.house, "day") });
+    const game = makeGame({ tiles });
+
+    const { result } = handleMove(game, {
+      type: "move",
+      player: "day",
+      from: { row: 2, column: 2 },
+      to: { row: 2, column: 3 },
+    });
+
     expect(result.success).toBe(true);
+  });
+
+  it("moves through your own wall but not an enemy wall", () => {
+    const base = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const wallTile = base.find((t) => t.row === 2 && t.column === 3)!;
+    const ownWall = makeGame({ tiles: replaceTile(base, { ...wallTile, building: createBuilding(BuildingType.wall, "day") }) });
+    const enemyWall = makeGame({ tiles: replaceTile(base, { ...wallTile, building: createBuilding(BuildingType.wall, "night") }) });
+    const move = { type: "move" as const, player: "day" as const, from: { row: 2, column: 2 }, to: { row: 2, column: 3 } };
+
+    expect(handleMove(ownWall, move).result.success).toBe(true);
+    expect(handleMove(enemyWall, move).result.success).toBe(false);
   });
 
   it("advances the clock after a successful move", () => {
@@ -1160,123 +1188,6 @@ describe("clock and turns", () => {
 // ACTION DISPATCHER TESTS
 // ============================================
 
-describe("handleLoot", () => {
-  it("harvests an adjacent tree for wood and clears it to grass", () => {
-    const tiles = setLandscape(
-      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2,
-      3,
-      treeLandscape(),
-    );
-    const game = makeGame({ tiles });
-    const woodBefore = game.dayPlayer.resources.wood;
-
-    const { game: after, result } = handleLoot(game, {
-      type: "loot",
-      player: "day",
-      piecePosition: { row: 2, column: 2 },
-      targetPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(true);
-    expect(after.dayPlayer.resources.wood).toBe(woodBefore + 1);
-    const looted = after.tiles.find((t) => t.row === 2 && t.column === 3);
-    expect(looted?.landscape?.type).toBe(LandscapeType.grass);
-    expect(looted?.landscape?.lootDrop).toBeUndefined();
-  });
-
-  it("harvests an adjacent mountain for stone", () => {
-    const tiles = setLandscape(
-      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2,
-      3,
-      mountainLandscape(),
-    );
-    const game = makeGame({ tiles });
-    const stoneBefore = game.dayPlayer.resources.stone;
-
-    const { game: after, result } = handleLoot(game, {
-      type: "loot",
-      player: "day",
-      piecePosition: { row: 2, column: 2 },
-      targetPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(true);
-    expect(after.dayPlayer.resources.stone).toBe(stoneBefore + 1);
-  });
-
-  it("rejects looting a non-adjacent tile", () => {
-    const tiles = setLandscape(
-      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      4,
-      4,
-      treeLandscape(),
-    );
-    const game = makeGame({ tiles });
-
-    const { result } = handleLoot(game, {
-      type: "loot",
-      player: "day",
-      piecePosition: { row: 2, column: 2 },
-      targetPosition: { row: 4, column: 4 },
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Target must be adjacent to your piece");
-  });
-
-  it("rejects looting terrain with no loot drop", () => {
-    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
-    const game = makeGame({ tiles });
-
-    const { result } = handleLoot(game, {
-      type: "loot",
-      player: "day",
-      piecePosition: { row: 2, column: 2 },
-      targetPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Nothing to harvest here");
-  });
-
-  it("rejects looting without a friendly piece", () => {
-    const tiles = setLandscape(make5x5GrassTiles(), 2, 3, treeLandscape());
-    const game = makeGame({ tiles });
-
-    const { result } = handleLoot(game, {
-      type: "loot",
-      player: "day",
-      piecePosition: { row: 2, column: 2 },
-      targetPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("No piece or not your piece");
-  });
-
-  it("rejects looting when it is not the player's turn", () => {
-    const tiles = setLandscape(
-      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("night")),
-      2,
-      3,
-      treeLandscape(),
-    );
-    const game = makeGame({ tiles });
-
-    const { result } = handleLoot(game, {
-      type: "loot",
-      player: "night",
-      piecePosition: { row: 2, column: 2 },
-      targetPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Not your turn");
-  });
-});
-
 describe("getVisibleTiles", () => {
   it("reveals one ring around a lone peasant", () => {
     const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
@@ -1379,24 +1290,6 @@ describe("handleAction", () => {
     expect(result.success).toBe(true);
   });
 
-  it("dispatches loot action", () => {
-    const tiles = setLandscape(
-      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2,
-      3,
-      treeLandscape(),
-    );
-    const game = makeGame({ tiles });
-
-    const { result } = handleAction(game, {
-      type: "loot",
-      player: "day",
-      piecePosition: { row: 2, column: 2 },
-      targetPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(true);
-  });
 
   it("rejects actions when game is over", () => {
     const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
