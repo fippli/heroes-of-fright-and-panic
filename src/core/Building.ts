@@ -53,7 +53,7 @@ export class Building {
     const x = Hexagon.x(position.row, position.column);
     const y = Hexagon.y(position.row);
 
-    ctx.clip(Hexagon.path(x, y));
+    ctx.clip(Hexagon.path(x, y, Hexagon.clipRadius));
 
     imageAssets.buildingImage(this.owner, this.type).renderCentered(ctx, x, y);
 

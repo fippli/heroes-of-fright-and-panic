@@ -230,6 +230,11 @@ export class ImageAssets {
     if (themeImage !== undefined) return themeImage;
     return staticLandscapeImage(type);
   }
+
+  /** Overlay for an equipment/steed key; only themes provide these */
+  itemImage(itemKey: string): GameImage | undefined {
+    return this.theme?.itemImage(itemKey);
+  }
 }
 
 export const defaultImageAssets = new ImageAssets();

@@ -150,6 +150,7 @@ export const ThemeEditorPage = () => {
     faction !== undefined ? getSlotsForFaction(faction, "building") : [];
   const landscapeSlots =
     faction === "landscape" ? getSlotsForFaction("landscape", "landscape") : [];
+  const itemSlots = faction === "items" ? getSlotsForFaction("items", "piece") : [];
 
   const renderGrid = (
     slots: readonly {
@@ -295,7 +296,19 @@ export const ThemeEditorPage = () => {
           <Text color="brand.contrast">Select a faction to edit assets.</Text>
         )}
 
-        {faction !== undefined && faction !== "landscape" && (
+        {faction === "items" && (
+          <>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">
+              Equipment & steeds
+            </Heading>
+            <Text fontSize="sm" color="brand.contrast" opacity={0.8}>
+              Drawn on top of (equipment) or underneath (steeds) any piece that carries them, for both factions.
+            </Text>
+            {renderGrid(itemSlots)}
+          </>
+        )}
+
+        {faction !== undefined && faction !== "landscape" && faction !== "items" && (
           <>
             <Heading as="h3" fontSize="1.25rem" color="brand.contrast">
               Pieces

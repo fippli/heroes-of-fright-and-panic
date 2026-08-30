@@ -209,17 +209,15 @@ export const handleBuild = (
     };
   }
 
-  const neighbors = findNeighborTiles(game.tiles, action.position);
-  const hasAdjacentUnit = neighbors.some(
-    (neighbor) =>
-      neighbor.piece !== null && neighbor.piece.owner === action.player,
-  );
-  if (!hasAdjacentUnit) {
+  // Your kingdom is what you can see: buildings may only go on tiles
+  // currently within your field of vision.
+  const kingdom = getVisibleTiles(game, action.player);
+  if (!kingdom.has(`${action.position.row},${action.position.column}`)) {
     return {
       game,
       result: {
         success: false,
-        error: "Must build adjacent to one of your units",
+        error: "Can only build within your kingdom (tiles you can see)",
       },
     };
   }

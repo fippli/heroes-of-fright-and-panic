@@ -128,6 +128,8 @@ There are five building types. All buildings have 1 defense and 0 hearts.
 | Wall   | 1 stone             | 0          | Owner only   | Defensive barrier. |
 | Church | 3 wood + 3 stone    | 1          | Both players | Trains priests. Priests inside generate faith. |
 
+**Kingdom rule:** a building may only be placed on grass inside your kingdom, and your kingdom is exactly the set of tiles currently visible to you (see [Fog of War](#fog-of-war)). There is no adjacency requirement beyond that.
+
 A building's View Range is not standalone vision — it only takes effect when a friendly piece occupies the building, amplifying that piece's view (see [Fog of War](#fog-of-war)).
 
 ---

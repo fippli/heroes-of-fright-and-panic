@@ -17,8 +17,10 @@ import { createPlayer, type Player } from "@shared/player";
 import type { TilePosition } from "@shared/map/tile";
 import { renderResourcesInDOM } from "./render-resources";
 import { Tile } from "./Tile";
+import { LandscapeType } from "./Landscape";
 import { boundsOfTiles, focusPoint } from "./viewport";
 import { predictAction } from "./predict";
+import type { GameUiState } from "./ui-state";
 
 /**
  * Game class - Client-side render-only implementation
@@ -62,6 +64,12 @@ export class Game {
   // and what we fall back to when a prediction is not confirmed.
   private lastServerState: ServerGameState | null = null;
 
+  // Build mode: the building type waiting for a tile click
+  pendingBuild: BuildingType | null = null;
+
+  // Sidebar subscribers, notified with a fresh snapshot on every change
+  private readonly listeners = new Set<(ui: GameUiState) => void>();
+
   // Game over state
   gameOver: boolean = false;
   winner: PlayerType | null = null;
@@ -101,6 +109,63 @@ export class Game {
     return this.currentPlayer === this.myPlayerType;
   }
 
+  /** Subscribe to UI snapshots; returns an unsubscribe function */
+  subscribe(listener: (ui: GameUiState) => void): () => void {
+    this.listeners.add(listener);
+    listener(this.uiState());
+    return () => this.listeners.delete(listener);
+  }
+
+  private notify(): void {
+    const ui = this.uiState();
+    this.listeners.forEach((listener) => listener(ui));
+  }
+
+  uiState(): GameUiState {
+    const selected = this.selectedTile ?? null;
+    const mine = (owner: { type: PlayerType } | undefined): boolean =>
+      owner !== undefined && owner.type === this.myPlayerType;
+    return {
+      isPlayer: this.myPlayerType !== null,
+      isMyTurn: this.isMyTurn,
+      resources: this.player.resources,
+      pendingBuild: this.pendingBuild,
+      selected:
+        selected === null
+          ? null
+          : {
+              row: selected.row,
+              column: selected.column,
+              building: mine(selected.building?.owner) ? (selected.building?.type ?? null) : null,
+              piece: mine(selected.piece?.owner) ? (selected.piece?.kind ?? null) : null,
+            },
+    };
+  }
+
+  /** Enter build mode for a building type (click a tile to place it); null or the same type cancels */
+  setPendingBuild(buildingType: BuildingType | null): void {
+    this.pendingBuild =
+      buildingType === null || buildingType === this.pendingBuild ? null : buildingType;
+    this.notify();
+  }
+
+  /** Escape: leave build mode and clear the selection */
+  cancel(): void {
+    this.pendingBuild = null;
+    this.selectedTile = undefined;
+    this.notify();
+  }
+
+  /** Tiles a building could go on right now: explored grass without a building */
+  private buildableTiles(): Tile[] {
+    return this.tiles.filter(
+      (tile) =>
+        tile.explored &&
+        tile.landscape?.type === LandscapeType.grass &&
+        tile.building === undefined,
+    );
+  }
+
   /**
    * Apply parsed game state to the board and detect time transitions
    */
@@ -129,6 +194,7 @@ export class Game {
       this.dialog.open({ title: "Dawn", content: "The sun is rising" });
     }
     this.previousWasDay = isNowDay;
+    this.notify();
   }
 
   /**
@@ -286,6 +352,13 @@ export class Game {
     this.tiles.forEach((tile: Tile) => {
       tile.render(canvas.ctx, this.imageAssets);
     });
+
+    // Build mode: outline every tile the building could go on
+    if (this.pendingBuild !== null) {
+      this.buildableTiles().forEach((tile) => {
+        Hexagon.render(canvas.ctx, tile.x, tile.y, "#ffd54f66");
+      });
+    }
 
     // Render selected tile highlight and valid moves/attacks
     if (this.selectedTile !== undefined && this.selectedTile !== null) {
@@ -458,12 +531,29 @@ export class Game {
     const clickedTile = this.findTile(tilePosition);
     if (clickedTile === undefined) return;
 
+    // Build mode: the click places the pending building
+    if (this.pendingBuild !== null && this.myPlayerType !== null) {
+      const placed = await this.sendAction({
+        type: "build",
+        player: this.myPlayerType,
+        buildingType: this.pendingBuild,
+        position: tilePosition,
+      });
+      if (placed) {
+        this.pendingBuild = null;
+        this.selectedTile = this.findTile(tilePosition);
+      }
+      this.notify();
+      return;
+    }
+
     // Use myPlayerType for ownership checks (our player's pieces/buildings)
     const myPlayer = this.myPlayerType;
 
     // If clicking on a tile with our piece, just select it locally
     if (myPlayer !== null && clickedTile.piece?.owner?.type === myPlayer) {
       this.selectedTile = clickedTile;
+      this.notify();
       return;
     }
 
@@ -474,6 +564,7 @@ export class Game {
       clickedTile.piece === undefined
     ) {
       this.selectedTile = clickedTile;
+      this.notify();
       return;
     }
 
@@ -534,10 +625,46 @@ export class Game {
           this.selectedTile = undefined;
         }
       }
+      this.notify();
     } else {
       // No actionable selection - just (de)select the clicked tile
       this.selectedTile = clickedTile;
+      this.notify();
     }
+  }
+
+  // ============================================
+  // MENU ACTIONS (take a tile position, not a mouse position)
+  // ============================================
+
+  async buildAt(buildingType: BuildingType, position: TilePosition): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "build", player: this.myPlayerType, buildingType, position });
+  }
+
+  async spawnPeasantAt(position: TilePosition): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "spawnPeasant", player: this.myPlayerType, position });
+  }
+
+  async trainPriestAt(churchPosition: TilePosition): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "trainPriest", player: this.myPlayerType, churchPosition });
+  }
+
+  async summonArchAngelAt(churchPosition: TilePosition): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "summonArchAngel", player: this.myPlayerType, churchPosition });
+  }
+
+  async researchAt(researchType: ResearchType, castlePosition: TilePosition): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "research", player: this.myPlayerType, researchType, castlePosition });
+  }
+
+  async craftEquipmentAt(equipmentType: EquipmentType, piecePosition: TilePosition): Promise<boolean> {
+    if (this.myPlayerType === null) return false;
+    return this.sendAction({ type: "craftEquipment", player: this.myPlayerType, equipmentType, piecePosition });
   }
 
   /**

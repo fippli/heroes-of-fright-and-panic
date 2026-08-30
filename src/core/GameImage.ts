@@ -40,4 +40,15 @@ export class GameImage {
   renderCentered(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
     this.render(ctx, cx - this.width / 2, cy - this.height / 2);
   }
+
+  /** Draw scaled (e.g. 0.5 for a badge), centered on (cx, cy) */
+  renderScaled(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number) {
+    if (!this.image.complete) {
+      return;
+    }
+    const w = this.width * scale;
+    const h = this.height * scale;
+    ctx.imageSmoothingEnabled = this.image.naturalWidth >= w;
+    ctx.drawImage(this.image, cx - w / 2, cy - h / 2, w, h);
+  }
 }

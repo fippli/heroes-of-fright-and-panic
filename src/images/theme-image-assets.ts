@@ -101,4 +101,9 @@ export class ThemeImageAssets {
     const key = `landscape/${landscapeAssetKey(type)}`;
     return this.imageCache.get(key);
   }
+
+  /** Equipment or steed overlay (sword, shield, bow, horse, boat) */
+  itemImage(itemKey: string): GameImage | undefined {
+    return this.imageCache.get(`piece/${itemKey}`);
+  }
 }

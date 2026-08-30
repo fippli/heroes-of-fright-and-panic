@@ -21,6 +21,8 @@ import { ImageAssets, defaultImageAssets } from "../../images";
 import { ThemeImageAssets } from "../../images/theme-image-assets";
 import { supabase, getEdgeFunctionError } from "../../lib/supabase";
 import type { Coordinate } from "../../types/coordinate";
+import type { GameUiState } from "../../core/ui-state";
+import { BuildMenu } from "./BuildMenu";
 import "./game.css";
 
 export const GamePage = () => {
@@ -33,6 +35,7 @@ export const GamePage = () => {
   const [searchParams] = useSearchParams();
   const playerParam = searchParams.get("player");
   const [error, setError] = useState<string | null>(null);
+  const [ui, setUi] = useState<GameUiState | null>(null);
 
   const isSpectator = playerParam === "spectator";
 
@@ -91,6 +94,7 @@ export const GamePage = () => {
 
         const game = new Game(canvas, myPlayerType, imageAssets);
         gameRef.current = game;
+        game.subscribe(setUi);
 
         game.parse(data);
         console.log("Game loaded:", game.id, "Playing as:", myPlayerType);
@@ -100,12 +104,12 @@ export const GamePage = () => {
         canvas.click((position: Coordinate) => game.click(position));
 
         canvas.keydown({
-          // Build actions
-          h: (position) => game.build(BuildingType.house, position),
-          t: (position) => game.build(BuildingType.tower, position),
-          c: (position) => game.build(BuildingType.castle, position),
-          w: (position) => game.build(BuildingType.wall, position),
-          r: (position) => game.build(BuildingType.church, position),
+          // Build mode: pick a building, then click a tile
+          h: () => game.setPendingBuild(BuildingType.house),
+          t: () => game.setPendingBuild(BuildingType.tower),
+          w: () => game.setPendingBuild(BuildingType.wall),
+          r: () => game.setPendingBuild(BuildingType.church),
+          escape: () => game.cancel(),
 
           // Unit actions
           p: (position) => game.spawnPeasant(position),
@@ -322,23 +326,9 @@ export const GamePage = () => {
             </div>
           </section>
 
-          <section className="panel">
-            <h2>Buildings</h2>
-            <div id="buildings" className="stat-grid">
-              <div>
-                <img src="/img/house.png" alt="buildings" />
-                <div id="houses" />
-              </div>
-              <div>
-                <img src="/img/tower.png" alt="buildings" />
-                <div id="towers" />
-              </div>
-              <div>
-                <img src="/img/castle.png" alt="buildings" />
-                <div id="castles" />
-              </div>
-            </div>
-          </section>
+          {ui !== null && gameRef.current !== null && (
+            <BuildMenu game={gameRef.current} ui={ui} />
+          )}
         </aside>
       </div>
 

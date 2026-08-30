@@ -48,7 +48,7 @@ export class Tile {
 
   render(ctx: CanvasRenderingContext2D, imageAssets: ImageAssets) {
     ctx.save();
-    ctx.clip(Hexagon.path(this.x, this.y));
+    ctx.clip(Hexagon.path(this.x, this.y, Hexagon.clipRadius));
 
     if (this.explored) {
       if (this.landscape !== null) {

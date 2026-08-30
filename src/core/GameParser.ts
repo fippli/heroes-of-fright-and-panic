@@ -92,6 +92,8 @@ const parsePiece = (serverPiece: ServerPiece): Piece => {
     attackRange: serverPiece.attackRange ?? getPieceAttackRange(enginePiece),
     owner: createPlayer({ type: serverPiece.owner ?? "day" }),
     walkableLandscape: [...getWalkableLandscape(enginePiece)],
+    equipment: enginePiece.equipment.map((item) => item.type),
+    steed: enginePiece.steed?.type ?? null,
   });
 };
 

@@ -7,6 +7,9 @@ export class Hexagon {
   static width = 2 * (this.radius - remainingDistanceToRadius(this.radius));
   static height = 2 * this.radius;
   static innerRadius: number = this.width / 2 - this.borderWidth;
+  // Tiles clip slightly outside their hex so anti-aliased edges of
+  // neighbouring tiles overlap instead of leaving a visible seam.
+  static clipRadius: number = this.radius + 1;
 
   static render(
     ctx: CanvasRenderingContext2D,
@@ -171,13 +174,13 @@ export class Hexagon {
     }
   }
 
-  static path(cx: number, cy: number) {
+  static path(cx: number, cy: number, radius: number = this.radius) {
     const path = new Path2D();
 
     Array.from({ length: 6 }, (_, index) => index).forEach((index) => {
       const angle = (Math.PI / 3) * index - Math.PI / 6;
-      const xOffset = cx + this.radius * Math.cos(angle);
-      const yOffset = cy + this.radius * Math.sin(angle);
+      const xOffset = cx + radius * Math.cos(angle);
+      const yOffset = cy + radius * Math.sin(angle);
       if (index === 0) {
         path.moveTo(xOffset, yOffset);
       } else {

@@ -340,7 +340,7 @@ describe("handleBuild", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects building without adjacent unit", () => {
+  it("rejects building outside the kingdom (no unit can see the tile)", () => {
     const game = makeGame({});
 
     const { result } = handleBuild(game, {
@@ -348,6 +348,37 @@ describe("handleBuild", () => {
       player: "day",
       buildingType: BuildingType.house,
       position: { row: 0, column: 0 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("kingdom");
+  });
+
+  it("allows building anywhere inside the field of vision, not just adjacent", () => {
+    // King sees 2 tiles: (2,4) is two steps away from (2,2)
+    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createKing("day"));
+    const game = makeGame({ tiles });
+
+    const { result } = handleBuild(game, {
+      type: "build",
+      player: "day",
+      buildingType: BuildingType.house,
+      position: { row: 2, column: 4 },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects building on a tile just beyond the field of vision", () => {
+    // Peasant sees 1 tile: (2,4) is out of view from (2,2)
+    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const game = makeGame({ tiles });
+
+    const { result } = handleBuild(game, {
+      type: "build",
+      player: "day",
+      buildingType: BuildingType.house,
+      position: { row: 2, column: 4 },
     });
 
     expect(result.success).toBe(false);

@@ -59,13 +59,18 @@ export const getSlotsByCategory = (
 ): readonly AssetSlot[] =>
   ASSET_SLOTS.filter((slot) => slot.category === category);
 
-export type Faction = "day" | "night" | "landscape";
+export type Faction = "day" | "night" | "items" | "landscape";
 
 export const FACTIONS: readonly { readonly id: Faction; readonly label: string }[] = [
   { id: "day", label: "Day" },
   { id: "night", label: "Night" },
+  { id: "items", label: "Items" },
   { id: "landscape", label: "Landscape" },
 ];
+
+/** Equipment and steeds: faction-neutral piece overlays drawn on top of / under a piece */
+const isItemSlot = (slot: AssetSlot): boolean =>
+  slot.category === "piece" && !/_(day|night)$/.test(slot.key);
 
 export const getSlotsForFaction = (
   faction: Faction,
@@ -74,6 +79,9 @@ export const getSlotsForFaction = (
   ASSET_SLOTS.filter((slot) => {
     if (faction === "landscape") {
       return slot.category === "landscape";
+    }
+    if (faction === "items") {
+      return isItemSlot(slot);
     }
     return slot.category === category && slot.key.endsWith(`_${faction}`);
   });
