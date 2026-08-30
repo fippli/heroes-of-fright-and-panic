@@ -22,6 +22,7 @@ import { BuildMenu } from "./BuildMenu";
 import { Banner } from "./Banner";
 import { EconomyPanel } from "./EconomyPanel";
 import { HelpOverlay } from "./HelpOverlay";
+import { SelectionPanel } from "./SelectionPanel";
 import { EventFeed } from "./EventFeed";
 import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
 import { installErrorReporting, reportClientError } from "../../lib/error-report";
@@ -322,6 +323,7 @@ export const GamePage = () => {
           <Banner notice={ui?.notice ?? null} />
           <button type="button" className="action-btn help-toggle" onClick={() => setHelpOpen(true)} title="How to play (?)">?</button>
           <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
+          {ui !== null && gameRef.current !== null && <SelectionPanel game={gameRef.current} ui={ui} />}
           <div className="canvas-wrapper" ref={wrapperRef}>
             <canvas id="canvas" ref={canvasRef} width="600" height="600" />
           </div>

@@ -182,6 +182,15 @@ const PAPER_PIECES: Record<string, Record<"day" | "night", string>> = {
   ),
 };
 
+const ICONS: Record<string, string> = {
+  wood: "a small pile of two cut logs, resource icon",
+  stone: "a grey stone block, resource icon",
+  food: "a loaf of bread with a wheat sprig, resource icon",
+  gold: "a stack of gold coins, resource icon",
+  iron: "an iron ingot bar, resource icon",
+  faith: "a glowing halo over praying hands, resource icon",
+};
+
 const PAPER_ITEMS: Record<string, string> = {
   sword: `an ink-drawn map icon of a longsword, ${PAPER_SUFFIX}`,
   shield: `an ink-drawn map icon of a round wooden shield, ${PAPER_SUFFIX}`,
@@ -226,6 +235,9 @@ const PAPER_LANDSCAPE: Record<string, string> = {
 const PAPER_ICON_TERRAIN = new Set(["tree", "mountain"]);
 
 const paperPromptFor = (category: AssetCategory, key: string): Prompt => {
+  if (category === "icon") {
+    return { description: `an ink-drawn map icon of ${ICONS[key]}, ${PAPER_SUFFIX}`, view: "side", noBackground: true };
+  }
   if (category === "landscape") {
     const icon = PAPER_ICON_TERRAIN.has(key);
     return {
@@ -259,6 +271,9 @@ const lofiPromptFor = (category: AssetCategory, key: string): Prompt => {
 const promptFor = (category: AssetCategory, key: string): Prompt => {
   if (style === "paper" && lofi) return lofiPromptFor(category, key);
   if (style === "paper") return paperPromptFor(category, key);
+  if (category === "icon") {
+    return { description: ICONS[key], view: "side", noBackground: true };
+  }
   if (category === "landscape") {
     return { description: LANDSCAPE[key], view: "high top-down", noBackground: false };
   }

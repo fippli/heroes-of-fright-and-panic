@@ -13,6 +13,14 @@ export type Notice = {
 export type GameUiState = {
   /** Latest thing worth telling the player; null when there is nothing new */
   readonly notice: Notice | null;
+  /** Resource icon URLs from the active theme */
+  readonly icons: Record<string, string>;
+  /** Sprite URLs for the selected piece, its items and building, from the active theme */
+  readonly sprites: {
+    readonly piece: string | null;
+    readonly building: string | null;
+    readonly items: Record<string, string>;
+  };
   readonly isPlayer: boolean;
   readonly isMyTurn: boolean;
   readonly currentPlayer: string;

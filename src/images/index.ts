@@ -217,6 +217,16 @@ export class ImageAssets {
   itemImage(itemKey: string): GameImage | undefined {
     return this.theme?.itemImage(itemKey);
   }
+
+  /** URL of a resource icon: the theme's, else the built-in lo-fi one */
+  iconUrl(resource: string): string {
+    return this.theme?.iconImage(resource)?.image.src ?? `/img/icons/${resource}.png`;
+  }
+
+  /** URLs for all six resources, for React panels */
+  iconUrls(): Record<string, string> {
+    return Object.fromEntries(["wood", "stone", "food", "gold", "iron", "faith"].map((key) => [key, this.iconUrl(key)]));
+  }
 }
 
 export const defaultImageAssets = new ImageAssets();

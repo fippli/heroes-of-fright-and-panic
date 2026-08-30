@@ -151,6 +151,7 @@ export const ThemeEditorPage = () => {
   const landscapeSlots =
     faction === "landscape" ? getSlotsForFaction("landscape", "landscape") : [];
   const itemSlots = faction === "items" ? getSlotsForFaction("items", "piece") : [];
+  const iconSlots = faction === "icons" ? getSlotsForFaction("icons", "icon") : [];
 
   const renderGrid = (
     slots: readonly {
@@ -308,7 +309,19 @@ export const ThemeEditorPage = () => {
           </>
         )}
 
-        {faction !== undefined && faction !== "landscape" && faction !== "items" && (
+        {faction === "icons" && (
+          <>
+            <Heading as="h3" fontSize="1.25rem" color="brand.contrast">
+              Resource icons
+            </Heading>
+            <Text fontSize="sm" color="brand.contrast" opacity={0.8}>
+              Shown in the sidebar and on prices. Missing ones fall back to the built-in lo-fi icons.
+            </Text>
+            {renderGrid(iconSlots)}
+          </>
+        )}
+
+        {faction !== undefined && faction !== "landscape" && faction !== "items" && faction !== "icons" && (
           <>
             <Heading as="h3" fontSize="1.25rem" color="brand.contrast">
               Pieces

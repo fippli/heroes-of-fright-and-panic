@@ -92,7 +92,7 @@ The game uses an **odd-r offset coordinate system**. Even rows are flush left, o
 | tree       | No       | No        | Impassable. Produces wood for an adjacent house. |
 | sand       | Yes      | No        | Shoreline transition between grass and water |
 | water      | No       | No        | Boat steed enables water travel |
-| mountain   | No       | No        | Impassable. Produces stone for an adjacent house with a peasant inside (iron with Mining II, gold with Mining III). |
+| mountain   | No       | No        | Impassable. Produces stone for an adjacent house (iron with Mining II, gold with Mining III). |
 | unexplored | -        | -         | Fog of war placeholder for non-visible tiles |
 
 Terrain is never cleared or harvested by pieces; resources come from houses working the land around them.
@@ -201,7 +201,7 @@ Resource production triggers at dawn (for day player) and dusk (for night player
 
 - **House next to a farm**: +1 food per adjacent farm tile
 - **House next to a forest**: +1 wood per adjacent tree tile
-- **House with a peasant inside, next to a mountain**: +1 stone per adjacent mountain tile (+1 iron if Mining II, +1 gold if Mining III)
+- **House next to a mountain**: +1 stone per adjacent mountain tile (+1 iron if Mining II, +1 gold if Mining III — researched at a castle)
 - Each terrain tile produces once per cycle even if several houses touch it
 - **Priest in church**: +1 faith
 - **Peasant in boat on water**: +1 food

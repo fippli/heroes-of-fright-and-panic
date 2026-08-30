@@ -1,0 +1,205 @@
+import { BuildingType } from "@shared/building";
+import { EquipmentType, createEquipment } from "@shared/equipment";
+import { PieceKind, peasantSpawnCost, priestTrainCost, archAngelSummonCost } from "@shared/piece";
+import { ResearchType, researchCostOf } from "@shared/research";
+import { SteedType, createSteed } from "@shared/steed";
+import { createResourceMap, type ResourceMap } from "@shared/player/resource-map";
+import type { Game } from "../../core/Board";
+import type { GameUiState, TargetMode } from "../../core/ui-state";
+import { ActionButton, affordable } from "./ActionButton";
+
+const KIND_LABEL: Record<string, string> = { peasant: "Peasant", king: "King", priest: "Priest", archAngel: "Archangel" };
+const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower", castle: "Castle", wall: "Wall", church: "Church" };
+const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", bow: "Bow", horse: "Horse", boat: "Boat" };
+
+const RESEARCH: readonly { readonly type: ResearchType; readonly label: string; readonly key: string }[] = [
+  { type: ResearchType.speed, label: "Speed", key: "4" },
+  { type: ResearchType.miningII, label: "Mining II", key: "5" },
+  { type: ResearchType.miningIII, label: "Mining III", key: "6" },
+  { type: ResearchType.queen, label: "Queen", key: "7" },
+];
+
+type SlotProps = {
+  readonly label: string;
+  readonly item: string | null;
+  readonly sprite: string | undefined;
+  readonly side: "left" | "right";
+};
+
+/** One paper-doll slot: the item's sprite when carried, an empty diamond otherwise */
+const Slot = ({ label, item, sprite, side }: SlotProps) => (
+  <div className={`doll__slot doll__slot--${side}${item !== null ? " doll__slot--filled" : ""}`} title={item !== null ? ITEM_LABEL[item] ?? item : `${label}: empty`}>
+    <div className="doll__diamond">
+      {item !== null && sprite !== undefined && <img src={sprite} alt={ITEM_LABEL[item] ?? item} />}
+    </div>
+    <span className="doll__label">{item !== null ? ITEM_LABEL[item] ?? item : label}</span>
+  </div>
+);
+
+/**
+ * Slides in from the left of the board when a tile is selected. Pieces get a
+ * paper-doll with equipment slots and stats; own buildings get their actions.
+ */
+export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui: GameUiState }) => {
+  const selected = ui.selected;
+  const open = selected !== null;
+  const piece = selected?.pieceInfo ?? null;
+  const building = selected?.buildingInfo ?? null;
+  const at = selected !== null ? { row: selected.row, column: selected.column } : null;
+  const ownPiece = selected?.piece ?? null;
+  const ownBuilding = selected?.building ?? null;
+  const can = (cost: ResourceMap): boolean => ui.isPlayer && ui.isMyTurn && affordable(ui.resources, cost);
+  const icons = ui.icons;
+
+  const targetButton = (label: string, hotkey: string, mode: TargetMode, cost: ResourceMap, hint: string) => (
+    <ActionButton
+      label={ui.pendingTarget === mode ? `${label} — click a tile` : label}
+      hotkey={hotkey}
+      cost={cost}
+      icons={icons}
+      active={ui.pendingTarget === mode}
+      enabled={can(cost)}
+      onClick={() => game.setPendingTarget(mode)}
+      title={hint}
+    />
+  );
+
+  const title =
+    piece !== null
+      ? KIND_LABEL[piece.kind] ?? piece.kind
+      : building !== null
+        ? BUILDING_LABEL[building.type] ?? building.type
+        : selected?.landscape ?? "Tile";
+  const owner = piece?.owner ?? building?.owner ?? null;
+
+  const has = (item: string): string | null =>
+    piece !== null && (piece.equipment.includes(item) || piece.steed === item) ? item : null;
+
+  return (
+    <aside className={`selection${open ? " selection--open" : ""}`} aria-hidden={!open}>
+      {selected !== null && (
+        <>
+          <header className="selection__head">
+            <div>
+              <h2>{title}</h2>
+              <span className="selection__meta">
+                {owner !== null && <span className={`owner owner--${owner}`}>{owner}</span>}
+                {selected.row},{selected.column} · {selected.landscape ?? "?"}
+              </span>
+            </div>
+            <button type="button" className="action-btn selection__close" onClick={() => game.cancel()} title="Close (Esc)">×</button>
+          </header>
+
+          {piece !== null && (
+            <section className="doll">
+              <div className="doll__column">
+                <Slot label="Weapon" item={has("sword")} sprite={ui.sprites.items.sword} side="left" />
+                <Slot label="Shield" item={has("shield")} sprite={ui.sprites.items.shield} side="left" />
+              </div>
+              <div className="doll__figure">
+                {ui.sprites.piece !== null && <img src={ui.sprites.piece} alt={title} />}
+                <div className="doll__hearts" aria-label={`${piece.hearts} of ${piece.maxHearts} hearts`}>
+                  {Array.from({ length: piece.maxHearts }, (_, index) => (
+                    <span key={index} className={index < piece.hearts ? "heart" : "heart heart--lost"}>♥</span>
+                  ))}
+                </div>
+              </div>
+              <div className="doll__column">
+                <Slot label="Bow" item={has("bow")} sprite={ui.sprites.items.bow} side="right" />
+                <Slot label="Steed" item={piece.steed} sprite={piece.steed !== null ? ui.sprites.items[piece.steed] : undefined} side="right" />
+              </div>
+            </section>
+          )}
+
+          {piece !== null && (
+            <dl className="stats">
+              <div><dt>Attack</dt><dd>{piece.attack}</dd></div>
+              <div><dt>Defense</dt><dd>{piece.defense}</dd></div>
+              <div><dt>Range</dt><dd>{piece.attackRange}</dd></div>
+              <div><dt>View</dt><dd>{piece.viewRange}</dd></div>
+              <div><dt>Move</dt><dd>{piece.move}</dd></div>
+            </dl>
+          )}
+
+          {ownPiece === PieceKind.peasant && at !== null && (
+            <section className="selection__actions">
+              <h3>Equip</h3>
+              {[
+                { type: EquipmentType.sword, label: "Craft sword", key: "S" },
+                { type: EquipmentType.shield, label: "Craft shield", key: "D" },
+                { type: EquipmentType.bow, label: "Craft bow", key: "B" },
+              ]
+                .filter(({ type }) => !(piece?.equipment.includes(type) ?? false))
+                .map(({ type, label, key }) => (
+                  <ActionButton
+                    key={type}
+                    label={label}
+                    hotkey={key}
+                    cost={createEquipment(type).cost}
+                    icons={icons}
+                    enabled={can(createEquipment(type).cost)}
+                    onClick={() => void game.craftEquipmentAt(type, at)}
+                  />
+                ))}
+              <p className="hint">Steeds are bought at a house and mounted by walking onto them.</p>
+            </section>
+          )}
+
+          {ownPiece === PieceKind.king && (
+            <section className="selection__actions">
+              <h3>King</h3>
+              {targetButton("Enter tower", "E", "enterTower", createResourceMap({}), "Turns an adjacent tower into your castle")}
+            </section>
+          )}
+
+          {ownPiece === PieceKind.priest && (
+            <section className="selection__actions">
+              <h3>Priest</h3>
+              {targetButton("Heal", "G", "heal", createResourceMap({ faith: 1 }), "Restores one heart to an adjacent ally")}
+            </section>
+          )}
+
+          {building !== null && piece === null && ui.sprites.building !== null && (
+            <div className="selection__portrait">
+              <img src={ui.sprites.building} alt={title} />
+              <span className="selection__meta">view range {building.viewRange}</span>
+            </div>
+          )}
+
+          {ownBuilding === BuildingType.house && at !== null && (
+            <section className="selection__actions">
+              <h3>House</h3>
+              <ActionButton label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost())} onClick={() => void game.spawnPeasantAt(at)} />
+              {targetButton("Buy horse", "O", "horse", createSteed(SteedType.horse).cost, "Placed on a tile next to the house")}
+              {targetButton("Buy boat", "F", "boat", createSteed(SteedType.boat).cost, "Placed on water next to the house")}
+            </section>
+          )}
+
+          {ownBuilding === BuildingType.church && at !== null && (
+            <section className="selection__actions">
+              <h3>Church</h3>
+              <ActionButton label="Train priest" hotkey="N" cost={priestTrainCost()} icons={icons} enabled={can(priestTrainCost())} onClick={() => void game.trainPriestAt(at)} />
+              <ActionButton label="Summon archangel" hotkey="M" cost={archAngelSummonCost()} icons={icons} enabled={can(archAngelSummonCost())} onClick={() => void game.summonArchAngelAt(at)} />
+            </section>
+          )}
+
+          {ownBuilding === BuildingType.castle && at !== null && (
+            <section className="selection__actions">
+              <h3>Research</h3>
+              {RESEARCH.map(({ type, label, key }) => (
+                <ActionButton key={type} label={label} hotkey={key} cost={researchCostOf(type)} icons={icons} enabled={can(researchCostOf(type))} onClick={() => void game.researchAt(type, at)} />
+              ))}
+            </section>
+          )}
+
+          {ownBuilding === BuildingType.tower && (
+            <section className="selection__actions">
+              <h3>Tower</h3>
+              <p className="hint">Select your king next to this tower and use Enter tower to make it a castle.</p>
+            </section>
+          )}
+        </>
+      )}
+    </aside>
+  );
+};

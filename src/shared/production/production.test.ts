@@ -122,18 +122,21 @@ describe("calculateProduction", () => {
     expect(production.wood).toBe(1);
   });
 
-  it("mountains only produce while a peasant lives in the house", () => {
+  it("mountains produce stone for any adjacent house; iron needs Mining II", () => {
     const tiles: Tile[] = [
       makeTile(0, 0, { landscape: mountainLandscape() }),
       makeTile(0, 1, {
         building: createHouseBuilding("day"),
-        piece: null, // no peasant
+        piece: null, // no peasant needed
       }),
       makeTile(0, 2, { landscape: grass() }),
     ];
 
     const production = calculateProduction("day", tiles, createResearch());
-    expect(production.stone).toBe(0);
+    expect(production.stone).toBe(1);
+    expect(production.iron).toBe(0);
+    const mined = calculateProduction("day", tiles, { ...createResearch(), hasMiningII: true });
+    expect(mined.iron).toBe(1);
   });
 
   it("does not produce from enemy houses", () => {

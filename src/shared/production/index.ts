@@ -14,8 +14,7 @@ import type { Research } from "@shared/research/index.ts";
  * - House: produces from adjacent terrain tiles
  *   - Farm → +1 food (always)
  *   - Tree → +1 wood (always; forests are worked from the house)
- *   - Mountain → +1 stone (+ iron with Mining II, + gold with Mining III),
- *     only while a peasant lives in the house (mining is labour)
+ *   - Mountain → +1 stone (+ iron with Mining II, + gold with Mining III)
  * - Church with priest: +1 faith per praying priest
  * - Boat with peasant surrounded by water: +1 food (fishing)
  *
@@ -48,17 +47,13 @@ const calculateHouseProduction = (
   const producedTileKeys = new Set<string>();
 
   return houses.reduce((total, houseTile) => {
-    const staffed =
-      houseTile.piece !== null &&
-      houseTile.piece.kind === PieceKind.peasant &&
-      houseTile.piece.owner === playerType;
     const neighbors = hex.findNeighbors(houseTile, tiles as Tile[]);
     return neighbors.reduce((acc, neighbor) => {
       const tileKey = `${neighbor.row},${neighbor.column}`;
       if (producedTileKeys.has(tileKey)) {
         return acc;
       }
-      const production = tileProduction(neighbor, research, staffed);
+      const production = tileProduction(neighbor, research);
       if (production !== null) {
         producedTileKeys.add(tileKey);
         return addResources(acc, production);
@@ -71,7 +66,6 @@ const calculateHouseProduction = (
 const tileProduction = (
   tile: Tile,
   research: Research,
-  staffed: boolean,
 ): ResourceMap | null => {
   if (tile.landscape === null) {
     return null;
@@ -82,7 +76,6 @@ const tileProduction = (
     case LandscapeType.tree:
       return createResourceMap({ wood: 1 });
     case LandscapeType.mountain:
-      if (!staffed) return null;
       return createResourceMap({
         stone: 1,
         iron: research.hasMiningII ? 1 : 0,

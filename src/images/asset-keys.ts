@@ -1,4 +1,4 @@
-export type AssetCategory = "piece" | "building" | "landscape";
+export type AssetCategory = "piece" | "building" | "landscape" | "icon";
 
 type AssetSlot = {
   readonly category: AssetCategory;
@@ -38,6 +38,14 @@ export const ASSET_SLOTS: readonly AssetSlot[] = [
   { category: "building", key: "church_day", label: "Church (Day)" },
   { category: "building", key: "church_night", label: "Church (Night)" },
 
+  // Resource icons (sidebar, prices)
+  { category: "icon", key: "wood", label: "Wood" },
+  { category: "icon", key: "stone", label: "Stone" },
+  { category: "icon", key: "food", label: "Food" },
+  { category: "icon", key: "gold", label: "Gold" },
+  { category: "icon", key: "iron", label: "Iron" },
+  { category: "icon", key: "faith", label: "Faith" },
+
   // Landscape
   { category: "landscape", key: "unexplored", label: "Unexplored" },
   { category: "landscape", key: "grass", label: "Grass" },
@@ -52,6 +60,7 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   "piece",
   "building",
   "landscape",
+  "icon",
 ] as const;
 
 export const getSlotsByCategory = (
@@ -59,12 +68,13 @@ export const getSlotsByCategory = (
 ): readonly AssetSlot[] =>
   ASSET_SLOTS.filter((slot) => slot.category === category);
 
-export type Faction = "day" | "night" | "items" | "landscape";
+export type Faction = "day" | "night" | "items" | "icons" | "landscape";
 
 export const FACTIONS: readonly { readonly id: Faction; readonly label: string }[] = [
   { id: "day", label: "Day" },
   { id: "night", label: "Night" },
   { id: "items", label: "Items" },
+  { id: "icons", label: "Icons" },
   { id: "landscape", label: "Landscape" },
 ];
 
@@ -82,6 +92,9 @@ export const getSlotsForFaction = (
     }
     if (faction === "items") {
       return isItemSlot(slot);
+    }
+    if (faction === "icons") {
+      return slot.category === "icon";
     }
     return slot.category === category && slot.key.endsWith(`_${faction}`);
   });

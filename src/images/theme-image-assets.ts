@@ -106,4 +106,9 @@ export class ThemeImageAssets {
   itemImage(itemKey: string): GameImage | undefined {
     return this.imageCache.get(`piece/${itemKey}`);
   }
+
+  /** Resource icon (wood, stone, food, gold, iron, faith) */
+  iconImage(resource: string): GameImage | undefined {
+    return this.imageCache.get(`icon/${resource}`);
+  }
 }

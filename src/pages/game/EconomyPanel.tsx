@@ -1,10 +1,10 @@
 import { formatClock, type GameUiState } from "../../core/ui-state";
 
-const RESOURCES: readonly { readonly key: "wood" | "stone" | "food" | "gold" | "iron" | "faith"; readonly icon?: string; readonly label: string }[] = [
-  { key: "wood", icon: "/img/wood.png", label: "Wood" },
-  { key: "stone", icon: "/img/stone.png", label: "Stone" },
-  { key: "food", icon: "/img/food.png", label: "Food" },
-  { key: "gold", icon: "/img/gold.png", label: "Gold" },
+const RESOURCES: readonly { readonly key: "wood" | "stone" | "food" | "gold" | "iron" | "faith"; readonly label: string }[] = [
+  { key: "wood", label: "Wood" },
+  { key: "stone", label: "Stone" },
+  { key: "food", label: "Food" },
+  { key: "gold", label: "Gold" },
   { key: "iron", label: "Iron" },
   { key: "faith", label: "Faith" },
 ];
@@ -38,11 +38,11 @@ export const EconomyPanel = ({ ui }: { readonly ui: GameUiState }) => {
       <section className="panel">
         <h2>Resources</h2>
         <div className="stat-grid">
-          {RESOURCES.map(({ key, icon, label }) => {
+          {RESOURCES.map(({ key, label }) => {
             const gain = ui.production[key] ?? 0;
             return (
               <div key={key} title={label}>
-                {icon !== undefined ? <img src={icon} alt={label} /> : <span className="stat-label">{label}</span>}
+                <img src={ui.icons[key]} alt={label} />
                 <div>{ui.resources[key] ?? 0}</div>
                 {gain > 0 && <span className="stat-gain" title={`+${gain} at ${next}`}>+{gain}</span>}
               </div>
@@ -53,7 +53,7 @@ export const EconomyPanel = ({ ui }: { readonly ui: GameUiState }) => {
           <p className="hint">
             {producer ? "Production arrives at the next " : "Your production arrives at the next "}{clock.isDay ? "dawn" : "dusk"}
             {" · "}Speed {research.speedLevel}
-            {research.hasMiningII ? " · Mining II" : ""}
+            {research.hasMiningII ? " · Mining II" : " · iron needs Mining II"}
             {research.hasMiningIII ? " · Mining III" : ""}
             {research.hasQueen ? " · Queen" : ""}
           </p>
