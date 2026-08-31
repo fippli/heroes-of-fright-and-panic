@@ -165,7 +165,7 @@ Horses are bought at houses and placed on an adjacent tile; boats are built at d
 
 ## Research
 
-Research requires a castle. There are four research options.
+Research happens at your castle once it has been upgraded to tier 2 (Castle). One research option exists today.
 
 | Research   | Cost    | Prerequisite | Effect |
 |------------|---------|-------------|--------|
