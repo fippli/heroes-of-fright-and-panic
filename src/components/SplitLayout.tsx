@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Box, Flex, Heading, VStack } from "@chakra-ui/react";
+import { Flex, Heading, VStack, Link as ChakraLink } from "@chakra-ui/react";
+import { Link } from "react-router-dom";
 
 type SplitLayoutProps = {
   readonly pageTitle?: string;
@@ -7,59 +8,50 @@ type SplitLayoutProps = {
 };
 
 /**
- * Shared frame for every non-game page: the war scene on the left, a
- * parchment sheet with the page's content on the right.
+ * Shared frame for every non-game page: the war scene fills the screen and
+ * the page's content floats in a centred parchment column — the same layout
+ * on a phone as on a desktop.
  */
 export const SplitLayout = ({ pageTitle, children }: SplitLayoutProps) => {
   return (
-    <Flex minH="100vh" direction={{ base: "column", md: "row" }}>
-      <Flex
-        w={{ base: "100%", md: "50%" }}
-        minH={{ base: "220px", md: "auto" }}
-        direction="column"
-        justify="flex-end"
-        position="relative"
-        backgroundImage="url(/img/hero.png)"
-        backgroundSize="cover"
-        backgroundPosition="center bottom"
-        style={{ imageRendering: "pixelated" }}
+    <Flex
+      minH="100vh"
+      align={{ base: "flex-start", md: "center" }}
+      justify="center"
+      p={{ base: "4", md: "8" }}
+      backgroundImage="url(/img/hero.png)"
+      backgroundSize="cover"
+      backgroundPosition="center bottom"
+      backgroundAttachment="fixed"
+      style={{ imageRendering: "pixelated" }}
+    >
+      <VStack
+        w="100%"
+        maxW="440px"
+        gap="4"
+        align="stretch"
+        bg="rgba(247, 238, 216, 0.95)"
+        border="3px solid"
+        borderColor="border"
+        borderRadius="14px"
+        boxShadow="0 18px 50px rgba(43, 33, 23, 0.45)"
+        p={{ base: "6", md: "8" }}
+        my={{ base: "8", md: "0" }}
       >
-        <Box position="absolute" inset="0" bg="linear-gradient(180deg, rgba(43,33,23,0) 55%, rgba(43,33,23,0.55) 100%)" />
-        <Heading
-          as="h1"
-          position="relative"
-          fontSize={{ base: "3rem", md: "5rem" }}
-          color="#f7eed8"
-          fontWeight="900"
-          lineHeight="1"
-          p={{ base: "6", md: "10" }}
-          textShadow="0 3px 0 #2b2117, 0 0 24px rgba(43,33,23,0.8)"
-        >
-          Dusk<br />and Dawn
-        </Heading>
-      </Flex>
-
-      <Flex
-        w={{ base: "100%", md: "50%" }}
-        direction="column"
-        align="center"
-        justify="center"
-        p={{ base: "6", md: "12" }}
-        bg="bg"
-        overflowY="auto"
-        color="fg"
-        borderLeft={{ md: "3px solid" }}
-        borderColor={{ md: "border" }}
-      >
-        <VStack w="100%" maxW="420px" gap="4" align="stretch">
-          {pageTitle !== undefined && (
-            <Heading as="h2" fontSize="2.2rem" color="fg" mb="2" letterSpacing="1px">
-              {pageTitle}
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }} alignSelf="center">
+          <Link to="/">
+            <Heading as="h1" fontSize="1.6rem" letterSpacing="2px" color="fg" textAlign="center">
+              Dusk and Dawn
             </Heading>
-          )}
-          {children}
-        </VStack>
-      </Flex>
+          </Link>
+        </ChakraLink>
+        {pageTitle !== undefined && (
+          <Heading as="h2" fontSize="2rem" color="fg" textAlign="center" letterSpacing="1px">
+            {pageTitle}
+          </Heading>
+        )}
+        {children}
+      </VStack>
     </Flex>
   );
 };
