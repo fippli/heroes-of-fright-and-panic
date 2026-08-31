@@ -19,10 +19,9 @@ describe("Building", () => {
       expect(cost.stone).toBe(0);
     });
 
-    it("tower costs 10 stone", () => {
-      const cost = buildingCostOf(BuildingType.tower);
-      expect(cost.stone).toBe(10);
-      expect(cost.wood).toBe(0);
+    it("tower costs 5 wood", () => {
+      expect(buildingCostOf(BuildingType.tower).wood).toBe(5);
+      expect(buildingCostOf(BuildingType.tower).stone).toBe(0);
     });
 
     it("wall costs 1 stone", () => {
@@ -48,8 +47,10 @@ describe("Building", () => {
       expect(createHouseBuilding("day").viewRange).toBe(1);
     });
 
-    it("tower has view range 4", () => {
-      expect(createTowerBuilding("day").viewRange).toBe(4);
+
+    it("a watchpost sees 2, a beacon 4", () => {
+      expect(createTowerBuilding("day").viewRange).toBe(2);
+      expect(createTowerBuilding("day", 3).viewRange).toBe(4);
     });
 
     it("a keep sees 2, a citadel 4", () => {
@@ -90,6 +91,7 @@ describe("Building", () => {
     it("ordinary buildings have 1 defense; castles grow with their tier", () => {
       expect(createHouseBuilding("day").defense).toBe(1);
       expect(createTowerBuilding("day").defense).toBe(1);
+      expect(createTowerBuilding("day", 3).defense).toBe(3);
       expect(createWallBuilding("day").defense).toBe(1);
       expect(createChurchBuilding("day").defense).toBe(1);
       expect(createCastleBuilding("day").defense).toBe(2);

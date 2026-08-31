@@ -1,4 +1,4 @@
-import { BuildingType, HOUSE_LEVEL_NAMES, houseUpgradeCost, CASTLE_LEVEL_NAMES, castleUpgradeCost } from "@shared/building";
+import { BuildingType, HOUSE_LEVEL_NAMES, houseUpgradeCost, CASTLE_LEVEL_NAMES, castleUpgradeCost, TOWER_LEVEL_NAMES, towerUpgradeCost } from "@shared/building";
 import { EquipmentType, createEquipment } from "@shared/equipment";
 import { PieceKind, peasantSpawnCost, priestTrainCost, archAngelSummonCost } from "@shared/piece";
 import { ResearchType, researchCostOf } from "@shared/research";
@@ -93,7 +93,9 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
           ? HOUSE_LEVEL_NAMES[building.level] ?? "House"
           : building.type === BuildingType.castle
             ? CASTLE_LEVEL_NAMES[building.level] ?? "Castle"
-            : BUILDING_LABEL[building.type] ?? building.type
+            : building.type === BuildingType.tower
+              ? TOWER_LEVEL_NAMES[building.level] ?? "Tower"
+              : BUILDING_LABEL[building.type] ?? building.type
         : selected?.landscape ?? "Tile";
   const owner = piece?.owner ?? building?.owner ?? null;
 
@@ -220,6 +222,26 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
               <h3>Church</h3>
               <ActionButton label="Train priest" hotkey="N" cost={priestTrainCost()} icons={icons} enabled={can(priestTrainCost()) && building?.acted !== true} onClick={() => void game.trainPriestAt(at)} />
               <ActionButton label="Summon archangel" hotkey="M" cost={archAngelSummonCost()} icons={icons} enabled={can(archAngelSummonCost()) && building?.acted !== true} onClick={() => void game.summonArchAngelAt(at)} />
+            </section>
+          )}
+
+          {ownBuilding === BuildingType.tower && at !== null && building !== null && (
+            <section className="selection__actions">
+              <h3>{TOWER_LEVEL_NAMES[building.level] ?? "Tower"}</h3>
+              {towerUpgradeCost(building.level) !== null ? (
+                <ActionButton
+                  label={`Upgrade to ${TOWER_LEVEL_NAMES[building.level + 1]}`}
+                  hotkey="U"
+                  cost={towerUpgradeCost(building.level) as ResourceMap}
+                  icons={icons}
+                  enabled={can(towerUpgradeCost(building.level) as ResourceMap) && !building.acted}
+                  onClick={() => void game.upgradeBuildingAt(at)}
+                  title={building.level === 1 ? "Watchtower: view and bow range 3, defense 2" : "Beacon: view and bow range 4, defense 3"}
+                />
+              ) : (
+                <p className="hint">This beacon watches as far as towers can.</p>
+              )}
+              <p className="hint">A bow inside shoots as far as the tower sees (range {building.viewRange}).</p>
             </section>
           )}
 

@@ -47,7 +47,7 @@ export const buildingCostOf = (buildingType: BuildingType): ResourceMap => {
     case BuildingType.house:
       return createResourceMap({ wood: 1 });
     case BuildingType.tower:
-      return createResourceMap({ stone: 10 });
+      return createResourceMap({ wood: 5 });
     case BuildingType.wall:
       return createResourceMap({ stone: 1 });
     case BuildingType.church:
@@ -72,17 +72,32 @@ export const createHouseBuilding = (owner: PlayerType): Building => ({
   level: 1,
 });
 
-export const createTowerBuilding = (owner: PlayerType): Building => ({
+export const createTowerBuilding = (owner: PlayerType, level: number = 1): Building => ({
   type: BuildingType.tower,
   owner,
   cost: buildingCostOf(BuildingType.tower),
-  viewRange: 4,
-  defense: 1,
+  viewRange: 1 + level,
+  defense: level,
   walkableByOwner: true,
   walkableByEnemy: true,
+  level,
 });
 
 export const CASTLE_LEVEL_NAMES: ReadonlyArray<string> = ["", "Keep", "Castle", "Citadel"];
+
+export const TOWER_LEVEL_NAMES: ReadonlyArray<string> = ["", "Watchpost", "Watchtower", "Beacon"];
+
+/** Cost to raise a tower from `level` to `level + 1`; null at the top */
+export const towerUpgradeCost = (level: number): ResourceMap | null => {
+  switch (level) {
+    case 1:
+      return createResourceMap({ stone: 8 });
+    case 2:
+      return createResourceMap({ gold: 5 });
+    default:
+      return null;
+  }
+};
 
 /** Cost to raise a castle from `level` to `level + 1`; null at the top */
 export const castleUpgradeCost = (level: number): ResourceMap | null => {

@@ -125,7 +125,7 @@ There are six building types. All buildings have 1 defense and 0 hearts.
 | Type   | Cost                | View Range | Walkable By  | Special |
 |--------|---------------------|------------|-------------|---------|
 | House  | 1 wood              | 1          | Both players | Spawns peasants. Adjacent grass converts to farm. |
-| Tower  | 10 stone            | 4          | Both players | Watchtower. A bow inside gets range 4. |
+| Tower  | 5 wood              | 2/3/4 by tier | Both players | Watchpost → Watchtower (8 stone) → Beacon (5 gold). A bow inside shoots at the tower's range. |
 | Castle | Fixed from the start | 2/3/4 by tier | Both players | Your kingdom seat: Keep → Castle (8 stone, unlocks research) → Citadel (12 stone + 3 iron). If it falls, you lose. |
 | Wall   | 1 stone             | 0          | Owner only   | Defensive barrier. |
 | Church | 3 wood + 3 stone    | 1          | Both players | Trains priests. Priests inside generate faith. |
@@ -247,7 +247,7 @@ There are twelve actions available. **A phase is a round**: every piece and ever
 | Research          | Unlock research at a Castle (tier 2+). | Varies by research |
 | SummonArchAngel   | Summon in an empty friendly church. | 100 faith + 10 praying priests |
 | Attack            | Damage enemy piece or building within attack range. | - |
-| UpgradeBuilding   | Raise one of your houses to the next level (homestead, manor). | 3 wood + 2 stone, then 5 wood + 5 stone + 1 iron |
+| UpgradeBuilding   | Raise a house (homestead, manor), tower (watchtower, beacon) or castle (castle, citadel) one tier. | Varies by building and tier |
 | Pass              | End your phase: the clock flips to dusk/dawn, production arrives, every piece and building rests. | - |
 
 ---

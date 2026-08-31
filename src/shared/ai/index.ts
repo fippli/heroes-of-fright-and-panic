@@ -8,7 +8,7 @@ import type { Game } from "@shared/game/types.ts";
 import type { GameAction, PlayerType } from "@shared/actions/index.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
-import { BuildingType, buildingLevel, houseUpgradeCost, castleUpgradeCost } from "@shared/building/index.ts";
+import { BuildingType, buildingLevel, houseUpgradeCost, castleUpgradeCost, towerUpgradeCost } from "@shared/building/index.ts";
 import { processAction } from "@shared/game/actions.ts";
 import { hasRoomForPeasant } from "@shared/game/population.ts";
 import type { ActionResult } from "@shared/actions/index.ts";
@@ -342,13 +342,18 @@ const generateUpgradeActions = (game: Game, player: PlayerType): ReadonlyArray<G
     .filter(
       (tile) =>
         tile.building !== null &&
-        (tile.building.type === BuildingType.house || tile.building.type === BuildingType.castle) &&
+        (tile.building.type === BuildingType.house || tile.building.type === BuildingType.castle || tile.building.type === BuildingType.tower) &&
         tile.building.owner === player &&
         buildingNotActed(tile),
     )
     .filter((tile) => {
       const building = tile.building as NonNullable<typeof tile.building>;
-      const cost = building.type === BuildingType.castle ? castleUpgradeCost(buildingLevel(building)) : houseUpgradeCost(buildingLevel(building));
+      const cost =
+        building.type === BuildingType.castle
+          ? castleUpgradeCost(buildingLevel(building))
+          : building.type === BuildingType.tower
+            ? towerUpgradeCost(buildingLevel(building))
+            : houseUpgradeCost(buildingLevel(building));
       return cost !== null && canAfford(playerData.resources, cost);
     })
     .map((tile): GameAction => ({ type: "upgradeBuilding", player, position: { row: tile.row, column: tile.column } }));

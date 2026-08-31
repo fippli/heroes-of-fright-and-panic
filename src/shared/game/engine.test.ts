@@ -1324,3 +1324,28 @@ describe("docks", () => {
     expect(handleBuySteed(withDock, { type: "buySteed", player: "day", steedType: SteedType.horse, housePosition: dock, targetPosition: { row: 1, column: 3 } }).result.success).toBe(false);
   });
 });
+
+describe("tower tiers", () => {
+  it("upgrades a watchpost to a watchtower for stone, then a beacon for gold", () => {
+    const base = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const tile = base.find((t) => t.row === 2 && t.column === 3)!;
+    const game = makeGame({ tiles: replaceTile(base, { ...tile, building: createTowerBuilding("day") }) });
+
+    const first = handleUpgradeBuilding(game, { type: "upgradeBuilding", player: "day", position: { row: 2, column: 3 } });
+    expect(first.result.success).toBe(true);
+    const watchtower = first.game.tiles.find((t) => t.row === 2 && t.column === 3)!.building!;
+    expect([watchtower.level, watchtower.viewRange, watchtower.defense]).toEqual([2, 3, 2]);
+    expect(first.game.dayPlayer.resources.stone).toBe(game.dayPlayer.resources.stone - 8);
+
+    // Rest the tower so it can act again next "phase"
+    const rested = { ...first.game, tiles: first.game.tiles.map((t) => (t.building !== null ? { ...t, building: { ...t.building, acted: false } } : t)) };
+    const second = handleUpgradeBuilding(rested, { type: "upgradeBuilding", player: "day", position: { row: 2, column: 3 } });
+    expect(second.result.success).toBe(true);
+    const beacon = second.game.tiles.find((t) => t.row === 2 && t.column === 3)!.building!;
+    expect([beacon.level, beacon.viewRange, beacon.defense]).toEqual([3, 4, 3]);
+    expect(second.game.dayPlayer.resources.gold).toBe(game.dayPlayer.resources.gold - 5);
+
+    const third = handleUpgradeBuilding(second.game, { type: "upgradeBuilding", player: "day", position: { row: 2, column: 3 } });
+    expect(third.result.success).toBe(false);
+  });
+});

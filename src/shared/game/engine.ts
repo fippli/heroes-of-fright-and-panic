@@ -21,8 +21,10 @@ import {
   buildingLevel,
   houseUpgradeCost,
   castleUpgradeCost,
+  towerUpgradeCost,
   HOUSE_LEVEL_NAMES,
   CASTLE_LEVEL_NAMES,
+  TOWER_LEVEL_NAMES,
 } from "../building/index.ts";
 import { resolveCombat } from "../combat/index.ts";
 import { createEquipment, EquipmentType } from "../equipment/index.ts";
@@ -906,12 +908,13 @@ export const handleUpgradeBuilding = (
   if (tile === undefined) {
     return { game, result: { success: false, error: "Invalid tile position" } };
   }
+  const UPGRADABLE = [BuildingType.house, BuildingType.castle, BuildingType.tower];
   if (
     tile.building === null ||
-    (tile.building.type !== BuildingType.house && tile.building.type !== BuildingType.castle) ||
+    !UPGRADABLE.includes(tile.building.type) ||
     tile.building.owner !== action.player
   ) {
-    return { game, result: { success: false, error: "Only your own houses and castle can be upgraded" } };
+    return { game, result: { success: false, error: "Only your own houses, towers and castle can be upgraded" } };
   }
 
   if (tile.building.acted === true) {
@@ -919,10 +922,17 @@ export const handleUpgradeBuilding = (
   }
 
   const isCastle = tile.building.type === BuildingType.castle;
+  const isTower = tile.building.type === BuildingType.tower;
   const level = buildingLevel(tile.building);
-  const cost = isCastle ? castleUpgradeCost(level) : houseUpgradeCost(level);
+  const cost = isCastle ? castleUpgradeCost(level) : isTower ? towerUpgradeCost(level) : houseUpgradeCost(level);
   if (cost === null) {
-    return { game, result: { success: false, error: isCastle ? "Your castle is already a citadel" : "This house is already a manor" } };
+    return {
+      game,
+      result: {
+        success: false,
+        error: isCastle ? "Your castle is already a citadel" : isTower ? "This tower is already a beacon" : "This house is already a manor",
+      },
+    };
   }
 
   const player = getPlayer(game, action.player);
@@ -930,12 +940,14 @@ export const handleUpgradeBuilding = (
     return { game, result: { success: false, error: "Cannot afford this upgrade" } };
   }
 
-  const names = isCastle ? CASTLE_LEVEL_NAMES : HOUSE_LEVEL_NAMES;
+  const names = isCastle ? CASTLE_LEVEL_NAMES : isTower ? TOWER_LEVEL_NAMES : HOUSE_LEVEL_NAMES;
   const upgraded = replaceTile(game.tiles, {
     ...tile,
     building: isCastle
       ? { ...tile.building, level: level + 1, viewRange: 2 + level, defense: 2 + level, acted: true }
-      : { ...tile.building, level: level + 1, acted: true },
+      : isTower
+        ? { ...tile.building, level: level + 1, viewRange: 2 + level, defense: level + 1, acted: true }
+        : { ...tile.building, level: level + 1, acted: true },
   });
   const afterUpgrade = withPlayer({ ...game, tiles: upgraded }, action.player, payForCost(player, cost));
   return {
