@@ -165,14 +165,13 @@ Research requires a castle. There are four research options.
 
 | Research   | Cost    | Prerequisite | Effect |
 |------------|---------|-------------|--------|
-| Speed      | 1 wood  | None        | Reduces action time. 6 levels: 60/30/15/10/5/1 min per action. |
 | Queen      | 25 gold | None        | All tiles adjacent to buildings become visible. |
 
 ---
 
 ## Clock System
 
-The game uses a 24-hour clock starting at 06:00. Each action advances the clock by a number of minutes determined by the current speed research level.
+The clock shows 06:00 during the Day phase and 18:00 during Night. It flips when a phase ends; each flip is a dawn or dusk and triggers that side's production.
 
 | Phase | Hours | Active Player |
 |-------|-------|--------------|
@@ -182,18 +181,6 @@ The game uses a 24-hour clock starting at 06:00. Each action advances the clock 
 - **Dawn (06:00)**: Day player receives resource production. Control passes to day player.
 - **Dusk (18:00)**: Night player receives resource production. Control passes to night player.
 
-### Speed Levels
-
-| Level | Minutes per Action |
-|-------|-------------------|
-| 0     | 60                |
-| 1     | 30                |
-| 2     | 15                |
-| 3     | 10                |
-| 4     | 5                 |
-| 5     | 1                 |
-
----
 
 ## Resource Production
 
