@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Box, Button, Flex, Heading, Link as ChakraLink, Text } from "@chakra-ui/react";
+import { Button, Flex, Heading, Link as ChakraLink, Text } from "@chakra-ui/react";
 import { supabase } from "../../lib/supabase";
 
 /** Full-viewport hero: the Day and Night armies meeting on the paper map */
