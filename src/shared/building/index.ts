@@ -18,8 +18,10 @@ export type Building = {
   readonly defense: number;
   readonly walkableByOwner: boolean;
   readonly walkableByEnemy: boolean;
-  /** Houses can be upgraded: 1 house, 2 homestead, 3 manor. Other buildings stay at 1. */
+  /** Houses and castles can be upgraded; other buildings stay at 1. */
   readonly level?: number;
+  /** Set once the building has used its action this phase */
+  readonly acted?: boolean;
 };
 
 export const MAX_HOUSE_LEVEL = 3;
@@ -80,14 +82,29 @@ export const createTowerBuilding = (owner: PlayerType): Building => ({
   walkableByEnemy: true,
 });
 
-export const createCastleBuilding = (owner: PlayerType): Building => ({
+export const CASTLE_LEVEL_NAMES: ReadonlyArray<string> = ["", "Keep", "Castle", "Citadel"];
+
+/** Cost to raise a castle from `level` to `level + 1`; null at the top */
+export const castleUpgradeCost = (level: number): ResourceMap | null => {
+  switch (level) {
+    case 1:
+      return createResourceMap({ stone: 8 });
+    case 2:
+      return createResourceMap({ stone: 12, iron: 3 });
+    default:
+      return null;
+  }
+};
+
+export const createCastleBuilding = (owner: PlayerType, level: number = 1): Building => ({
   type: BuildingType.castle,
   owner,
   cost: createResourceMap(),
-  viewRange: 3,
-  defense: 1,
+  viewRange: 1 + level,
+  defense: 1 + level,
   walkableByOwner: true,
   walkableByEnemy: true,
+  level,
 });
 
 export const createWallBuilding = (owner: PlayerType): Building => ({

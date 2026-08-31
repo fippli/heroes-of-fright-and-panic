@@ -8,7 +8,7 @@ import type { Game } from "@shared/game/types.ts";
 import type { GameAction, PlayerType } from "@shared/actions/index.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import { LandscapeType } from "@shared/map/landscape.ts";
-import { BuildingType, buildingLevel, houseUpgradeCost } from "@shared/building/index.ts";
+import { BuildingType, buildingLevel, houseUpgradeCost, castleUpgradeCost } from "@shared/building/index.ts";
 import { processAction } from "@shared/game/actions.ts";
 import { hasRoomForPeasant } from "@shared/game/population.ts";
 import type { ActionResult } from "@shared/actions/index.ts";
@@ -36,6 +36,8 @@ const getPlayer = (game: Game, playerType: PlayerType) =>
 // ============================================
 // ACTION GENERATORS
 // ============================================
+
+const buildingNotActed = (tile: { building: { acted?: boolean } | null }): boolean => tile.building?.acted !== true;
 
 const generateMoveActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
   const myPieces = game.tiles.filter(
@@ -150,6 +152,7 @@ const generateCraftActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
     (tile) =>
       tile.piece !== null &&
       tile.piece.owner === player &&
+      tile.piece.acted !== true &&
       tile.piece.canEquip,
   );
 
@@ -263,17 +266,15 @@ const generateResearchActions = (game: Game, player: PlayerType): ReadonlyArray<
     (tile) =>
       tile.building !== null &&
       tile.building.type === BuildingType.castle &&
-      tile.building.owner === player,
+      tile.building.owner === player &&
+      buildingLevel(tile.building) >= 2 &&
+      buildingNotActed(tile),
   );
 
   if (castles.length === 0) return [];
 
-  // Speed beyond level 2 makes a phase take hundreds of actions; the AI
-  // does not need it and it only slows the game for the human
-  const AI_MAX_SPEED_LEVEL = 2;
-  const researchable = [ResearchType.speed, ResearchType.queen]
+  const researchable = [ResearchType.queen]
     .filter((researchType) =>
-      !(researchType === ResearchType.speed && playerData.research.speedLevel >= AI_MAX_SPEED_LEVEL) &&
       canResearch(playerData.research, researchType) &&
       canAfford(playerData.resources, researchCostOf(researchType)),
     );
@@ -286,31 +287,6 @@ const generateResearchActions = (game: Game, player: PlayerType): ReadonlyArray<
       castlePosition: { row: castle.row, column: castle.column },
     })),
   );
-};
-
-const generateEnterTowerActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
-  const kingTile = game.tiles.find(
-    (tile) =>
-      tile.piece !== null &&
-      tile.piece.kind === PieceKind.king &&
-      tile.piece.owner === player,
-  );
-
-  if (kingTile === undefined) return [];
-
-  const adjacentTowers = findNeighborTiles(game.tiles, kingTile).filter(
-    (tile) =>
-      tile.building !== null &&
-      tile.building.type === BuildingType.tower &&
-      tile.building.owner === player,
-  );
-
-  return adjacentTowers.map((towerTile): GameAction => ({
-    type: "enterTower",
-    player,
-    kingPosition: { row: kingTile.row, column: kingTile.column },
-    towerPosition: { row: towerTile.row, column: towerTile.column },
-  }));
 };
 
 const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
@@ -363,9 +339,16 @@ const generateSteedActions = (game: Game, player: PlayerType): ReadonlyArray<Gam
 const generateUpgradeActions = (game: Game, player: PlayerType): ReadonlyArray<GameAction> => {
   const playerData = getPlayer(game, player);
   return game.tiles
-    .filter((tile) => tile.building !== null && tile.building.type === BuildingType.house && tile.building.owner === player)
+    .filter(
+      (tile) =>
+        tile.building !== null &&
+        (tile.building.type === BuildingType.house || tile.building.type === BuildingType.castle) &&
+        tile.building.owner === player &&
+        buildingNotActed(tile),
+    )
     .filter((tile) => {
-      const cost = houseUpgradeCost(buildingLevel(tile.building as NonNullable<typeof tile.building>));
+      const building = tile.building as NonNullable<typeof tile.building>;
+      const cost = building.type === BuildingType.castle ? castleUpgradeCost(buildingLevel(building)) : houseUpgradeCost(buildingLevel(building));
       return cost !== null && canAfford(playerData.resources, cost);
     })
     .map((tile): GameAction => ({ type: "upgradeBuilding", player, position: { row: tile.row, column: tile.column } }));
@@ -381,7 +364,6 @@ export const generateAllActions = (game: Game, player: PlayerType): ReadonlyArra
     ...generateTrainActions(game, player),
     ...generateHealActions(game, player),
     ...generateResearchActions(game, player),
-    ...generateEnterTowerActions(game, player),
     ...generateSteedActions(game, player),
     ...generateUpgradeActions(game, player),
   ];
@@ -402,7 +384,6 @@ const ACTION_WEIGHTS: Record<string, number> = {
   trainPriest: 8,
   heal: 12,
   research: 10,
-  enterTower: 5,
   buySteed: 5,
   summonArchAngel: 30,
   upgradeBuilding: 12,

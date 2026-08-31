@@ -3,6 +3,7 @@ import { GameMap, defaultMapConfig, type MapConfig } from "@shared/map/map.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
 import { createKing, createPeasant } from "@shared/piece/index.ts";
+import { createCastleBuilding } from "@shared/building/index.ts";
 import { createPlayer } from "@shared/player/index.ts";
 import { createResourceMap } from "@shared/player/resource-map.ts";
 import { replaceTile, findNeighborTiles } from "@shared/tile/index.ts";
@@ -114,14 +115,15 @@ export const createGame = (params: CreateGameParams) => {
 
   const { dayKingTile, nightKingTile, dayPeasantTile, nightPeasantTile } = board;
 
-  // Place pieces
-  const tilesWithDayKing = replaceTile(
+  // Each side starts with a kingdom: a Keep on the start tile, the king
+  // beside it, a peasant beside the king.
+  const tilesWithDayKeep = replaceTile(
     board.tiles,
-    { row: dayKingTile.row, column: dayKingTile.column, piece: createKing("day") },
+    { row: dayKingTile.row, column: dayKingTile.column, building: createCastleBuilding("day"), piece: createKing("day") },
   );
 
   const tilesWithDayPeasant = replaceTile(
-    tilesWithDayKing,
+    tilesWithDayKeep,
     {
       row: dayPeasantTile.row,
       column: dayPeasantTile.column,
@@ -129,17 +131,18 @@ export const createGame = (params: CreateGameParams) => {
     },
   );
 
-  const tilesWithNightKing = replaceTile(
+  const tilesWithNightKeep = replaceTile(
     tilesWithDayPeasant,
     {
       row: nightKingTile.row,
       column: nightKingTile.column,
+      building: createCastleBuilding("night"),
       piece: createKing("night"),
     },
   );
 
   const tiles = replaceTile(
-    tilesWithNightKing,
+    tilesWithNightKeep,
     {
       row: nightPeasantTile.row,
       column: nightPeasantTile.column,

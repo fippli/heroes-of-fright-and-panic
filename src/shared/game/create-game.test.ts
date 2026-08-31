@@ -233,6 +233,26 @@ describe("createGame", () => {
     expect(parsed.name).toBe("test");
   });
 
+  it("starts each side with a Keep under its king", () => {
+    const game = createGame({
+      boardSize: 10,
+      name: "keeps",
+      alliance: "day",
+      creatorEmail: "creator@test.com",
+      inviteEmail: null,
+      seed: 4,
+    });
+    (["day", "night"] as const).forEach((side) => {
+      const keep = game.tiles.find(
+        (tile) => tile.building?.type === "castle" && tile.building.owner === side,
+      );
+      expect(keep).toBeDefined();
+      expect(keep?.building?.level).toBe(1);
+      expect(keep?.piece?.kind).toBe("king");
+      expect(keep?.piece?.owner).toBe(side);
+    });
+  });
+
   it("initializes players with empty research", () => {
     const game = createGame({
       boardSize: 10,
@@ -242,9 +262,7 @@ describe("createGame", () => {
       inviteEmail: null,
     });
 
-    expect(game.dayPlayer.research.speedLevel).toBe(0);
     expect(game.dayPlayer.research.hasQueen).toBe(false);
 
-    expect(game.nightPlayer.research.speedLevel).toBe(0);
   });
 });

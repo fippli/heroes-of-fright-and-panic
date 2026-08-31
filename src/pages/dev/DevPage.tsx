@@ -105,13 +105,11 @@ export const DevPage = () => {
           "3": (position) => game.craftBow(position),
 
           // Building / unit actions (some need a selected source first)
-          e: (position) => game.enterTower(position), // king selected → tower
           n: (position) => game.trainPriest(position), // on church
           m: (position) => game.summonArchAngel(position), // on church
           g: (position) => game.heal(position), // priest selected → ally
           o: (position) => game.buySteed(SteedType.horse, position), // house selected → tile
           f: (position) => game.buySteed(SteedType.boat, position), // house selected → water
-          "4": (position) => game.research(ResearchType.speed, position), // on castle
           "7": (position) => game.research(ResearchType.queen, position),
         });
       });
@@ -258,7 +256,7 @@ export const DevPage = () => {
                 tile)
               </div>
               <div>
-                <strong>4/7</strong> — Research speed / queen
+                <strong>7</strong> — Research the Queen (castle level 2+)
                 / queen (hover castle)
               </div>
               <div>

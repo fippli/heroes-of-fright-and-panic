@@ -23,7 +23,6 @@ export const eventPositions = (action: GameAction | null): ReadonlyArray<TilePos
     case "trainPriest": return [action.churchPosition];
     case "heal": return [action.priestPosition, action.targetPosition];
     case "research": return [action.castlePosition];
-    case "enterTower": return [action.kingPosition, action.towerPosition];
     case "summonArchAngel": return [action.churchPosition];
     case "attack": return [action.attackerPosition, action.targetPosition];
     case "upgradeBuilding": return [action.position];
@@ -43,11 +42,10 @@ export const describeAction = (player: string | null, action: GameAction): strin
     case "trainPriest": return `${who} trained a priest at ${at(action.churchPosition)}`;
     case "heal": return `${who} healed a piece at ${at(action.targetPosition)}`;
     case "research": return `${who} researched ${action.researchType}`;
-    case "enterTower": return `${who}'s king entered the tower at ${at(action.towerPosition)} — it is a castle now`;
     case "summonArchAngel": return `${who} summoned an archangel at ${at(action.churchPosition)}`;
     case "attack": return `${who} attacked ${at(action.targetPosition)} from ${at(action.attackerPosition)}`;
     case "upgradeBuilding": return `${who} upgraded the house at ${at(action.position)}`;
-    case "pass": return action.toPhaseEnd === true ? `${who} ended their phase` : `${who} waited an hour`;
+    case "pass": return `${who} ended their phase`;
     default: return `${who} acted`;
   }
 };

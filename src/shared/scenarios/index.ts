@@ -208,18 +208,6 @@ export const scenarios: ReadonlyArray<Scenario> = [
     buildings: [{ row: 2, column: 6, type: BuildingType.tower, owner: "day" }],
   },
   {
-    id: "enter-tower",
-    name: "Enter tower (castle)",
-    description:
-      "Select the king, then press E while hovering the adjacent tower to turn it into a castle.",
-    map: `
-      . . . . .
-      . k . . .
-      . . . . .
-    `,
-    buildings: [{ row: 1, column: 2, type: BuildingType.tower, owner: "day" }],
-  },
-  {
     id: "church-actions",
     name: "Church: priests",
     description:
@@ -235,7 +223,7 @@ export const scenarios: ReadonlyArray<Scenario> = [
     id: "castle-research",
     name: "Castle: research",
     description:
-      "Hover the castle and press 4 (speed) or 7 (queen) to research.",
+      "Select the keep, upgrade it (U) into a Castle, then research the Queen (7).",
     map: `
       . . . . .
       . . . . .

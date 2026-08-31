@@ -366,24 +366,6 @@ export class DevGame {
   }
 
   /** Move the selected king into the tower under the cursor to form a castle. */
-  enterTower({ x, y }: Coordinate): void {
-    const tile = this.findTile({ x, y });
-    if (tile === undefined) return;
-    if (this.selectedTile === undefined || this.selectedTile === null) {
-      this.log("Select your king first");
-      return;
-    }
-
-    this.dispatch({
-      type: "enterTower",
-      player: this.currentPlayer,
-      kingPosition: {
-        row: this.selectedTile.row,
-        column: this.selectedTile.column,
-      },
-      towerPosition: { row: tile.row, column: tile.column },
-    });
-  }
 
   /** Heal the friendly piece under the cursor with the selected priest. */
   heal({ x, y }: Coordinate): void {

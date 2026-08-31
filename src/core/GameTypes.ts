@@ -20,7 +20,6 @@ type GameClock = {
 export type ServerPlayer = {
   type: PlayerType;
   research?: {
-    speedLevel?: number;
     hasQueen?: boolean;
   };
   resources: {
@@ -46,6 +45,7 @@ export type ServerTile = {
     defense?: number;
     owner?: PlayerType;
     level?: number;
+    acted?: boolean;
   } | null;
   piece: {
     kind: PieceKind;
@@ -59,6 +59,7 @@ export type ServerTile = {
     equipment?: unknown[];
     steed?: unknown;
     walkableLandscape?: LandscapeType[];
+    acted?: boolean;
   } | null;
   /** A steed left on the tile (bought at a house), waiting to be mounted */
   steed?: { type: string } | null;

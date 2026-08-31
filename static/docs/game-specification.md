@@ -125,8 +125,8 @@ There are six building types. All buildings have 1 defense and 0 hearts.
 | Type   | Cost                | View Range | Walkable By  | Special |
 |--------|---------------------|------------|-------------|---------|
 | House  | 1 wood              | 1          | Both players | Spawns peasants. Adjacent grass converts to farm. |
-| Tower  | 10 stone            | 4          | Both players | King enters to create castle. Bow in tower gets range 4. |
-| Castle | Free (from tower)   | 3          | Both players | Research hub. Castle destroyed = king inside dies. |
+| Tower  | 10 stone            | 4          | Both players | Watchtower. A bow inside gets range 4. |
+| Castle | Fixed from the start | 2/3/4 by tier | Both players | Your kingdom seat: Keep → Castle (8 stone, unlocks research) → Citadel (12 stone + 3 iron). If it falls, you lose. |
 | Wall   | 1 stone             | 0          | Owner only   | Defensive barrier. |
 | Church | 3 wood + 3 stone    | 1          | Both players | Trains priests. Priests inside generate faith. |
 | Dock   | 4 wood              | 1          | Both players | Built on sand next to water. Builds boats. |
@@ -242,7 +242,7 @@ When attacking a tile:
 
 ## Actions
 
-There are thirteen actions available:
+There are twelve actions available. **A phase is a round**: every piece and every building may act once per phase; a second action by the same actor is refused. Newly created pieces and buildings enter already rested-out.
 
 | Action            | Description | Cost |
 |-------------------|------------|------|
@@ -253,12 +253,11 @@ There are thirteen actions available:
 | BuySteed          | Place a horse next to a friendly house, or a boat next to a friendly dock. | Varies by steed |
 | TrainPriest       | Create priest in an empty friendly church. | 1 gold |
 | Heal              | Priest heals adjacent ally by 1 heart. | 1 faith |
-| Research          | Unlock research at castle if affordable and prerequisites met. | Varies by research |
-| EnterTower        | King enters adjacent tower, creating a castle. | - |
+| Research          | Unlock research at a Castle (tier 2+). | Varies by research |
 | SummonArchAngel   | Summon in an empty friendly church. | 100 faith + 10 praying priests |
 | Attack            | Damage enemy piece or building within attack range. | - |
 | UpgradeBuilding   | Raise one of your houses to the next level (homestead, manor). | 3 wood + 2 stone, then 5 wood + 5 stone + 1 iron |
-| Pass              | Let one hour pass, or (`toPhaseEnd`) end your whole phase. Always legal on your turn, so a phase can never get stuck. | - |
+| Pass              | End your phase: the clock flips to dusk/dawn, production arrives, every piece and building rests. | - |
 
 ---
 
@@ -289,9 +288,9 @@ Each player begins with: **5 wood, 2 stone**.
 
 ### Starting Conditions
 
-- Clock starts at 06:00. Day player goes first.
-- **Day player**: King + peasant placed near bottom-left of the map.
-- **Night player**: King + peasant placed near top-right of the map.
+- Clock starts at 06:00; Day plays first. The clock flips 06:00 ↔ 18:00 when a phase ends.
+- **Day player**: Keep with the king inside plus a peasant, near the bottom-left.
+- **Night player**: Keep with the king inside plus a peasant, near the top-right.
 - Trees and mountains are cleared from the starting area around each king.
 - Pieces may walk onto and through their own buildings; enemy walls block.
 

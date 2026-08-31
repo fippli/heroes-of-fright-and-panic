@@ -235,6 +235,10 @@ export class Game {
           : { peasants: 0, capacity: 0 },
       buildings: this.buildingCounts(),
       clock: { time: this.clock.time, ...phaseOf(this.clock.time) },
+      round: (() => {
+        const ownPieces = this.tiles.filter((tile) => tile.piece?.owner?.type === this.myPlayerType);
+        return { acted: ownPieces.filter((tile) => tile.piece?.acted === true).length, total: ownPieces.length };
+      })(),
       pendingBuild: this.pendingBuild,
       pendingTarget: this.pendingTarget,
       selected:
@@ -251,6 +255,7 @@ export class Game {
                 selected.piece === undefined
                   ? null
                   : {
+                      acted: selected.piece.acted,
                       kind: selected.piece.kind,
                       owner: selected.piece.owner.type,
                       hearts: selected.piece.hearts,
@@ -266,7 +271,7 @@ export class Game {
               buildingInfo:
                 selected.building === undefined
                   ? null
-                  : { type: selected.building.type, owner: selected.building.owner.type, viewRange: selected.building.viewRange, level: selected.building.level },
+                  : { acted: selected.building.acted, type: selected.building.type, owner: selected.building.owner.type, viewRange: selected.building.viewRange, level: selected.building.level },
             },
     };
   }
@@ -304,8 +309,6 @@ export class Game {
     switch (mode) {
       case "heal":
         return this.sendAction({ type: "heal", player, priestPosition: source, targetPosition: target });
-      case "enterTower":
-        return this.sendAction({ type: "enterTower", player, kingPosition: source, towerPosition: target });
       case "horse":
         return this.sendAction({ type: "buySteed", player, steedType: SteedType.horse, housePosition: source, targetPosition: target });
       case "boat":
@@ -1024,25 +1027,6 @@ export class Game {
   /**
    * Move the selected king into the tower at the given position to form a castle
    */
-  async enterTower({ x, y }: Coordinate): Promise<void> {
-    if (this.myPlayerType === null) return;
-
-    const towerPosition = this.pixelToTilePosition({ x, y });
-    if (towerPosition === null) return;
-
-    const kingPosition = this.getSelectedPosition();
-    if (kingPosition === undefined) {
-      console.warn("Select your king first");
-      return;
-    }
-
-    await this.sendAction({
-      type: "enterTower",
-      player: this.myPlayerType,
-      kingPosition,
-      towerPosition,
-    });
-  }
 
   /**
    * Heal the friendly piece at the given position with the selected priest

@@ -22,10 +22,9 @@ export const BuildMenu = ({ game, ui }: { readonly game: Game; readonly ui: Game
       <section className="panel">
         <h2>Turn</h2>
         <div className="action-list">
-          <ActionButton label="Wait an hour" hotkey="Space" cost={createResourceMap({})} icons={ui.icons} enabled={ui.isMyTurn} onClick={() => void game.passTurn(false)} />
-          <ActionButton label="End phase" hotkey="⇧Space" cost={createResourceMap({})} icons={ui.icons} enabled={ui.isMyTurn} onClick={() => void game.passTurn(true)} />
+          <ActionButton label="End phase" hotkey="Space" cost={createResourceMap({})} icons={ui.icons} enabled={ui.isMyTurn} onClick={() => void game.passTurn(true)} />
         </div>
-        <p className="hint">Every action takes an hour; a phase is 12 hours. Waiting lets the clock run when there is nothing useful to do.</p>
+        <p className="hint">Every piece and building may act once per phase. End the phase when you are done — night falls, production arrives, everything rests.</p>
       </section>
 
       <section className="panel">

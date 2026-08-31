@@ -9,7 +9,6 @@ import type {
   TrainPriestAction,
   HealAction,
   ResearchAction,
-  EnterTowerAction,
   SummonArchAngelAction,
   AttackAction,
   PassAction,
@@ -18,11 +17,12 @@ import type {
 } from "../actions/index.ts";
 import {
   createBuilding,
-  createCastleBuilding,
   BuildingType,
   buildingLevel,
   houseUpgradeCost,
+  castleUpgradeCost,
   HOUSE_LEVEL_NAMES,
+  CASTLE_LEVEL_NAMES,
 } from "../building/index.ts";
 import { resolveCombat } from "../combat/index.ts";
 import { createEquipment, EquipmentType } from "../equipment/index.ts";
@@ -47,7 +47,7 @@ import {
   pieceWithHealing,
 } from "../piece/index.ts";
 import { createPlayer, playerWithResearch } from "../player/index.ts";
-import { canResearch, applyResearch, SPEED_LEVELS } from "../research/index.ts";
+import { canResearch, applyResearch } from "../research/index.ts";
 import { createSteed, SteedType } from "../steed/index.ts";
 import {
   findTile,
@@ -56,7 +56,7 @@ import {
   areNeighbors,
   findTilesInRange,
 } from "../tile/index.ts";
-import type { Game, GameClock } from "./types.ts";
+import type { Game } from "./types.ts";
 import { getPlayer, withPlayer } from "./state.ts";
 import { validateMove, executeMove } from "../movement/index.ts";
 import {
@@ -90,51 +90,52 @@ const ARCH_ANGEL_PRIEST_REQUIREMENT = 10;
 // CLOCK / TIME MANAGEMENT
 // ============================================
 
-const isDay = (time: number): boolean => time >= 6 && time < 18;
-
-const activePlayer = (time: number): PlayerType =>
-  isDay(time) ? "day" : "night";
-
-const minutesPerAction = (game: Game, playerType: PlayerType): number => {
-  const player = getPlayer(game, playerType);
-  const level = SPEED_LEVELS.find(
-    (entry) => entry.level === player.research.speedLevel,
-  );
-  return level !== undefined ? level.minutesPerAction : 60;
-};
-
-const advanceClock = (game: Game, playerType: PlayerType): Game => {
-  const minutes = minutesPerAction(game, playerType);
-  const newTime = (game.clock.time * 60 + minutes) / 60;
-  const wrappedTime = newTime % 24;
-
-  const oldIsDay = isDay(game.clock.time);
-  const newIsDay = isDay(wrappedTime);
-
-  const crossedDawn = !oldIsDay && newIsDay;
-  const crossedDusk = oldIsDay && !newIsDay;
-
-  const newClock: GameClock = {
-    time: wrappedTime,
-    hasDawned: crossedDawn ? true : game.clock.hasDawned,
-    hasDusked: crossedDusk ? true : game.clock.hasDusked,
-  };
-
-  const afterClock: Game = {
+/**
+ * A phase is a round: every piece and building may act once. Ending the
+ * phase flips the clock to the next dawn/dusk, hands the turn over, runs
+ * production for the side whose night/day begins, and rests every actor.
+ */
+export const endPhase = (game: Game, playerType: PlayerType): Game => {
+  const toNight = playerType === "day";
+  const rested = game.tiles.map((tile): Tile => {
+    let next = tile;
+    if (next.piece !== null && next.piece.acted === true) {
+      next = { ...next, piece: { ...next.piece, acted: false } };
+    }
+    if (next.building !== null && next.building.acted === true) {
+      next = { ...next, building: { ...next.building, acted: false } };
+    }
+    return next;
+  });
+  const flipped: Game = {
     ...game,
-    clock: newClock,
-    currentPlayer: activePlayer(wrappedTime),
+    tiles: rested,
+    clock: {
+      time: toNight ? 18 : 6,
+      hasDawned: toNight ? game.clock.hasDawned : true,
+      hasDusked: toNight ? true : game.clock.hasDusked,
+    },
+    currentPlayer: toNight ? "night" : "day",
   };
-
-  if (crossedDawn) {
-    return triggerProduction(afterClock, "day");
-  }
-  if (crossedDusk) {
-    return triggerProduction(afterClock, "night");
-  }
-
-  return afterClock;
+  return triggerProduction(flipped, flipped.currentPlayer);
 };
+
+/** Mark the piece on a tile as having used its action this phase */
+const restPiece = (tiles: ReadonlyArray<Tile>, position: TilePosition): ReadonlyArray<Tile> => {
+  const tile = findTile(tiles, position);
+  if (tile === undefined || tile.piece === null) return tiles;
+  return replaceTile(tiles, { ...tile, piece: { ...tile.piece, acted: true } });
+};
+
+/** Mark the building on a tile as having used its action this phase */
+const restBuilding = (tiles: ReadonlyArray<Tile>, position: TilePosition): ReadonlyArray<Tile> => {
+  const tile = findTile(tiles, position);
+  if (tile === undefined || tile.building === null) return tiles;
+  return replaceTile(tiles, { ...tile, building: { ...tile.building, acted: true } });
+};
+
+const pieceAlreadyActed = { success: false, error: "This piece has already acted this phase" } as const;
+const buildingAlreadyActed = { success: false, error: "This building has already acted this phase" } as const;
 
 // ============================================
 // TURN VALIDATION
@@ -176,12 +177,13 @@ export const handleMove = (
     return { game, result: { success: false, error: validation.error } };
   }
 
-  const updatedTiles = executeMove(game.tiles, action.from, action.to);
-  const afterMove = advanceClock(
-    { ...game, tiles: updatedTiles },
-    action.player,
-  );
-  return { game: afterMove, result: { success: true, message: "Piece moved" } };
+  const mover = findTile(game.tiles, action.from);
+  if (mover?.piece?.acted === true) {
+    return { game, result: pieceAlreadyActed };
+  }
+
+  const updatedTiles = restPiece(executeMove(game.tiles, action.from, action.to), action.to);
+  return { game: { ...game, tiles: updatedTiles }, result: { success: true, message: "Piece moved" } };
 };
 
 export const handleBuild = (
@@ -257,13 +259,10 @@ export const handleBuild = (
     return withBuilding;
   })();
 
-  const afterBuild = advanceClock(
-    withPlayer(
-      { ...game, tiles: tilesAfterBuild },
-      action.player,
-      updatedPlayer,
-    ),
+  const afterBuild = withPlayer(
+    { ...game, tiles: restBuilding(tilesAfterBuild, action.position) },
     action.player,
+    updatedPlayer,
   );
   return {
     game: afterBuild,
@@ -339,16 +338,20 @@ export const handleSpawnPeasant = (
     return { game, result: { success: false, error: "Cannot afford peasant" } };
   }
 
-  const updatedPlayer = payForCost(player, cost);
-  const peasant = createPeasant(action.player);
-  const updatedTiles = replaceTile(game.tiles, { ...tile, piece: peasant });
+  if (tile.building.acted === true) {
+    return { game, result: buildingAlreadyActed };
+  }
 
-  const afterSpawn = advanceClock(
-    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
-    action.player,
-  );
+  const updatedPlayer = payForCost(player, cost);
+  const peasant = { ...createPeasant(action.player), acted: true };
+  const updatedTiles = replaceTile(game.tiles, {
+    ...tile,
+    piece: peasant,
+    building: { ...tile.building, acted: true },
+  });
+
   return {
-    game: afterSpawn,
+    game: withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
     result: { success: true, message: "Spawned peasant" },
   };
 };
@@ -381,6 +384,10 @@ export const handleCraftEquipment = (
     };
   }
 
+  if (tile.piece.acted === true) {
+    return { game, result: pieceAlreadyActed };
+  }
+
   const equipment = createEquipment(action.equipmentType);
 
   if (pieceHasEquipment(tile.piece, equipment.type)) {
@@ -407,9 +414,10 @@ export const handleCraftEquipment = (
     piece: equippedPiece,
   });
 
-  const afterCraft = advanceClock(
-    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+  const afterCraft = withPlayer(
+    { ...game, tiles: restPiece(updatedTiles, action.piecePosition) },
     action.player,
+    updatedPlayer,
   );
   return {
     game: afterCraft,
@@ -486,9 +494,10 @@ export const handleBuySteed = (
     steed,
   } as Tile);
 
-  const afterBuy = advanceClock(
-    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+  const afterBuy = withPlayer(
+    { ...game, tiles: restBuilding(updatedTiles, action.housePosition) },
     action.player,
+    updatedPlayer,
   );
   return {
     game: afterBuy,
@@ -539,9 +548,10 @@ export const handleTrainPriest = (
   const priest = createPriest(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: priest });
 
-  const afterTrain = advanceClock(
-    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+  const afterTrain = withPlayer(
+    { ...game, tiles: restBuilding(updatedTiles, action.churchPosition) },
     action.player,
+    updatedPlayer,
   );
   return {
     game: afterTrain,
@@ -574,6 +584,10 @@ export const handleHeal = (
       game,
       result: { success: false, error: "No priest or not your priest" },
     };
+  }
+
+  if (priestTile.piece.acted === true) {
+    return { game, result: pieceAlreadyActed };
   }
 
   if (targetTile.piece === null || targetTile.piece.owner !== action.player) {
@@ -611,9 +625,10 @@ export const handleHeal = (
     piece: healedPiece,
   });
 
-  const afterHeal = advanceClock(
-    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+  const afterHeal = withPlayer(
+    { ...game, tiles: restPiece(updatedTiles, action.priestPosition) },
     action.player,
+    updatedPlayer,
   );
   return {
     game: afterHeal,
@@ -646,6 +661,17 @@ export const handleResearch = (
     };
   }
 
+  if (buildingLevel(tile.building) < 2) {
+    return {
+      game,
+      result: { success: false, error: "Research needs a Castle — upgrade your Keep first" },
+    };
+  }
+
+  if (tile.building.acted === true) {
+    return { game, result: buildingAlreadyActed };
+  }
+
   const player = getPlayer(game, action.player);
 
   if (!canResearch(player.research, action.researchType)) {
@@ -666,75 +692,14 @@ export const handleResearch = (
     applyResearch(player.research, action.researchType),
   );
 
-  const afterResearch = advanceClock(
-    withPlayer(game, action.player, updatedPlayer),
+  const afterResearch = withPlayer(
+    { ...game, tiles: restBuilding(game.tiles, action.castlePosition) },
     action.player,
+    updatedPlayer,
   );
   return {
     game: afterResearch,
     result: { success: true, message: `Researched ${action.researchType}` },
-  };
-};
-
-export const handleEnterTower = (
-  game: Game,
-  action: EnterTowerAction,
-): { readonly game: Game; readonly result: ActionResult } => {
-  const turnError = validateTurn(game, action.player);
-  if (turnError !== null) {
-    return { game, result: turnError };
-  }
-
-  const kingTile = findTile(game.tiles, action.kingPosition);
-  const towerTile = findTile(game.tiles, action.towerPosition);
-
-  if (kingTile === undefined || towerTile === undefined) {
-    return { game, result: { success: false, error: "Invalid tile position" } };
-  }
-
-  if (
-    kingTile.piece === null ||
-    kingTile.piece.kind !== PieceKind.king ||
-    kingTile.piece.owner !== action.player
-  ) {
-    return {
-      game,
-      result: { success: false, error: "No king or not your king" },
-    };
-  }
-
-  if (
-    towerTile.building === null ||
-    towerTile.building.type !== BuildingType.tower ||
-    towerTile.building.owner !== action.player
-  ) {
-    return {
-      game,
-      result: { success: false, error: "No tower or not your tower" },
-    };
-  }
-
-  if (!areNeighbors(kingTile, towerTile)) {
-    return {
-      game,
-      result: { success: false, error: "King must be adjacent to tower" },
-    };
-  }
-
-  const castle = createCastleBuilding(action.player);
-  const king = kingTile.piece;
-  const updatedTiles = replaceTile(
-    replaceTile(game.tiles, { ...kingTile, piece: null }),
-    { ...towerTile, building: castle, piece: king },
-  );
-
-  const afterEnter = advanceClock(
-    { ...game, tiles: updatedTiles },
-    action.player,
-  );
-  return {
-    game: afterEnter,
-    result: { success: true, message: "King entered tower, castle created" },
   };
 };
 
@@ -789,9 +754,10 @@ export const handleSummonArchAngel = (
   const archAngel = createArchAngel(action.player);
   const updatedTiles = replaceTile(game.tiles, { ...tile, piece: archAngel });
 
-  const afterSummon = advanceClock(
-    withPlayer({ ...game, tiles: updatedTiles }, action.player, updatedPlayer),
+  const afterSummon = withPlayer(
+    { ...game, tiles: restBuilding(updatedTiles, action.churchPosition) },
     action.player,
+    updatedPlayer,
   );
   return {
     game: afterSummon,
@@ -876,12 +842,8 @@ export const handleAttack = (
                 : targetTile.piece,
           }
         : targetTile;
-      const updatedTiles = replaceTile(game.tiles, updatedTargetTile);
-      const afterAttack = advanceClock(
-        { ...game, tiles: updatedTiles },
-        action.player,
-      );
-      const afterWinCheck = checkWinCondition(afterAttack);
+      const updatedTiles = restPiece(replaceTile(game.tiles, updatedTargetTile), action.attackerPosition);
+      const afterWinCheck = checkWinCondition({ ...game, tiles: updatedTiles });
       return {
         game: afterWinCheck,
         result: { success: true, message: "Attack successful" },
@@ -899,12 +861,8 @@ export const handleAttack = (
       const updatedTargetTile: Tile = combatResult.destroyed
         ? { ...targetTile, piece: null }
         : { ...targetTile, piece: combatResult.survivingPiece };
-      const updatedTiles = replaceTile(game.tiles, updatedTargetTile);
-      const afterAttack = advanceClock(
-        { ...game, tiles: updatedTiles },
-        action.player,
-      );
-      const afterWinCheck = checkWinCondition(afterAttack);
+      const updatedTiles = restPiece(replaceTile(game.tiles, updatedTargetTile), action.attackerPosition);
+      const afterWinCheck = checkWinCondition({ ...game, tiles: updatedTiles });
       return {
         game: afterWinCheck,
         result: { success: true, message: "Attack successful" },
@@ -950,16 +908,21 @@ export const handleUpgradeBuilding = (
   }
   if (
     tile.building === null ||
-    tile.building.type !== BuildingType.house ||
+    (tile.building.type !== BuildingType.house && tile.building.type !== BuildingType.castle) ||
     tile.building.owner !== action.player
   ) {
-    return { game, result: { success: false, error: "Only your own houses can be upgraded" } };
+    return { game, result: { success: false, error: "Only your own houses and castle can be upgraded" } };
   }
 
+  if (tile.building.acted === true) {
+    return { game, result: buildingAlreadyActed };
+  }
+
+  const isCastle = tile.building.type === BuildingType.castle;
   const level = buildingLevel(tile.building);
-  const cost = houseUpgradeCost(level);
+  const cost = isCastle ? castleUpgradeCost(level) : houseUpgradeCost(level);
   if (cost === null) {
-    return { game, result: { success: false, error: "This house is already a manor" } };
+    return { game, result: { success: false, error: isCastle ? "Your castle is already a citadel" : "This house is already a manor" } };
   }
 
   const player = getPlayer(game, action.player);
@@ -967,14 +930,17 @@ export const handleUpgradeBuilding = (
     return { game, result: { success: false, error: "Cannot afford this upgrade" } };
   }
 
-  const upgraded = replaceTile(game.tiles, { ...tile, building: { ...tile.building, level: level + 1 } });
-  const afterUpgrade = advanceClock(
-    withPlayer({ ...game, tiles: upgraded }, action.player, payForCost(player, cost)),
-    action.player,
-  );
+  const names = isCastle ? CASTLE_LEVEL_NAMES : HOUSE_LEVEL_NAMES;
+  const upgraded = replaceTile(game.tiles, {
+    ...tile,
+    building: isCastle
+      ? { ...tile.building, level: level + 1, viewRange: 2 + level, defense: 2 + level, acted: true }
+      : { ...tile.building, level: level + 1, acted: true },
+  });
+  const afterUpgrade = withPlayer({ ...game, tiles: upgraded }, action.player, payForCost(player, cost));
   return {
     game: afterUpgrade,
-    result: { success: true, message: `Upgraded to ${HOUSE_LEVEL_NAMES[level + 1]}` },
+    result: { success: true, message: `Upgraded to ${names[level + 1]}` },
   };
 };
 
@@ -982,7 +948,7 @@ export const handleUpgradeBuilding = (
 // PASS
 // ============================================
 
-/** Advance the clock without acting: one tick, or until the phase changes */
+/** End the phase: night falls (or day breaks), everything rests */
 export const handlePass = (
   game: Game,
   action: PassAction,
@@ -992,23 +958,8 @@ export const handlePass = (
     return { game, result: turnError };
   }
 
-  if (action.toPhaseEnd !== true) {
-    return {
-      game: advanceClock(game, action.player),
-      result: { success: true, message: "Waited an hour" },
-    };
-  }
-
-  // Tick until the other side's phase begins (bounded: a phase is at most
-  // 12 hours at 60 minutes per action, more with Speed research)
-  let current = game;
-  let ticks = 0;
-  while (current.currentPlayer === action.player && ticks < 1000) {
-    current = advanceClock(current, action.player);
-    ticks += 1;
-  }
   return {
-    game: current,
+    game: endPhase(game, action.player),
     result: { success: true, message: `Ended the ${action.player} phase` },
   };
 };
@@ -1036,6 +987,13 @@ export const checkWinCondition = (game: Game): Game => {
       tile.piece.owner === "night",
   );
 
+  const dayCastleStands = game.tiles.some(
+    (tile) => tile.building !== null && tile.building.type === BuildingType.castle && tile.building.owner === "day",
+  );
+  const nightCastleStands = game.tiles.some(
+    (tile) => tile.building !== null && tile.building.type === BuildingType.castle && tile.building.owner === "night",
+  );
+
   const dayHasPiecesOrHouses =
     dayKingAlive ||
     game.tiles.some(
@@ -1056,11 +1014,11 @@ export const checkWinCondition = (game: Game): Game => {
           tile.building.owner === "night"),
     );
 
-  if (!dayKingAlive || !dayHasPiecesOrHouses) {
+  if (!dayKingAlive || !dayCastleStands || !dayHasPiecesOrHouses) {
     return { ...game, gameOver: true, winner: "night" };
   }
 
-  if (!nightKingAlive || !nightHasPiecesOrHouses) {
+  if (!nightKingAlive || !nightCastleStands || !nightHasPiecesOrHouses) {
     return { ...game, gameOver: true, winner: "day" };
   }
 
@@ -1163,8 +1121,6 @@ export const handleAction = (
       return handleHeal(game, action);
     case "research":
       return handleResearch(game, action);
-    case "enterTower":
-      return handleEnterTower(game, action);
     case "summonArchAngel":
       return handleSummonArchAngel(game, action);
     case "attack":

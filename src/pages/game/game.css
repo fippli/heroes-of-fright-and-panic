@@ -687,6 +687,16 @@ canvas {
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
 }
 
+.acted-tag {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 6px;
+  opacity: 0.8;
+}
+
 .doll__hearts {
   display: flex;
   gap: 2px;

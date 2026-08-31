@@ -8,11 +8,10 @@ const SHORTCUTS: readonly (readonly [string, string])[] = [
   ["S D B", "Sword, shield, bow for the selected peasant"],
   ["N M", "Train a priest / summon an archangel (church selected)"],
   ["G", "Heal: select your priest, then click an ally"],
-  ["E", "Enter tower: select your king, then click the tower"],
   ["O F", "Buy a horse next to the selected house / build a boat next to the selected dock"],
-  ["4 7", "Research at the castle: Speed, Queen"],
-  ["U", "Upgrade the selected house (homestead, then manor)"],
-  ["Space", "Wait an hour · Shift+Space ends your phase"],
+  ["7", "Research the Queen at a Castle (level 2+)"],
+  ["U", "Upgrade the selected house or castle"],
+  ["Space", "End your phase — everything rests, the other side plays"],
   ["Esc", "Cancel build or target mode"],
   ["?", "This help"],
 ];
@@ -39,14 +38,14 @@ export const HelpOverlay = ({ open, onClose }: { readonly open: boolean; readonl
         <div className="help__columns">
           <section>
             <h2>The game</h2>
-            <p>Two alliances share an island: <strong>Day</strong> plays from 06:00 to 18:00, <strong>Night</strong> from 18:00 to 06:00. Every action takes one hour, so a phase is twelve actions — wait or end your phase when you have nothing to do.</p>
-            <p><strong>Win</strong> by killing the other king. A king inside a castle dies when the castle falls.</p>
+            <p>Two alliances share an island and take turns as <strong>Day</strong> and <strong>Night</strong>. A phase is a round: every piece and every building may act once. End your phase when you are done — production arrives at dusk and dawn.</p>
+            <p><strong>Win</strong> by killing the other king or razing their castle. You start with a <strong>Keep</strong> — upgrade it to a <strong>Castle</strong> (unlocks research) and on to a <strong>Citadel</strong>. If it falls, your kingdom falls.</p>
             <h2>Your kingdom</h2>
             <p>Your kingdom is what your pieces can see. You may only build on grass inside it. Forests and mountains cannot be entered; there is always a pass around them. Water needs a boat, built at a dock (docks go on sand by the shore).</p>
             <h2>Economy</h2>
             <p>At dawn (Day) and dusk (Night) your <strong>houses</strong> produce: +1 wood per adjacent forest tile, +1 food per adjacent farm (grass next to a house becomes farm), +1 stone per adjacent mountain. <strong>Upgrade</strong> a house (3 wood + 2 stone) into a homestead to get +2 stone and +1 iron per mountain, then (5 wood + 5 stone + 1 iron) into a manor for +1 gold per mountain and double wood and food. A priest in a church makes faith; a peasant in a boat on open water fishes.</p>
             <h2>Pieces</h2>
-            <p>Peasants need housing: each house holds one, a homestead two, a manor three — the header shows peasants housed / room. Peasants work, fight and can carry a sword (+1 attack), shield (+1 defense) or bow (+1 range), plus iron armour — helmet, cuirass, greaves — worth +1 defense each; buy any of it with the + in the peasant's panel. Priests heal. The king turns a tower into a castle, which unlocks research. Archangels are summoned with faith and ten praying priests.</p>
+            <p>Peasants need housing: each house holds one, a homestead two, a manor three — the header shows peasants housed / room. Peasants work, fight and can carry a sword (+1 attack), shield (+1 defense) or bow (+1 range), plus iron armour — helmet, cuirass, greaves — worth +1 defense each; buy any of it with the + in the peasant's panel. Priests heal. Your castle stands from the first turn; upgrade it for reach, defense and research. Archangels are summoned with faith and ten praying priests.</p>
           </section>
           <section>
             <h2>Controls</h2>

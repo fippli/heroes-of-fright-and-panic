@@ -35,11 +35,11 @@ export type GameUiState = {
   readonly clock: {
     readonly time: number;
     readonly isDay: boolean;
-    /** Hours until the phase changes */
     readonly hoursLeft: number;
-    /** 0–1 through the current phase */
     readonly progress: number;
   };
+  /** Rounds: how many of your pieces have used their action this phase */
+  readonly round: { readonly acted: number; readonly total: number };
   readonly pendingBuild: BuildingType | null;
   /** A target-picking mode waiting for a tile click */
   readonly pendingTarget: TargetMode | null;
@@ -59,9 +59,10 @@ export type GameUiState = {
   } | null;
 };
 
-export type TargetMode = "heal" | "enterTower" | "horse" | "boat";
+export type TargetMode = "heal" | "horse" | "boat";
 
 export type PieceInfo = {
+  readonly acted: boolean;
   readonly kind: PieceKind;
   readonly owner: string;
   readonly hearts: number;
@@ -76,6 +77,7 @@ export type PieceInfo = {
 };
 
 export type BuildingInfo = {
+  readonly acted: boolean;
   readonly type: BuildingType;
   readonly owner: string;
   readonly viewRange: number;

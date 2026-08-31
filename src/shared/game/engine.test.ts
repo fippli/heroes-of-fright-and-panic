@@ -47,7 +47,6 @@ import {
   handleTrainPriest,
   handleHeal,
   handleResearch,
-  handleEnterTower,
   handleSummonArchAngel,
   handleAttack,
   handlePass,
@@ -271,7 +270,7 @@ describe("handleMove", () => {
     expect(handleMove(enemyWall, move).result.success).toBe(false);
   });
 
-  it("advances the clock after a successful move", () => {
+  it("marks the piece as acted and refuses a second action", () => {
     const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
     const game = makeGame({ tiles });
 
@@ -282,7 +281,19 @@ describe("handleMove", () => {
       to: { row: 2, column: 3 },
     });
 
-    expect(after.clock.time).toBe(7); // default speed = 60 min = 1 hour
+    // Rounds: the clock does not move, but the piece has used its action
+    expect(after.clock.time).toBe(game.clock.time);
+    const moved = after.tiles.find((t) => t.row === 2 && t.column === 3);
+    expect(moved?.piece?.acted).toBe(true);
+
+    const again = handleMove(after, {
+      type: "move",
+      player: "day",
+      from: { row: 2, column: 3 },
+      to: { row: 2, column: 4 },
+    });
+    expect(again.result.success).toBe(false);
+    expect(again.result.error).toContain("already acted");
   });
 
   it("does not mutate the original game", () => {
@@ -736,43 +747,37 @@ describe("handleHeal", () => {
 // ============================================
 
 describe("handleResearch", () => {
-  it("researches speed at castle", () => {
-    const tiles = placeBuilding(
+  it("researches the queen at a level 2 castle, not at a keep", () => {
+    const keepTiles = placeBuilding(
       placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
       2,
       2,
       createCastleBuilding("day"),
     );
-    const game = makeGame({ tiles });
-
-    const { game: after, result } = handleResearch(game, {
+    const atKeep = handleResearch(makeGame({ tiles: keepTiles }), {
       type: "research",
       player: "day",
-      researchType: ResearchType.speed,
+      researchType: ResearchType.queen,
       castlePosition: { row: 2, column: 2 },
     });
+    expect(atKeep.result.success).toBe(false);
+    expect(atKeep.result.error).toContain("upgrade");
 
+    const castleTiles = placeBuilding(
+      placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
+      2,
+      2,
+      createCastleBuilding("day", 2),
+    );
+    const { game: after, result } = handleResearch(makeGame({ tiles: castleTiles }), {
+      type: "research",
+      player: "day",
+      researchType: ResearchType.queen,
+      castlePosition: { row: 2, column: 2 },
+    });
     expect(result.success).toBe(true);
-    expect(after.dayPlayer.research.speedLevel).toBe(1);
-  });
-
-  it("deducts research cost (speed = 1 wood)", () => {
-    const tiles = placeBuilding(
-      placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      2,
-      2,
-      createCastleBuilding("day"),
-    );
-    const game = makeGame({ tiles });
-
-    const { game: after } = handleResearch(game, {
-      type: "research",
-      player: "day",
-      researchType: ResearchType.speed,
-      castlePosition: { row: 2, column: 2 },
-    });
-
-    expect(after.dayPlayer.resources.wood).toBe(49);
+    expect(after.dayPlayer.research.hasQueen).toBe(true);
+    expect(after.dayPlayer.resources.gold).toBe(makeGame({}).dayPlayer.resources.gold - 25);
   });
 
   it("rejects research without castle", () => {
@@ -787,7 +792,7 @@ describe("handleResearch", () => {
     const { result } = handleResearch(game, {
       type: "research",
       player: "day",
-      researchType: ResearchType.speed,
+      researchType: ResearchType.queen,
       castlePosition: { row: 2, column: 2 },
     });
 
@@ -798,71 +803,6 @@ describe("handleResearch", () => {
 // ============================================
 // ENTER TOWER TESTS
 // ============================================
-
-describe("handleEnterTower", () => {
-  it("transforms tower into castle when king enters", () => {
-    const tiles = placeBuilding(
-      placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      2,
-      3,
-      createTowerBuilding("day"),
-    );
-    const game = makeGame({ tiles });
-
-    const { game: after, result } = handleEnterTower(game, {
-      type: "enterTower",
-      player: "day",
-      kingPosition: { row: 2, column: 2 },
-      towerPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(true);
-    const towerTile = after.tiles.find((t) => t.row === 2 && t.column === 3);
-    expect(towerTile?.building?.type).toBe(BuildingType.castle);
-    expect(towerTile?.piece?.kind).toBe(PieceKind.king);
-
-    const kingOrigin = after.tiles.find((t) => t.row === 2 && t.column === 2);
-    expect(kingOrigin?.piece).toBeNull();
-  });
-
-  it("rejects non-king entering tower", () => {
-    const tiles = placeBuilding(
-      placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day")),
-      2,
-      3,
-      createTowerBuilding("day"),
-    );
-    const game = makeGame({ tiles });
-
-    const { result } = handleEnterTower(game, {
-      type: "enterTower",
-      player: "day",
-      kingPosition: { row: 2, column: 2 },
-      towerPosition: { row: 2, column: 3 },
-    });
-
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects entering non-adjacent tower", () => {
-    const tiles = placeBuilding(
-      placePiece(make5x5GrassTiles(), 0, 0, createKing("day")),
-      4,
-      4,
-      createTowerBuilding("day"),
-    );
-    const game = makeGame({ tiles });
-
-    const { result } = handleEnterTower(game, {
-      type: "enterTower",
-      player: "day",
-      kingPosition: { row: 0, column: 0 },
-      towerPosition: { row: 4, column: 4 },
-    });
-
-    expect(result.success).toBe(false);
-  });
-});
 
 // ============================================
 // ATTACK TESTS
@@ -1014,25 +954,39 @@ describe("checkWinCondition", () => {
     expect(result.winner).toBe("night");
   });
 
-  it("day wins when night king is dead", () => {
-    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createKing("day"));
-    const game = makeGame({ tiles });
+  const bothKingdoms = () =>
+    placeBuilding(
+      placeBuilding(
+        placePiece(placePiece(make5x5GrassTiles(), 2, 2, createKing("day")), 3, 3, createKing("night")),
+        2,
+        2,
+        createCastleBuilding("day"),
+      ),
+      3,
+      3,
+      createCastleBuilding("night"),
+    );
 
-    const result = checkWinCondition(game);
+  it("day wins when the night king is dead", () => {
+    const tiles = bothKingdoms().map((tile) =>
+      tile.row === 3 && tile.column === 3 ? { ...tile, piece: null } : tile,
+    );
+    const result = checkWinCondition(makeGame({ tiles }));
     expect(result.gameOver).toBe(true);
     expect(result.winner).toBe("day");
   });
 
-  it("game continues when both kings are alive", () => {
-    const tiles = placePiece(
-      placePiece(make5x5GrassTiles(), 2, 2, createKing("day")),
-      3,
-      3,
-      createKing("night"),
+  it("razing the castle loses the game even with the king alive", () => {
+    const tiles = bothKingdoms().map((tile) =>
+      tile.row === 3 && tile.column === 3 ? { ...tile, building: null } : tile,
     );
-    const game = makeGame({ tiles });
+    const result = checkWinCondition(makeGame({ tiles }));
+    expect(result.gameOver).toBe(true);
+    expect(result.winner).toBe("day");
+  });
 
-    const result = checkWinCondition(game);
+  it("game continues while both kings and castles stand", () => {
+    const result = checkWinCondition(makeGame({ tiles: bothKingdoms() }));
     expect(result.gameOver).toBe(false);
   });
 
@@ -1122,50 +1076,18 @@ describe("handleSummonArchAngel", () => {
 // ============================================
 
 describe("clock and turns", () => {
-  it("switches to night player when clock crosses 18:00", () => {
-    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
-    const game = makeGame({
-      tiles,
-      clock: { time: 17, hasDawned: true, hasDusked: false },
-    });
+  it("ending the phase flips to night, rests every actor and runs production", () => {
+    const base = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
+    const game = makeGame({ tiles: base });
+    const moved = handleMove(game, { type: "move", player: "day", from: { row: 2, column: 2 }, to: { row: 2, column: 3 } }).game;
 
-    const { game: after } = handleMove(game, {
-      type: "move",
-      player: "day",
-      from: { row: 2, column: 2 },
-      to: { row: 2, column: 3 },
-    });
-
-    // Clock goes from 17 to 18 = dusk
+    const { game: after, result } = handlePass(moved, { type: "pass", player: "day" });
+    expect(result.success).toBe(true);
     expect(after.currentPlayer).toBe("night");
-  });
-
-  it("speed research reduces time per action", () => {
-    const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
-    const game = makeGame({
-      tiles,
-      dayPlayer: createPlayer({
-        type: "day",
-        resources: createResourceMap({
-          wood: 50,
-          stone: 50,
-          iron: 50,
-          gold: 50,
-          food: 50,
-          faith: 200,
-        }),
-        research: createResearch({ speedLevel: 1 }), // 30 min per action
-      }),
-    });
-
-    const { game: after } = handleMove(game, {
-      type: "move",
-      player: "day",
-      from: { row: 2, column: 2 },
-      to: { row: 2, column: 3 },
-    });
-
-    expect(after.clock.time).toBe(6.5); // 6 + 0.5 hours
+    expect(after.clock.time).toBe(18);
+    expect(after.clock.hasDusked).toBe(true);
+    const rested = after.tiles.find((t) => t.row === 2 && t.column === 3);
+    expect(rested?.piece?.acted).toBe(false);
   });
 });
 
@@ -1292,13 +1214,13 @@ describe("handleAction", () => {
 });
 
 describe("handlePass", () => {
-  it("advances the clock one tick without moving anything", () => {
+  it("pass ends the phase outright", () => {
     const tiles = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
     const game = makeGame({ tiles });
     const { game: after, result } = handlePass(game, { type: "pass", player: "day" });
     expect(result.success).toBe(true);
-    expect(after.clock.time).toBe(game.clock.time + 1);
-    expect(after.tiles).toEqual(game.tiles);
+    expect(after.currentPlayer).toBe("night");
+    expect(after.clock.time).toBe(18);
   });
 
   it("ends the phase in one action with toPhaseEnd", () => {

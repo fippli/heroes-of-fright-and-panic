@@ -25,6 +25,7 @@ export class Piece {
   readonly attack: number;
   readonly defense: number;
   readonly move: number;
+  readonly acted: boolean;
 
   constructor({
     kind,
@@ -39,6 +40,7 @@ export class Piece {
     attack,
     defense,
     move,
+    acted,
   }: {
     kind: PieceKind;
     viewRange?: number;
@@ -52,6 +54,7 @@ export class Piece {
     attack?: number;
     defense?: number;
     move?: number;
+    acted?: boolean;
   }) {
     this.kind = kind;
     this.viewRange = viewRange ?? 1;
@@ -65,6 +68,7 @@ export class Piece {
     this.attack = attack ?? 1;
     this.defense = defense ?? 0;
     this.move = move ?? 1;
+    this.acted = acted ?? false;
   }
 
   render(
@@ -73,6 +77,10 @@ export class Piece {
     imageAssets: ImageAssets,
   ): void {
     ctx.save();
+    if (this.acted) {
+      // A piece that has used its action rests until the phase ends
+      ctx.globalAlpha = 0.55;
+    }
     const x = Hexagon.x(position.row, position.column);
     const y = Hexagon.y(position.row);
     // Prefer a dedicated sprite: mounted (horse/boat) beats armoured beats

@@ -16,7 +16,7 @@ describe("describeEvent", () => {
 
   it("marks refused actions with the reason", () => {
     expect(describeEvent(event({ action: { type: "pass", player: "night" }, result: { success: false, error: "Not your turn" } })))
-      .toBe("Night waited an hour — refused: Not your turn");
+      .toBe("Night ended their phase — refused: Not your turn");
   });
 
   it("handles AI stall notes and creation", () => {

@@ -27,12 +27,10 @@ Commands:
   steed <type> <house> <target>  Buy: horse, boat
   train <row>,<col>         Train priest at church
   heal <priest> <target>    Priest heals adjacent piece
-  research <type> <row>,<col>  Research: speed, queen
+  research queen <row>,<col>   Research the Queen (needs a Castle)
   upgrade <row>,<col>       Upgrade a house (homestead, manor)
-  enter <king> <tower>      King enters tower (creates castle)
   summon <row>,<col>        Summon arch angel at church
-  pass [phase]              Wait one hour (or the rest of the phase)
-  end                       End your phase
+  end                       End your phase (everything rests, night falls)
   inspect <row>,<col>       Show tile details (i)
   status                    Show resources and clock (st)
   board                     Redraw the board (show)

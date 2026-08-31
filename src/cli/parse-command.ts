@@ -258,7 +258,7 @@ export const parseCommand = (
       const researchName = parts.at(1);
       const posStr = parts.at(2);
       if (researchName === undefined || posStr === undefined) {
-        return { type: "error", message: "Usage: research <speed|queen> <row>,<col>" };
+        return { type: "error", message: "Usage: research queen <row>,<col>" };
       }
       const castlePosition = parsePosition(posStr);
       if (castlePosition === null) {
@@ -266,49 +266,12 @@ export const parseCommand = (
       }
       const researchType = parseResearchType(researchName);
       if (researchType === null) {
-        return { type: "error", message: `Unknown research: ${researchName}. Options: speed, queen` };
+        return { type: "error", message: `Unknown research: ${researchName}. Options: queen` };
       }
       return {
         type: "action",
         action: { type: "research", player: currentPlayer, researchType, castlePosition },
       };
-    }
-
-    case "enter": {
-      const kingStr = parts.at(1);
-      const towerStr = parts.at(2);
-      if (kingStr === undefined || towerStr === undefined) {
-        return { type: "error", message: "Usage: enter <kingRow>,<kingCol> <towerRow>,<towerCol>" };
-      }
-      const kingPosition = parsePosition(kingStr);
-      const towerPosition = parsePosition(towerStr);
-      if (kingPosition === null || towerPosition === null) {
-        return { type: "error", message: "Invalid position. Use: row,col" };
-      }
-      return {
-        type: "action",
-        action: { type: "enterTower", player: currentPlayer, kingPosition, towerPosition },
-      };
-    }
-
-    case "upgrade":
-    case "up": {
-      const posStr = parts.at(1);
-      if (posStr === undefined) {
-        return { type: "error", message: "Usage: upgrade <row>,<col>" };
-      }
-      const position = parsePosition(posStr);
-      if (position === null) {
-        return { type: "error", message: "Invalid position. Use: row,col" };
-      }
-      return { type: "action", action: { type: "upgradeBuilding", player: currentPlayer, position } };
-    }
-
-    case "pass":
-    case "wait":
-    case "end": {
-      const toPhaseEnd = command === "end" || parts.at(1) === "phase";
-      return { type: "action", action: { type: "pass", player: currentPlayer, toPhaseEnd } };
     }
 
     case "summon": {
@@ -367,7 +330,6 @@ const parseSteedType = (name: string): SteedType | null => {
 
 const parseResearchType = (name: string): ResearchType | null => {
   switch (name) {
-    case "speed": return ResearchType.speed;
     case "queen": return ResearchType.queen;
     default: return null;
   }

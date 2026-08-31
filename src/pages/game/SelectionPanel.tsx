@@ -1,4 +1,4 @@
-import { BuildingType, HOUSE_LEVEL_NAMES, houseUpgradeCost } from "@shared/building";
+import { BuildingType, HOUSE_LEVEL_NAMES, houseUpgradeCost, CASTLE_LEVEL_NAMES, castleUpgradeCost } from "@shared/building";
 import { EquipmentType, createEquipment } from "@shared/equipment";
 import { PieceKind, peasantSpawnCost, priestTrainCost, archAngelSummonCost } from "@shared/piece";
 import { ResearchType, researchCostOf } from "@shared/research";
@@ -13,7 +13,6 @@ const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower",
 const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", bow: "Bow", helmet: "Helmet", torso: "Cuirass", legs: "Greaves", horse: "Horse", boat: "Boat" };
 
 const RESEARCH: readonly { readonly type: ResearchType; readonly label: string; readonly key: string }[] = [
-  { type: ResearchType.speed, label: "Speed", key: "4" },
   { type: ResearchType.queen, label: "Queen", key: "7" },
 ];
 
@@ -70,6 +69,7 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
   const ownPiece = selected?.piece ?? null;
   const ownBuilding = selected?.building ?? null;
   const can = (cost: ResourceMap): boolean => ui.isPlayer && ui.isMyTurn && affordable(ui.resources, cost);
+  const pieceCan = (cost: ResourceMap): boolean => can(cost) && piece?.acted !== true;
   const icons = ui.icons;
 
   const targetButton = (label: string, hotkey: string, mode: TargetMode, cost: ResourceMap, hint: string) => (
@@ -91,7 +91,9 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
       : building !== null
         ? building.type === BuildingType.house
           ? HOUSE_LEVEL_NAMES[building.level] ?? "House"
-          : BUILDING_LABEL[building.type] ?? building.type
+          : building.type === BuildingType.castle
+            ? CASTLE_LEVEL_NAMES[building.level] ?? "Castle"
+            : BUILDING_LABEL[building.type] ?? building.type
         : selected?.landscape ?? "Tile";
   const owner = piece?.owner ?? building?.owner ?? null;
 
@@ -103,7 +105,7 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
     ownPiece === PieceKind.peasant && at !== null
       ? {
           cost: createEquipment(type).cost,
-          enabled: can(createEquipment(type).cost),
+          enabled: pieceCan(createEquipment(type).cost),
           hotkey: hotkey === "" ? "click" : hotkey,
           onBuy: () => void game.craftEquipmentAt(type, at),
         }
@@ -132,6 +134,7 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
                 <Slot label="Greaves" item={has("legs")} sprite={ui.sprites.items.legs} side="left" icons={icons} buy={buyFor(EquipmentType.legs, "")} />
               </div>
               <div className="doll__figure">
+                {piece.acted && <span className="acted-tag">has acted</span>}
                 {ui.sprites.piece !== null && <img src={ui.sprites.piece} alt={title} />}
                 <div className="doll__hearts" aria-label={`${piece.hearts} of ${piece.maxHearts} hearts`}>
                   {Array.from({ length: piece.maxHearts }, (_, index) => (
@@ -164,12 +167,6 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
             <p className="hint">Steeds are bought at a house and mounted by walking onto them.</p>
           )}
 
-          {ownPiece === PieceKind.king && (
-            <section className="selection__actions">
-              <h3>King</h3>
-              {targetButton("Enter tower", "E", "enterTower", createResourceMap({}), "Turns an adjacent tower into your castle")}
-            </section>
-          )}
 
           {ownPiece === PieceKind.priest && (
             <section className="selection__actions">
@@ -201,12 +198,12 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
                   hotkey="U"
                   cost={houseUpgradeCost(building.level) as ResourceMap}
                   icons={icons}
-                  enabled={can(houseUpgradeCost(building.level) as ResourceMap)}
+                  enabled={can(houseUpgradeCost(building.level) as ResourceMap) && !building.acted}
                   onClick={() => void game.upgradeBuildingAt(at)}
                   title={building.level === 1 ? "Homestead: +2 stone and +1 iron per adjacent mountain" : "Manor: +1 gold per mountain, double wood and food"}
                 />
               )}
-              <ActionButton label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost())} onClick={() => void game.spawnPeasantAt(at)} />
+              <ActionButton label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost()) && building?.acted !== true} onClick={() => void game.spawnPeasantAt(at)} />
               {targetButton("Buy horse", "O", "horse", createSteed(SteedType.horse).cost, "Placed on a tile next to the house")}
             </section>
           )}
@@ -221,24 +218,33 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
           {ownBuilding === BuildingType.church && at !== null && (
             <section className="selection__actions">
               <h3>Church</h3>
-              <ActionButton label="Train priest" hotkey="N" cost={priestTrainCost()} icons={icons} enabled={can(priestTrainCost())} onClick={() => void game.trainPriestAt(at)} />
-              <ActionButton label="Summon archangel" hotkey="M" cost={archAngelSummonCost()} icons={icons} enabled={can(archAngelSummonCost())} onClick={() => void game.summonArchAngelAt(at)} />
+              <ActionButton label="Train priest" hotkey="N" cost={priestTrainCost()} icons={icons} enabled={can(priestTrainCost()) && building?.acted !== true} onClick={() => void game.trainPriestAt(at)} />
+              <ActionButton label="Summon archangel" hotkey="M" cost={archAngelSummonCost()} icons={icons} enabled={can(archAngelSummonCost()) && building?.acted !== true} onClick={() => void game.summonArchAngelAt(at)} />
             </section>
           )}
 
-          {ownBuilding === BuildingType.castle && at !== null && (
+          {ownBuilding === BuildingType.castle && at !== null && building !== null && (
             <section className="selection__actions">
-              <h3>Research</h3>
-              {RESEARCH.map(({ type, label, key }) => (
-                <ActionButton key={type} label={label} hotkey={key} cost={researchCostOf(type)} icons={icons} enabled={can(researchCostOf(type))} onClick={() => void game.researchAt(type, at)} />
-              ))}
-            </section>
-          )}
-
-          {ownBuilding === BuildingType.tower && (
-            <section className="selection__actions">
-              <h3>Tower</h3>
-              <p className="hint">Select your king next to this tower and use Enter tower to make it a castle.</p>
+              <h3>{CASTLE_LEVEL_NAMES[building.level] ?? "Castle"}</h3>
+              {castleUpgradeCost(building.level) !== null && (
+                <ActionButton
+                  label={`Upgrade to ${CASTLE_LEVEL_NAMES[building.level + 1]}`}
+                  hotkey="U"
+                  cost={castleUpgradeCost(building.level) as ResourceMap}
+                  icons={icons}
+                  enabled={can(castleUpgradeCost(building.level) as ResourceMap) && !building.acted}
+                  onClick={() => void game.upgradeBuildingAt(at)}
+                  title={building.level === 1 ? "Castle: +1 view and defense, unlocks research" : "Citadel: +1 view and defense"}
+                />
+              )}
+              {building.level >= 2 ? (
+                RESEARCH.map(({ type, label, key }) => (
+                  <ActionButton key={type} label={label} hotkey={key} cost={researchCostOf(type)} icons={icons} enabled={can(researchCostOf(type)) && !building.acted} onClick={() => void game.researchAt(type, at)} />
+                ))
+              ) : (
+                <p className="hint">Research unlocks once your Keep becomes a Castle.</p>
+              )}
+              <p className="hint">If this falls, the kingdom falls with it.</p>
             </section>
           )}
         </>

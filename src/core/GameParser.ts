@@ -28,10 +28,7 @@ const parsePlayer = (serverPlayer: ServerPlayer): Player =>
   createPlayer({
     type: serverPlayer.type,
     resources: createResourceMap(serverPlayer.resources),
-    research: {
-      speedLevel: serverPlayer.research?.speedLevel ?? 0,
-      hasQueen: serverPlayer.research?.hasQueen ?? false,
-    },
+    research: { hasQueen: serverPlayer.research?.hasQueen ?? false },
   });
 
 const parseTile = (tile: ServerTile): Tile =>
@@ -46,6 +43,7 @@ const parseTile = (tile: ServerTile): Tile =>
             type: tile.building.type,
             viewRange: tile.building.viewRange ?? 1,
             level: tile.building.level ?? 1,
+            acted: tile.building.acted ?? false,
             owner: createPlayer({
               type: tile.building.owner ?? "day",
             }),
@@ -109,6 +107,7 @@ const parsePiece = (serverPiece: ServerPiece): Piece => {
     attack: getPieceAttack(enginePiece),
     defense: getPieceDefense(enginePiece),
     move: getPieceMove(enginePiece),
+    acted: enginePiece.acted ?? false,
   });
 };
 

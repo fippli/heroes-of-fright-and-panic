@@ -20,6 +20,7 @@ export class Building {
   readonly walkable: boolean = false;
   readonly viewRange: number;
   readonly level: number;
+  readonly acted: boolean;
 
   constructor({
     type,
@@ -29,6 +30,7 @@ export class Building {
     viewRange,
     owner,
     level,
+    acted,
   }: {
     type: BuildingType;
     walkable?: boolean;
@@ -37,8 +39,10 @@ export class Building {
     viewRange?: number;
     owner: Player;
     level?: number;
+    acted?: boolean;
   }) {
     this.level = level ?? 1;
+    this.acted = acted ?? false;
     this.walkable = walkable ?? true;
     this.viewRange = viewRange ?? 1;
     this.type = type;

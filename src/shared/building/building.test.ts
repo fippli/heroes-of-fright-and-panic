@@ -52,8 +52,9 @@ describe("Building", () => {
       expect(createTowerBuilding("day").viewRange).toBe(4);
     });
 
-    it("castle has view range 3", () => {
-      expect(createCastleBuilding("day").viewRange).toBe(3);
+    it("a keep sees 2, a citadel 4", () => {
+      expect(createCastleBuilding("day").viewRange).toBe(2);
+      expect(createCastleBuilding("day", 3).viewRange).toBe(4);
     });
 
     it("wall has view range 0", () => {
@@ -86,12 +87,14 @@ describe("Building", () => {
   });
 
   describe("defense", () => {
-    it("all buildings have 1 defense", () => {
+    it("ordinary buildings have 1 defense; castles grow with their tier", () => {
       expect(createHouseBuilding("day").defense).toBe(1);
       expect(createTowerBuilding("day").defense).toBe(1);
-      expect(createCastleBuilding("day").defense).toBe(1);
       expect(createWallBuilding("day").defense).toBe(1);
       expect(createChurchBuilding("day").defense).toBe(1);
+      expect(createCastleBuilding("day").defense).toBe(2);
+      expect(createCastleBuilding("day", 2).defense).toBe(3);
+      expect(createCastleBuilding("day", 3).defense).toBe(4);
     });
   });
 

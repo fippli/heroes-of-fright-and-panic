@@ -29,6 +29,8 @@ export type Piece = {
   readonly steed: Steed | null;
   readonly canEquip: boolean;
   readonly canMountSteed: boolean;
+  /** Set once the piece has used its action this phase */
+  readonly acted?: boolean;
 };
 
 // ============================================

@@ -168,8 +168,7 @@ export const GamePage = () => {
           },
           "?": () => setHelpOpen(true),
           "shift+?": () => setHelpOpen(true),
-          " ": () => void game.passTurn(false),
-          "shift+ ": () => void game.passTurn(true),
+          " ": () => void game.passTurn(true), // end the phase
 
           // Unit actions
           p: (position) => game.spawnPeasant(position),
@@ -179,13 +178,11 @@ export const GamePage = () => {
           x: (position) => game.attack(position),
 
           // Building / unit actions (some need a selected source first)
-          e: () => game.setPendingTarget("enterTower"), // king selected → click tower
           n: (position) => game.trainPriest(position), // on church
           m: (position) => game.summonArchAngel(position), // on church
           g: () => game.setPendingTarget("heal"), // priest selected → click ally
           o: () => game.setPendingTarget("horse"), // house selected → click tile
           f: () => game.setPendingTarget("boat"), // house selected → click water
-          "4": (position) => game.research(ResearchType.speed, position), // castle
           "7": (position) => game.research(ResearchType.queen, position),
         });
       })

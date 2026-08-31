@@ -59,12 +59,6 @@ export type ResearchAction = BaseAction & {
   readonly castlePosition: TilePosition;
 };
 
-export type EnterTowerAction = BaseAction & {
-  readonly type: "enterTower";
-  readonly kingPosition: TilePosition;
-  readonly towerPosition: TilePosition;
-};
-
 export type SummonArchAngelAction = BaseAction & {
   readonly type: "summonArchAngel";
   readonly churchPosition: TilePosition;
@@ -97,7 +91,6 @@ export type GameAction =
   | TrainPriestAction
   | HealAction
   | ResearchAction
-  | EnterTowerAction
   | SummonArchAngelAction
   | AttackAction
   | PassAction

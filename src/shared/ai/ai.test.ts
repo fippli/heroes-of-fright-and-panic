@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createGame } from "../game/create-game.ts";
 import { generateAllActions, pickAction, playAiPhase } from "./index.ts";
-import { createResearch } from "../research/index.ts";
 
 const gameWithoutDayPieces = () => {
   const game = createGame({ boardSize: 12, name: "ai", alliance: "day", creatorEmail: "a@b.c", inviteEmail: null, seed: 2 });
@@ -39,12 +38,11 @@ describe("playAiPhase", () => {
     expect(report.steps.every((step) => step.action.type === "pass")).toBe(true);
   });
 
-  it("passes the remainder when the attempt budget runs out", () => {
+  it("ends the phase with a single pass when nothing can act", () => {
     const game = gameWithoutDayPieces();
     const report = playAiPhase(game, "day", () => 0.5, 3);
-    expect(report.attempts).toBe(3);
-    expect(report.passedRemainder).toBe(true);
     expect(report.game.currentPlayer).toBe("night");
+    expect(report.steps.at(-1)?.action.type).toBe("pass");
   });
 
   it("plays real actions and still ends the phase within the attempt budget", () => {
@@ -58,11 +56,4 @@ describe("playAiPhase", () => {
     expect(report.steps.length).toBeGreaterThan(0);
   });
 
-  it("never researches Speed past level 2", () => {
-    const base = gameWithoutDayPieces();
-    const research = { ...createResearch(), speedLevel: 2 };
-    const game = { ...base, nightPlayer: { ...base.nightPlayer, research, resources: { ...base.nightPlayer.resources, wood: 99, stone: 99, gold: 99, iron: 99 } } };
-    const actions = generateAllActions(game, "night");
-    expect(actions.some((a) => a.type === "research" && a.researchType === "speed")).toBe(false);
-  });
 });

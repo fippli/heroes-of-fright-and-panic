@@ -23,7 +23,7 @@ const findPiece = (state: ServerGameState, kind: string, owner: string) =>
   );
 
 describe("predictAction", () => {
-  it("applies a legal move locally: piece relocates and the clock advances", () => {
+  it("applies a legal move locally: piece relocates and is marked acted", () => {
     const state = freshGame();
     const from = findPiece(state, "peasant", "day");
     expect(from).toBeDefined();
@@ -45,11 +45,12 @@ describe("predictAction", () => {
     });
 
     expect(predicted).not.toBeNull();
-    expect(predicted!.clock.time).toBe(state.clock.time + 1);
+    expect(predicted!.clock.time).toBe(state.clock.time);
     const moved = predicted!.tiles.find(
       (tile) => tile.row === target!.row && tile.column === target!.column,
     );
     expect(moved?.piece?.kind).toBe("peasant");
+    expect(moved?.piece?.acted).toBe(true);
     // Input state is untouched
     expect(
       state.tiles.find((tile) => tile.row === from!.row && tile.column === from!.column)?.piece?.kind,
