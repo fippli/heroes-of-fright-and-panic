@@ -43,6 +43,15 @@ export const TopBar = ({ ui }: { readonly ui: GameUiState }) => {
             </div>
           ))}
       </div>
+      <div
+        className="topbar__clock"
+        title={`${clock.hoursLeft} hour${clock.hoursLeft === 1 ? "" : "s"} until ${next}`}
+      >
+        <span aria-hidden="true">{clock.isDay ? "☀" : "☾"}</span>
+        <span className="topbar__value">
+          {String(((clock.time % 24) + 24) % 24).padStart(2, "0")}:00
+        </span>
+      </div>
     </header>
   );
 };

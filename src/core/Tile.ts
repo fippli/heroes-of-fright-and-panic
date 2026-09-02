@@ -4,7 +4,7 @@ import type { ImageAssets } from "../images";
 import type { Building } from "./Building";
 import { Hexagon } from "./Hexagon";
 
-import { Landscape } from "./Landscape";
+import { Landscape, LandscapeType } from "./Landscape";
 import type { Piece } from "./Piece";
 
 export type { TilePosition };
@@ -53,6 +53,19 @@ export class Tile {
     this.landscape = landscape ?? null;
   }
 
+  /**
+   * Whether this tile was discovered earlier but is not in current vision:
+   * the server (or an optimistic prediction) gave us terrain data for it,
+   * yet no friendly piece can see it right now.
+   */
+  isRemembered(): boolean {
+    return (
+      !this.explored &&
+      this.landscape !== null &&
+      this.landscape.type !== LandscapeType.unexplored
+    );
+  }
+
   render(ctx: CanvasRenderingContext2D, imageAssets: ImageAssets) {
     ctx.save();
     ctx.clip(Hexagon.path(this.x, this.y, Hexagon.clipRadius));
@@ -66,6 +79,17 @@ export class Tile {
         }
         this.piece?.render(ctx, this, imageAssets);
       }
+    } else if (this.isRemembered()) {
+      // Discovered but out of sight: the last-seen terrain, building and
+      // waiting steed under a shadow — never pieces (they may have moved,
+      // and an enemy could be standing here right now).
+      this.landscape?.render(ctx, this, imageAssets);
+      this.building?.render(ctx, this, imageAssets);
+      if (this.steed !== null) {
+        imageAssets.itemImage(this.steed)?.renderCentered(ctx, this.x, this.y);
+      }
+      ctx.fillStyle = "rgba(10, 10, 25, 0.55)";
+      ctx.fill(Hexagon.path(this.x, this.y, Hexagon.clipRadius));
     } else {
       Landscape.unexplored(ctx, this.x, this.y, imageAssets);
     }

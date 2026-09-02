@@ -1,7 +1,7 @@
-import type { Piece } from "@shared/piece/index.ts";
-import type { Landscape } from "./landscape.ts";
-import type { Building } from "@shared/building/index.ts";
-import type { Steed } from "@shared/steed/index.ts";
+import type { Piece, PlayerType } from "@shared/piece/index.ts";
+import type { Landscape, LandscapeType } from "./landscape.ts";
+import type { Building, BuildingType } from "@shared/building/index.ts";
+import type { Steed, SteedType } from "@shared/steed/index.ts";
 
 export type Tile = {
   readonly column: number;
@@ -10,6 +10,21 @@ export type Tile = {
   readonly piece: Piece | null;
   readonly building: Building | null;
   readonly steed?: Steed | null;
+};
+
+/**
+ * What a player last saw on a tile that has since left their vision: the
+ * terrain and any building or waiting steed, but never pieces. Stale by
+ * design — the world may have changed since.
+ */
+export type RememberedTile = {
+  readonly landscape: LandscapeType | null;
+  readonly building: {
+    readonly type: BuildingType;
+    readonly owner: PlayerType;
+    readonly level: number;
+  } | null;
+  readonly steed: SteedType | null;
 };
 
 export type TilePosition = {

@@ -263,7 +263,9 @@ A player loses if either condition is met:
 
 ## Fog of War
 
-Field of vision comes from **pieces only**. Tiles are visible within the view range of a player's own pieces; non-visible tiles are shown as unexplored.
+Field of vision comes from **pieces only**. Tiles are visible within the view range of a player's own pieces; tiles never seen are shown as unexplored.
+
+**Discovered terrain is remembered.** A tile that has been in vision stays on the map after vision moves away, drawn shadowed with the terrain, buildings and waiting steeds as they were **last seen**. The snapshot can be stale — a remembered building may since have fallen. Pieces are never remembered: an enemy may be standing on a remembered tile without showing. Each player's memory is tracked server-side, so it survives reloads and follows the account.
 
 Buildings produce no field of vision on their own. A player always sees the tile their own building occupies, but an empty building reveals nothing around it.
 

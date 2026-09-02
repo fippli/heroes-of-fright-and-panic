@@ -599,9 +599,14 @@ export class Game {
         tilesInRange.forEach((rangeTile) => (rangeTile.explored = true));
       }
 
-      // You always see your own building's tile (buildings emit no vision).
+      // You always see your own building's tile (buildings emit no vision),
+      // and Queen research reveals its neighbors — mirrors the server's
+      // getVisibleTiles so remembered-tile shading matches actual vision.
       if (tile.building?.owner?.type === this.myPlayerType) {
         tile.explored = true;
+        if (this.player.research.hasQueen) {
+          tile.getNeighbors(this.tiles).forEach((neighbor) => (neighbor.explored = true));
+        }
       }
     });
   }

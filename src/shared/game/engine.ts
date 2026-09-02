@@ -33,7 +33,7 @@ import {
   farm as farmLandscape,
   unexplored as unexploredLandscape,
 } from "../map/landscape.ts";
-import type { Tile } from "../map/tile.ts";
+import type { RememberedTile, Tile } from "../map/tile.ts";
 import { populationOf } from "./population.ts";
 import type { PlayerType } from "../piece/index.ts";
 import {
@@ -48,7 +48,7 @@ import {
   pieceWithEquipment,
   pieceWithHealing,
 } from "../piece/index.ts";
-import { createPlayer, playerWithResearch } from "../player/index.ts";
+import { createPlayer, playerWithResearch, type Player } from "../player/index.ts";
 import { canResearch, applyResearch } from "../research/index.ts";
 import { createSteed, SteedType } from "../steed/index.ts";
 import {
@@ -885,9 +885,14 @@ export const getSpectatorGameState = (game: Game): Game => {
   const filteredTiles = game.tiles.map((tile) => {
     const key = `${tile.row},${tile.column}`;
     if (day.has(key) || night.has(key)) return tile;
-    return { ...tile, piece: null, building: null, landscape: unexploredLandscape() } as Tile;
+    return { ...tile, piece: null, building: null, landscape: unexploredLandscape(), steed: null } as Tile;
   });
-  return { ...game, tiles: filteredTiles };
+  return {
+    ...game,
+    tiles: filteredTiles,
+    dayPlayer: withoutMemory(game.dayPlayer),
+    nightPlayer: withoutMemory(game.nightPlayer),
+  };
 };
 
 // ============================================
@@ -1078,21 +1083,86 @@ export const getVisibleTiles = (
   return visible;
 };
 
+/**
+ * Merge each player's current field of vision into their persistent tile
+ * memory, so once-seen terrain, buildings and waiting steeds stay visible
+ * (faded, via getFilteredGameState) after the tiles leave vision. Pieces are
+ * deliberately never remembered.
+ */
+export const rememberVisible = (game: Game): Game => {
+  const remember = (player: Player): Player => {
+    const visible = getVisibleTiles(game, player.type);
+    if (visible.size === 0) return player;
+    const explored: Record<string, RememberedTile> = { ...player.explored };
+    game.tiles.forEach((tile) => {
+      const key = `${tile.row},${tile.column}`;
+      if (!visible.has(key)) return;
+      explored[key] = {
+        landscape: tile.landscape?.type ?? null,
+        building:
+          tile.building === null
+            ? null
+            : {
+                type: tile.building.type,
+                owner: tile.building.owner,
+                level: buildingLevel(tile.building),
+              },
+        steed: tile.steed?.type ?? null,
+      };
+    });
+    return { ...player, explored };
+  };
+
+  return {
+    ...game,
+    dayPlayer: remember(game.dayPlayer),
+    nightPlayer: remember(game.nightPlayer),
+  };
+};
+
+/** A remembered tile as served to the client: last-seen snapshot, no pieces */
+const tileFromMemory = (tile: Tile, seen: RememberedTile): Tile => ({
+  ...tile,
+  piece: null,
+  landscape: seen.landscape === null ? null : { type: seen.landscape },
+  building:
+    seen.building === null
+      ? null
+      : {
+          ...createBuilding(seen.building.type, seen.building.owner),
+          level: seen.building.level,
+        },
+  steed: seen.steed === null ? null : createSteed(seen.steed),
+});
+
+/** The memory map is served through the tiles themselves; keep it off the wire */
+const withoutMemory = (player: Player): Player => {
+  const { explored: _explored, ...rest } = player;
+  return rest;
+};
+
 export const getFilteredGameState = (
   game: Game,
   forPlayer: PlayerType,
 ): Game => {
   const visible = getVisibleTiles(game, forPlayer);
+  const memory = getPlayer(game, forPlayer).explored ?? {};
 
   const filteredTiles = game.tiles.map((tile) => {
-    if (visible.has(`${tile.row},${tile.column}`)) {
+    const key = `${tile.row},${tile.column}`;
+    if (visible.has(key)) {
       return tile;
+    }
+    const seen = memory[key];
+    if (seen !== undefined) {
+      return tileFromMemory(tile, seen);
     }
     return {
       ...tile,
       piece: null,
       building: null,
       landscape: unexploredLandscape(),
+      steed: null,
     } as Tile;
   });
 
@@ -1100,10 +1170,12 @@ export const getFilteredGameState = (
     ...game,
     tiles: filteredTiles,
     dayPlayer:
-      forPlayer === "day" ? game.dayPlayer : createPlayer({ type: "day" }),
+      forPlayer === "day"
+        ? withoutMemory(game.dayPlayer)
+        : createPlayer({ type: "day" }),
     nightPlayer:
       forPlayer === "night"
-        ? game.nightPlayer
+        ? withoutMemory(game.nightPlayer)
         : createPlayer({ type: "night" }),
   };
 };

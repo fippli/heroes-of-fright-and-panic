@@ -115,6 +115,13 @@ body:has(.game-body) {
   image-rendering: pixelated;
 }
 
+.topbar__clock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .banner {
   position: absolute;
   top: 52px;
