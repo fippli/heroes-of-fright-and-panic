@@ -87,20 +87,25 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     Player->>Client: Click / command
+    Client->>Client: Predict with shared engine, render immediately
     Client->>Edge: POST game-action
     Edge->>DB: Fetch game state
     DB-->>Edge: Game row (JSONB)
     Edge->>Engine: handleAction(game, action)
     Engine-->>Edge: { game, result }
+    Edge->>DB: UPDATE game state
+    Edge-->>Client: Filtered game state (replaces the prediction)
+    Client-->>Player: Render updated board
 
-    alt AI Opponent
-        Edge->>Engine: generateAllActions + pickAction
-        Engine-->>Edge: AI turns applied
+    par After the response (background)
+        Edge->>DB: Append event log
+        Edge->>Client: Realtime broadcast "updated" on game channel
+        alt AI Opponent
+            Edge->>Engine: Play AI phase, persist, broadcast
+        end
     end
 
-    Edge->>DB: UPDATE game state
-    Edge-->>Client: Filtered game state
-    Client-->>Player: Render updated board
+    Note over Client: Opponent clients hold a realtime subscription and refetch<br/>game-state on each poke (fallback poll every 10s with `since`)
 ```
 
 ### Map Generation Flow

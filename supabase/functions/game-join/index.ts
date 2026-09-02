@@ -5,6 +5,7 @@ import {
 } from "../_shared/supabase-client.ts";
 import { rowToGame } from "@shared/game/converters.ts";
 import type { GameRow } from "@shared/game/types.ts";
+import { broadcastGameUpdate } from "../_shared/notify.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -71,11 +72,12 @@ Deno.serve(async (request) => {
     });
   }
 
+  const joinedAt = new Date();
   const { error: updateError } = await supabase
     .from("games")
     .update({
       [side === "day" ? "day_player_email" : "night_player_email"]: user.email,
-      updated_at: new Date().toISOString(),
+      updated_at: joinedAt.toISOString(),
     })
     .eq("id", gameId);
 
@@ -86,6 +88,9 @@ Deno.serve(async (request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  // Tell anyone already looking at this game that the seat was taken
+  await broadcastGameUpdate(gameId, joinedAt);
 
   return new Response(
     JSON.stringify({ success: true, side, message: `Joined game as ${side} player` }),

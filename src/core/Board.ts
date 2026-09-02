@@ -424,20 +424,24 @@ export class Game {
     // Request notification permission for turn alerts
     Notifications.requestPermission();
 
-    // Start polling for updates if not already polling
-    this.startPolling();
+    // Start watching for updates if not already watching
+    this.startWatching();
   }
 
   /**
-   * Start polling for game state updates
+   * Watch for game state updates (realtime pokes plus a fallback poll)
    * This allows us to see when the other player makes a move
    */
-  private startPolling(): void {
-    this.client.startPolling(this.id, (game) => this.parseQuiet(game));
+  private startWatching(): void {
+    this.client.startWatching(
+      this.id,
+      (game) => this.parseQuiet(game),
+      this.lastServerState?.updatedAt,
+    );
   }
 
   /**
-   * Parse game state without logging (for polling updates)
+   * Parse game state without logging (for watch updates)
    */
   private parseQuiet(game: ServerGameState): void {
     // Store old state to detect changes
@@ -466,8 +470,8 @@ export class Game {
    * Handle game over state
    */
   private handleGameOver(): void {
-    // Stop polling
-    this.stopPolling();
+    // Stop watching for updates
+    this.stopWatching();
 
     // Determine if we won or lost
     const isWinner = this.winner === this.myPlayerType;
@@ -502,10 +506,10 @@ export class Game {
   }
 
   /**
-   * Stop polling for game state updates
+   * Stop watching for game state updates (also called when the page unmounts)
    */
-  private stopPolling(): void {
-    this.client.stopPolling();
+  stopWatching(): void {
+    this.client.stopWatching();
   }
 
   /**

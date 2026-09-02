@@ -1,3 +1,4 @@
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase, getEdgeFunctionError } from "../lib/supabase";
 import { reportClientError } from "../lib/error-report";
 import type { ActionResponse, GameAction, ServerGameState } from "./GameTypes";
@@ -17,45 +18,93 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 
 /**
  * GameClient handles all communication with the game server.
- * Sends actions and polls for state updates.
+ * Sends actions and watches for state updates: the server broadcasts a poke
+ * on the game's realtime channel after every change, and a slow fallback
+ * poll covers missed broadcasts (and lets the server resume a stalled AI).
  */
 export class GameClient {
   private isProcessingAction: boolean = false;
+  private channel: RealtimeChannel | null = null;
   private pollIntervalId: number | null = null;
-  private readonly POLL_INTERVAL_MS = 2000;
+  private fetchInFlight: boolean = false;
+  private refetchQueued: boolean = false;
+  /** updated_at of the newest state this client has seen; lets game-state answer "nothing changed" cheaply */
+  private lastUpdatedAt: string | null = null;
+  private readonly FALLBACK_POLL_MS = 10_000;
 
-  startPolling(
+  startWatching(
     gameId: string,
     onUpdate: (game: ServerGameState) => void,
+    initialUpdatedAt?: string,
   ): void {
-    if (this.pollIntervalId !== null) return;
+    if (this.channel !== null || this.pollIntervalId !== null) return;
+    this.noteUpdatedAt(initialUpdatedAt);
 
-    this.pollIntervalId = window.setInterval(async () => {
-      if (this.isProcessingAction) return;
+    this.channel = supabase
+      .channel(`game-${gameId}`)
+      .on("broadcast", { event: "updated" }, () => {
+        void this.fetchState(gameId, onUpdate);
+      })
+      .subscribe();
 
-      try {
-        const { data, error } = await withTimeout(
-          supabase.functions.invoke("game-state", { body: { gameId } }),
-          POLL_TIMEOUT_MS,
-          "game-state",
-        );
-        // An action started while this poll was in flight; its response is
-        // newer than this snapshot, so drop it.
-        if (this.isProcessingAction) return;
-        if (error === null && data !== null) {
-          onUpdate(data as ServerGameState);
-        }
-      } catch (pollError) {
-        console.warn("Polling error:", pollError);
-      }
-    }, this.POLL_INTERVAL_MS);
+    this.pollIntervalId = window.setInterval(() => {
+      void this.fetchState(gameId, onUpdate);
+    }, this.FALLBACK_POLL_MS);
   }
 
-  stopPolling(): void {
+  stopWatching(): void {
+    if (this.channel !== null) {
+      void supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
     if (this.pollIntervalId !== null) {
       window.clearInterval(this.pollIntervalId);
       this.pollIntervalId = null;
     }
+  }
+
+  private async fetchState(
+    gameId: string,
+    onUpdate: (game: ServerGameState) => void,
+  ): Promise<void> {
+    if (this.isProcessingAction) return;
+    if (this.fetchInFlight) {
+      // A poke landed mid-fetch; that fetch may predate the change, so go again
+      this.refetchQueued = true;
+      return;
+    }
+    this.fetchInFlight = true;
+
+    try {
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("game-state", {
+          body: { gameId, since: this.lastUpdatedAt },
+        }),
+        POLL_TIMEOUT_MS,
+        "game-state",
+      );
+      // An action started while this fetch was in flight; its response is
+      // newer than this snapshot, so drop it.
+      if (this.isProcessingAction) return;
+      if (error === null && data !== null) {
+        if ((data as { notModified?: boolean }).notModified === true) return;
+        const game = data as ServerGameState;
+        this.noteUpdatedAt(game.updatedAt);
+        onUpdate(game);
+      }
+    } catch (fetchError) {
+      console.warn("State fetch error:", fetchError);
+    } finally {
+      this.fetchInFlight = false;
+      if (this.refetchQueued) {
+        this.refetchQueued = false;
+        void this.fetchState(gameId, onUpdate);
+      }
+    }
+  }
+
+  private noteUpdatedAt(updatedAt: string | undefined): void {
+    if (typeof updatedAt === "string") this.lastUpdatedAt = updatedAt;
   }
 
   async sendAction(
@@ -84,6 +133,7 @@ export class GameClient {
       }
 
       const response = data as ActionResponse;
+      this.noteUpdatedAt(response.game?.updatedAt);
       return { success: response.result.success, response };
     } catch (actionError) {
       console.error("Error sending action:", actionError);

@@ -201,6 +201,7 @@ export const GamePage = () => {
     // Cleanup on unmount
     return () => {
       uninstallErrorReporting();
+      gameRef.current?.stopWatching();
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
       }

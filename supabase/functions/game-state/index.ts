@@ -62,6 +62,19 @@ Deno.serve(async (request) => {
       ? await runAiPhase(supabase, stored)
       : stored;
 
+  // The client already holds this snapshot (its poll sends the updated_at it
+  // last saw): skip the fog-of-war filtering and the full-board payload.
+  const since = typeof body.since === "string" ? body.since : null;
+  if (since !== null && game.updatedAt.toISOString() === since) {
+    return new Response(
+      JSON.stringify({ notModified: true, updatedAt: since }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
   // Derive player perspective from JWT email
   const playerType: PlayerType | null =
     game.dayPlayerEmail === user.email

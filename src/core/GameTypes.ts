@@ -68,6 +68,8 @@ export type ServerTile = {
 export type ServerGameState = {
   id: string;
   _id?: string;
+  /** When the server last stored this game (ISO string); echoed back as `since` when polling */
+  updatedAt?: string;
   size: number;
   currentPlayer: PlayerType;
   clock: GameClock;

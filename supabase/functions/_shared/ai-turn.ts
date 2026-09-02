@@ -5,6 +5,7 @@ import type { PlayerType } from "@shared/piece/index.ts";
 import { playAiPhase } from "@shared/ai/index.ts";
 import { createRandom } from "@shared/utils/random.ts";
 import { appendGameEvents, type NewGameEvent } from "./events.ts";
+import { broadcastGameUpdate } from "./notify.ts";
 
 export const AI_EMAIL = "ai@bot";
 
@@ -20,7 +21,9 @@ export const isAiTurn = (game: Game): boolean => {
   return ai !== null && game.currentPlayer === ai && game.gameOver !== true;
 };
 
-export const persistGame = async (supabase: SupabaseClient, game: Game): Promise<void> => {
+/** Write the game to the database; returns it stamped with the stored updated_at */
+export const persistGame = async (supabase: SupabaseClient, game: Game): Promise<Game> => {
+  const now = new Date();
   const { error } = await supabase
     .from("games")
     .update(gameToRow({
@@ -29,12 +32,13 @@ export const persistGame = async (supabase: SupabaseClient, game: Game): Promise
       nightPlayer: game.nightPlayer,
       currentPlayer: game.currentPlayer,
       clock: game.clock,
-      updatedAt: new Date(),
+      updatedAt: now,
       gameOver: game.gameOver ?? false,
       winner: game.winner ?? null,
     }))
     .eq("id", game.id);
   if (error !== null) console.error("Error persisting game:", error.message);
+  return { ...game, updatedAt: now };
 };
 
 /**
@@ -62,9 +66,10 @@ export const runAiPhase = async (supabase: SupabaseClient, game: Game): Promise<
       state: null,
     });
   }
-  await persistGame(supabase, report.game);
+  const finished = await persistGame(supabase, report.game);
   await appendGameEvents(supabase, game.id, events);
-  return report.game;
+  await broadcastGameUpdate(game.id, finished.updatedAt);
+  return finished;
 };
 
 /** Run work after the response is sent when the runtime allows it */

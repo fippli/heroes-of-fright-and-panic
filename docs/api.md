@@ -55,11 +55,16 @@ Fetch current game state. Response is filtered by fog of war based on the authen
 **Request:**
 ```json
 {
-  "gameId": "game-uuid"
+  "gameId": "game-uuid",
+  "since": "2026-03-25T12:00:00.000Z"
 }
 ```
 
-**Response:** Full game state including tiles, players, clock, and game-over status. Non-visible tiles are replaced with `unexplored` landscape.
+`since` is optional: the `updatedAt` of the last state the client received. When the game has not changed since then, the response is just `{ "notModified": true, "updatedAt": "..." }` instead of the full board.
+
+**Response:** Full game state including tiles, players, clock, `updatedAt`, and game-over status. Non-visible tiles are replaced with `unexplored` landscape.
+
+After every state change the server also broadcasts an `updated` event (payload: `{ updatedAt }`, no game data) on the Supabase Realtime channel `game-{gameId}`. Clients subscribe to that channel and call `game-state` when poked, with a slow fallback poll in case a broadcast is missed.
 
 ### game-action
 
@@ -89,7 +94,7 @@ Submit a game action. Validates the user is authorized to play as the claimed pl
 }
 ```
 
-When the opponent is AI (`ai@bot`), the function automatically runs AI turns after the human's action and includes them in the response.
+The response is sent as soon as the action is persisted; event logging, the realtime `updated` broadcast, and (when the opponent is AI, `ai@bot`) the AI's phase all run in the background after it. Clients pick up the AI's moves via the realtime poke or the fallback poll of `game-state`.
 
 ### game-join
 
