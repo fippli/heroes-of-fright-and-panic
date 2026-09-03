@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, getEdgeFunctionError } from "./supabase";
 
 export type Profile = {
   readonly id: string;
@@ -123,6 +123,23 @@ export const profilesApi = {
       );
     }
     return "sent";
+  },
+
+  /**
+   * Send a friend request by username or email. Emails go through the
+   * friend-request edge function, which resolves them server-side.
+   */
+  async request(query: string): Promise<{ status: "sent" | "friends"; username: string }> {
+    const trimmed = query.trim();
+    if (trimmed.includes("@")) {
+      const { data, error } = await supabase.functions.invoke("friend-request", {
+        body: { query: trimmed },
+      });
+      if (error !== null) throw new Error(await getEdgeFunctionError(error));
+      return data as { status: "sent" | "friends"; username: string };
+    }
+    const status = await this.sendRequest(trimmed);
+    return { status, username: trimmed.toLowerCase() };
   },
 
   /** Accept a pending request from this player */

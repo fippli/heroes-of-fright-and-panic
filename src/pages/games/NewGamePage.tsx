@@ -15,6 +15,7 @@ import { Field } from "@chakra-ui/react";
 import { NativeSelect } from "@chakra-ui/react";
 import { gamesApi } from "../../lib/api";
 import { profilesApi } from "../../lib/profiles";
+import { AddFriendDialog } from "../friends/AddFriendDialog";
 import { themesApi, type Theme } from "../../lib/theme-api";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
@@ -90,15 +91,21 @@ type CreateFormState = {
   readonly name: string;
   readonly size: number;
   readonly alliance: "day" | "night";
-  readonly inviteEmail: string;
-  /** A friend's username picked from the dropdown; wins over inviteEmail */
-  readonly inviteFriend: string;
+  /** The other seat: "" = open, "AI", a friend's username, or an email */
+  readonly opponent: string;
   readonly themeId: string;
   readonly forestDensity: number;
   readonly mountainDensity: number;
   readonly waterLevel: number;
-  readonly aiOpponent: boolean;
 };
+
+const SIZES: readonly { readonly label: string; readonly value: number }[] = [
+  { label: "xs", value: 25 },
+  { label: "s", value: 32 },
+  { label: "m", value: 40 },
+  { label: "l", value: 55 },
+  { label: "xl", value: 70 },
+];
 
 // ============================================
 // COMPONENT
@@ -110,17 +117,17 @@ export const NewGamePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [themes, setThemes] = useState<readonly Theme[]>([]);
   const [friendNames, setFriendNames] = useState<readonly string[]>([]);
+  const [ownName, setOwnName] = useState<string | null>(null);
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [formState, setFormState] = useState<CreateFormState>({
     name: "",
     size: 40,
     alliance: "day",
-    inviteEmail: "",
-    inviteFriend: "",
+    opponent: "",
     themeId: "",
     forestDensity: defaultMapConfig.forestDensity,
     mountainDensity: defaultMapConfig.mountainDensity,
     waterLevel: defaultMapConfig.waterLevel,
-    aiOpponent: false,
   });
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -154,6 +161,11 @@ export const NewGamePage = () => {
               .sort(),
           );
         })
+        .catch(console.error);
+
+      profilesApi
+        .getOwn()
+        .then((profile) => setOwnName(profile?.username ?? null))
         .catch(console.error);
 
       themesApi
@@ -210,6 +222,13 @@ export const NewGamePage = () => {
       return;
     }
 
+    // The opponent field folds every seat option into one value
+    const opponent = formState.opponent.trim();
+    const aiOpponent = opponent.toLowerCase() === "ai";
+    const inviteEmail = !aiOpponent && opponent.includes("@") ? opponent : null;
+    const inviteUsername =
+      !aiOpponent && inviteEmail === null && opponent !== "" ? opponent : null;
+
     setIsCreating(true);
     try {
       const game = await gamesApi.create({
@@ -217,14 +236,10 @@ export const NewGamePage = () => {
         size: formState.size,
         alliance: formState.alliance,
         seed,
-        inviteUsername:
-          formState.inviteFriend !== "" ? formState.inviteFriend : null,
-        inviteEmail:
-          formState.inviteFriend === "" && formState.inviteEmail.trim() !== ""
-            ? formState.inviteEmail.trim()
-            : null,
+        aiOpponent,
+        inviteUsername,
+        inviteEmail,
         themeId: formState.themeId !== "" ? formState.themeId : null,
-        aiOpponent: formState.aiOpponent,
         mapConfig: {
           forestDensity: formState.forestDensity,
           mountainDensity: formState.mountainDensity,
@@ -251,100 +266,81 @@ export const NewGamePage = () => {
   return (
     <SplitLayout pageTitle="New Game" maxW="880px">
       {error !== null && <ErrorBox>{error}</ErrorBox>}
+      <AddFriendDialog
+        open={addFriendOpen}
+        onClose={() => setAddFriendOpen(false)}
+        onAdded={(username) =>
+          setFormState((current) =>
+            current.opponent === "" ? { ...current, opponent: username } : current,
+          )
+        }
+      />
 
       <VStack as="form" onSubmit={handleSubmit} gap="4" align="stretch">
-        {!formState.aiOpponent && (
-          <>
-            {friendNames.length > 0 && (
-              <Field.Root>
-                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Invite a friend</Field.Label>
+        <Field.Root>
+          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Players</Field.Label>
+          <VStack gap="2" align="stretch" w="100%">
+            <Flex gap="2">
+              <Flex flex="1" align="center" px="3" bg="rgba(0, 0, 0, 0.08)" borderRadius="md" fontWeight="900" color="brand.contrast">
+                {ownName ?? "You"}&nbsp;<Text as="span" fontWeight="700" opacity={0.6}>(you)</Text>
+              </Flex>
+              <Box w="150px">
                 <NativeSelect.Root>
                   <NativeSelect.Field
-                    value={formState.inviteFriend}
+                    value={formState.alliance}
                     onChange={(event) =>
-                      setFormState((current) => ({
-                        ...current,
-                        inviteFriend: event.target.value,
-                        inviteEmail: event.target.value !== "" ? "" : current.inviteEmail,
-                      }))
+                      setFormState((current) => ({ ...current, alliance: event.target.value as "day" | "night" }))
                     }
                     bg="white"
                     color="brand.contrast"
                     fontWeight="900"
                     border="none"
                   >
-                    <option value="">No one yet — share the link later</option>
-                    {friendNames.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
                   </NativeSelect.Field>
                 </NativeSelect.Root>
-              </Field.Root>
-            )}
-            {formState.inviteFriend === "" && (
-              <Field.Root>
-                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
-                  {friendNames.length > 0 ? "…or invite by email" : "Invite by email"}
-                </Field.Label>
+              </Box>
+            </Flex>
+            <Flex gap="2">
+              <Box flex="1">
                 <Input
-                  type="email"
-                  placeholder="email@example.com"
-                  value={formState.inviteEmail}
+                  list="opponent-options"
+                  placeholder="AI, a friend, an email — or leave open and share the link"
+                  value={formState.opponent}
                   onChange={(event) =>
-                    setFormState((current) => ({ ...current, inviteEmail: event.target.value }))
+                    setFormState((current) => ({ ...current, opponent: event.target.value }))
                   }
                   bg="white"
                   color="brand.contrast"
                   fontWeight="900"
                   border="none"
                 />
-              </Field.Root>
-            )}
-          </>
-        )}
-
-        <Field.Root>
-          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Alliance</Field.Label>
-          <NativeSelect.Root>
-            <NativeSelect.Field
-              value={formState.alliance}
-              onChange={(event) =>
-                setFormState((current) => ({ ...current, alliance: event.target.value as "day" | "night" }))
-              }
-              bg="white"
+                <datalist id="opponent-options">
+                  <option value="AI" />
+                  {friendNames.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+              </Box>
+              <Flex w="150px" align="center" justify="center" bg="rgba(0, 0, 0, 0.08)" borderRadius="md" fontWeight="900" color="brand.contrast">
+                {formState.alliance === "day" ? "Night" : "Day"}
+              </Flex>
+            </Flex>
+            <Button
+              type="button"
+              alignSelf="flex-start"
+              size="xs"
+              variant="outline"
+              borderColor="brand.contrast"
               color="brand.contrast"
-              fontWeight="900"
-              border="none"
+              _hover={{ bg: "rgba(0, 0, 0, 0.1)" }}
+              onClick={() => setAddFriendOpen(true)}
             >
-              <option value="day">Day</option>
-              <option value="night">Night</option>
-            </NativeSelect.Field>
-          </NativeSelect.Root>
+              + Add new friend
+            </Button>
+          </VStack>
         </Field.Root>
-
-        <Flex align="center" gap="2">
-          <input
-            type="checkbox"
-            id="aiOpponent"
-            checked={formState.aiOpponent}
-            onChange={(event) =>
-              setFormState((current) => ({
-                ...current,
-                aiOpponent: event.target.checked,
-                inviteEmail: event.target.checked ? "" : current.inviteEmail,
-                inviteFriend: event.target.checked ? "" : current.inviteFriend,
-              }))
-            }
-            style={{ width: "auto" }}
-          />
-          <label htmlFor="aiOpponent" style={{ cursor: "pointer" }}>
-            <Text as="span" color="brand.contrast" fontWeight="700" fontSize="1.2rem">
-              AI Opponent (single player)
-            </Text>
-          </label>
-        </Flex>
 
         <Field.Root>
           <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Theme</Field.Label>
@@ -393,6 +389,7 @@ export const NewGamePage = () => {
               </Field.Label>
               <input
                 type="range"
+                style={{ width: "100%" }}
                 min={0}
                 max={100}
                 value={Math.round(formState.waterLevel * 100)}
@@ -408,6 +405,7 @@ export const NewGamePage = () => {
               </Field.Label>
               <input
                 type="range"
+                style={{ width: "100%" }}
                 min={0}
                 max={100}
                 value={Math.round(formState.forestDensity * 100)}
@@ -423,6 +421,7 @@ export const NewGamePage = () => {
               </Field.Label>
               <input
                 type="range"
+                style={{ width: "100%" }}
                 min={0}
                 max={100}
                 value={Math.round(formState.mountainDensity * 100)}
@@ -434,23 +433,25 @@ export const NewGamePage = () => {
 
             <Field.Root>
               <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Size</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  value={String(formState.size)}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, size: Number(event.target.value) }))
-                  }
-                  bg="white"
-                  color="brand.contrast"
-                  fontWeight="900"
-                  border="none"
-                >
-                  <option value="25">Small (25x25)</option>
-                  <option value="40">Medium (40x40)</option>
-                  <option value="55">Large (55x55)</option>
-                  <option value="70">Huge (70x70)</option>
-                </NativeSelect.Field>
-              </NativeSelect.Root>
+              <HStack gap="0" w="100%" borderRadius="md" overflow="hidden" border="2px solid" borderColor="brand.contrast">
+                {SIZES.map(({ label, value }) => (
+                  <Button
+                    key={label}
+                    type="button"
+                    flex="1"
+                    size="sm"
+                    borderRadius="0"
+                    bg={formState.size === value ? "brand.contrast" : "white"}
+                    color={formState.size === value ? "brand.solid" : "brand.contrast"}
+                    fontWeight="900"
+                    _hover={{ bg: formState.size === value ? "#3d3d3b" : "rgba(0, 0, 0, 0.1)" }}
+                    onClick={() => setFormState((current) => ({ ...current, size: value }))}
+                    title={`${value}x${value}`}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </HStack>
             </Field.Root>
           </VStack>
 
