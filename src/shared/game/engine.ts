@@ -35,13 +35,14 @@ import {
 } from "../map/landscape.ts";
 import type { RememberedTile, Tile } from "../map/tile.ts";
 import { populationOf } from "./population.ts";
-import type { PlayerType } from "../piece/index.ts";
+import type { Piece, PlayerType } from "../piece/index.ts";
 import {
   PieceKind,
   createPeasant,
   createPriest,
   createArchAngel,
   getPieceView,
+  getPieceMove,
   getPieceAttackRange,
   amplifiedView,
   pieceHasEquipment,
@@ -60,7 +61,7 @@ import {
 } from "../tile/index.ts";
 import type { Game } from "./types.ts";
 import { getPlayer, withPlayer } from "./state.ts";
-import { validateMove, executeMove } from "../movement/index.ts";
+import { validateMove, executeMove, findDistance } from "../movement/index.ts";
 import {
   canAffordCost,
   payForCost,
@@ -101,8 +102,8 @@ export const endPhase = (game: Game, playerType: PlayerType): Game => {
   const toNight = playerType === "day";
   const rested = game.tiles.map((tile): Tile => {
     let next = tile;
-    if (next.piece !== null && next.piece.acted === true) {
-      next = { ...next, piece: { ...next.piece, acted: false } };
+    if (next.piece !== null && (next.piece.acted === true || (next.piece.stepsTaken ?? 0) > 0)) {
+      next = { ...next, piece: { ...next.piece, acted: false, stepsTaken: 0 } };
     }
     if (next.building !== null && next.building.acted === true) {
       next = { ...next, building: { ...next.building, acted: false } };
@@ -137,6 +138,14 @@ const restBuilding = (tiles: ReadonlyArray<Tile>, position: TilePosition): Reado
 };
 
 const pieceAlreadyActed = { success: false, error: "This piece has already acted this phase" } as const;
+
+/**
+ * Whether the piece's phase is over for non-move actions: it acted, or it has
+ * already started moving (movement can be split into steps, but a piece that
+ * moved cannot also attack, craft or heal).
+ */
+const hasSpentAction = (piece: Piece): boolean =>
+  piece.acted === true || (piece.stepsTaken ?? 0) > 0;
 const buildingAlreadyActed = { success: false, error: "This building has already acted this phase" } as const;
 
 // ============================================
@@ -180,11 +189,45 @@ export const handleMove = (
   }
 
   const mover = findTile(game.tiles, action.from);
-  if (mover?.piece?.acted === true) {
+  const piece = mover?.piece ?? null;
+  if (piece === null) {
+    return { game, result: { success: false, error: "No piece to move" } };
+  }
+  // A piece that used a non-move action is done; a piece that only moved may
+  // keep moving while it has steps left (a mounted peasant can take two).
+  if (piece.acted === true) {
     return { game, result: pieceAlreadyActed };
   }
 
-  const updatedTiles = restPiece(executeMove(game.tiles, action.from, action.to), action.to);
+  const distance = findDistance(game.tiles, action.from, action.to, piece);
+  const remaining = getPieceMove(piece) - (piece.stepsTaken ?? 0);
+  if (distance === null || distance > remaining) {
+    return {
+      game,
+      result: {
+        success: false,
+        error:
+          remaining <= 0
+            ? "No movement left this phase"
+            : `Only ${remaining} step${remaining === 1 ? "" : "s"} of movement left this phase`,
+      },
+    };
+  }
+
+  const moved = executeMove(game.tiles, action.from, action.to);
+  const arrivedTile = findTile(moved, action.to);
+  if (arrivedTile === undefined || arrivedTile.piece === null) {
+    return { game, result: { success: false, error: "Move failed" } };
+  }
+  // Read the budget off the arrived piece: mounting a steed on arrival raises
+  // its Move, so stepping onto a horse leaves a step to ride on.
+  const stepsTaken = (piece.stepsTaken ?? 0) + distance;
+  const settled = {
+    ...arrivedTile.piece,
+    stepsTaken,
+    acted: stepsTaken >= getPieceMove(arrivedTile.piece),
+  };
+  const updatedTiles = replaceTile(moved, { ...arrivedTile, piece: settled });
   return { game: { ...game, tiles: updatedTiles }, result: { success: true, message: "Piece moved" } };
 };
 
@@ -386,7 +429,7 @@ export const handleCraftEquipment = (
     };
   }
 
-  if (tile.piece.acted === true) {
+  if (hasSpentAction(tile.piece)) {
     return { game, result: pieceAlreadyActed };
   }
 
@@ -588,7 +631,7 @@ export const handleHeal = (
     };
   }
 
-  if (priestTile.piece.acted === true) {
+  if (hasSpentAction(priestTile.piece)) {
     return { game, result: pieceAlreadyActed };
   }
 
@@ -791,6 +834,10 @@ export const handleAttack = (
       game,
       result: { success: false, error: "No attacker or not your piece" },
     };
+  }
+
+  if (hasSpentAction(attackerTile.piece)) {
+    return { game, result: pieceAlreadyActed };
   }
 
   const attacker = attackerTile.piece;

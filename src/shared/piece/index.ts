@@ -31,6 +31,12 @@ export type Piece = {
   readonly canMountSteed: boolean;
   /** Set once the piece has used its action this phase */
   readonly acted?: boolean;
+  /**
+   * Steps of movement already used this phase. A piece may split its Move
+   * across several move actions (a peasant on a horse can take two single
+   * steps); any non-move action ends its phase instead.
+   */
+  readonly stepsTaken?: number;
 };
 
 // ============================================

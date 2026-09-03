@@ -235,9 +235,11 @@ When attacking a tile:
 
 There are twelve actions available. **A phase is a round**: every piece and every building may act once per phase; a second action by the same actor is refused. Newly created pieces and buildings enter already rested-out.
 
+Movement is the one splittable action: a piece may spend its Move stat in several move actions during the phase (a peasant on a horse can take two single steps, or one two-step move). A piece that has moved cannot also attack, craft or heal that phase, and a piece that used another action cannot move.
+
 | Action            | Description | Cost |
 |-------------------|------------|------|
-| Move              | Move piece to adjacent walkable tile. Can mount steeds on arrival. | - |
+| Move              | Move a piece up to its Move stat in walkable steps, splittable across the phase. Can mount steeds on arrival — a steed's move bonus applies immediately, so stepping onto a horse leaves a step to ride on. | - |
 | Build             | Place building on grass inside your kingdom (a tile you can see). | Varies by building |
 | SpawnPeasant      | Create peasant in an empty friendly house, if there is housing for it (1 slot per house, 2 per homestead, 3 per manor). | 1 food |
 | CraftEquipment    | Equip a peasant with sword, shield, or bow. | Varies by equipment |
