@@ -23,6 +23,7 @@ import { Banner } from "./Banner";
 import { EconomyPanel } from "./EconomyPanel";
 import { HelpOverlay } from "./HelpOverlay";
 import { SelectionPanel } from "./SelectionPanel";
+import { BuildingActions } from "./BuildingActions";
 import { TopBar } from "./TopBar";
 import { EventFeed } from "./EventFeed";
 import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
@@ -322,18 +323,28 @@ export const GamePage = () => {
   return (
     <div className="game-body">
       <div id="app">
-        <div className="board">
-          {ui !== null && <TopBar ui={ui} />}
-          <Banner notice={ui?.notice ?? null} />
-          <button type="button" className="action-btn help-toggle" onClick={() => setHelpOpen(true)} title="How to play (?)">?</button>
-          <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
-          {ui !== null && gameRef.current !== null && <SelectionPanel game={gameRef.current} ui={ui} />}
-          <div className="canvas-wrapper" ref={wrapperRef}>
-            <canvas id="canvas" ref={canvasRef} width="600" height="600" />
-          </div>
-        </div>
+        {ui !== null && <TopBar ui={ui} />}
 
-        <aside className="sidebar">
+        <div className="columns">
+          <aside className="leftbar">
+            {ui !== null && gameRef.current !== null && <SelectionPanel game={gameRef.current} ui={ui} />}
+          </aside>
+
+          <div className="center">
+            <div className="board">
+              <Banner notice={ui?.notice ?? null} />
+              <button type="button" className="action-btn help-toggle" onClick={() => setHelpOpen(true)} title="How to play (?)">?</button>
+              <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
+              <div className="canvas-wrapper" ref={wrapperRef}>
+                <canvas id="canvas" ref={canvasRef} width="600" height="600" />
+              </div>
+            </div>
+            {gameRef.current !== null && (
+              <EventFeed game={gameRef.current} gameId={gameId} player={role} />
+            )}
+          </div>
+
+          <aside className="sidebar">
           <div className="sidebar__top">
             <div className="sidebar__title">
               <span className="sidebar__brand">Dusk and Dawn</span>
@@ -360,13 +371,14 @@ export const GamePage = () => {
               </section>
             )}
             {ui !== null && gameRef.current !== null && (
+              <BuildingActions game={gameRef.current} ui={ui} />
+            )}
+            {ui !== null && gameRef.current !== null && (
               <BuildMenu game={gameRef.current} ui={ui} />
             )}
           </div>
-          {gameRef.current !== null && (
-            <EventFeed game={gameRef.current} gameId={gameId} player={role} />
-          )}
-        </aside>
+          </aside>
+        </div>
       </div>
 
       <div className="dialog-wrapper">

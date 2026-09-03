@@ -1,8 +1,6 @@
-import { BuildingType, HOUSE_LEVEL_NAMES, houseUpgradeCost, CASTLE_LEVEL_NAMES, castleUpgradeCost, TOWER_LEVEL_NAMES, towerUpgradeCost } from "@shared/building";
+import { BuildingType, HOUSE_LEVEL_NAMES, CASTLE_LEVEL_NAMES, TOWER_LEVEL_NAMES } from "@shared/building";
 import { EquipmentType, createEquipment } from "@shared/equipment";
-import { PieceKind, peasantSpawnCost, priestTrainCost, archAngelSummonCost } from "@shared/piece";
-import { ResearchType, researchCostOf } from "@shared/research";
-import { SteedType, createSteed } from "@shared/steed";
+import { PieceKind } from "@shared/piece";
 import { createResourceMap, type ResourceMap } from "@shared/player/resource-map";
 import type { Game } from "../../core/Board";
 import { costEntries, type GameUiState, type TargetMode } from "../../core/ui-state";
@@ -11,10 +9,6 @@ import { ActionButton, affordable } from "./ActionButton";
 const KIND_LABEL: Record<string, string> = { peasant: "Peasant", king: "King", priest: "Priest", archAngel: "Archangel" };
 const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower", castle: "Castle", wall: "Wall", church: "Church", dock: "Dock" };
 const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", bow: "Bow", helmet: "Helmet", torso: "Cuirass", legs: "Greaves", horse: "Horse", boat: "Boat" };
-
-const RESEARCH: readonly { readonly type: ResearchType; readonly label: string; readonly key: string }[] = [
-  { type: ResearchType.queen, label: "Queen", key: "7" },
-];
 
 type SlotProps = {
   readonly label: string;
@@ -114,7 +108,10 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
       : undefined;
 
   return (
-    <section className={`selection${open ? " selection--open" : ""}`}>
+    <section className="selection">
+      {!open && (
+        <p className="hint">Select one of your pieces or buildings to see it here. Grab a piece to move it.</p>
+      )}
       {selected !== null && (
         <>
           <header className="selection__head">
@@ -191,83 +188,8 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
             </div>
           )}
 
-          {ownBuilding === BuildingType.house && at !== null && building !== null && (
-            <section className="selection__actions">
-              <h3>{HOUSE_LEVEL_NAMES[building.level] ?? "House"}</h3>
-              {houseUpgradeCost(building.level) !== null && (
-                <ActionButton
-                  label={`Upgrade to ${HOUSE_LEVEL_NAMES[building.level + 1]}`}
-                  hotkey="U"
-                  cost={houseUpgradeCost(building.level) as ResourceMap}
-                  icons={icons}
-                  enabled={can(houseUpgradeCost(building.level) as ResourceMap) && !building.acted}
-                  onClick={() => void game.upgradeBuildingAt(at)}
-                  title={building.level === 1 ? "Homestead: +2 stone and +1 iron per adjacent mountain" : "Manor: +1 gold per mountain, double wood and food"}
-                />
-              )}
-              <ActionButton label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost()) && building?.acted !== true} onClick={() => void game.spawnPeasantAt(at)} />
-              {targetButton("Buy horse", "O", "horse", createSteed(SteedType.horse).cost, "Placed on a tile next to the house")}
-            </section>
-          )}
-
-          {ownBuilding === BuildingType.dock && at !== null && (
-            <section className="selection__actions">
-              <h3>Dock</h3>
-              {targetButton("Build boat", "F", "boat", createSteed(SteedType.boat).cost, "Placed on water next to the dock; a piece mounts it by moving onto it")}
-            </section>
-          )}
-
-          {ownBuilding === BuildingType.church && at !== null && (
-            <section className="selection__actions">
-              <h3>Church</h3>
-              <ActionButton label="Train priest" hotkey="N" cost={priestTrainCost()} icons={icons} enabled={can(priestTrainCost()) && building?.acted !== true} onClick={() => void game.trainPriestAt(at)} />
-              <ActionButton label="Summon archangel" hotkey="M" cost={archAngelSummonCost()} icons={icons} enabled={can(archAngelSummonCost()) && building?.acted !== true} onClick={() => void game.summonArchAngelAt(at)} />
-            </section>
-          )}
-
-          {ownBuilding === BuildingType.tower && at !== null && building !== null && (
-            <section className="selection__actions">
-              <h3>{TOWER_LEVEL_NAMES[building.level] ?? "Tower"}</h3>
-              {towerUpgradeCost(building.level) !== null ? (
-                <ActionButton
-                  label={`Upgrade to ${TOWER_LEVEL_NAMES[building.level + 1]}`}
-                  hotkey="U"
-                  cost={towerUpgradeCost(building.level) as ResourceMap}
-                  icons={icons}
-                  enabled={can(towerUpgradeCost(building.level) as ResourceMap) && !building.acted}
-                  onClick={() => void game.upgradeBuildingAt(at)}
-                  title={building.level === 1 ? "Watchtower: view and bow range 3, defense 2" : "Beacon: view and bow range 4, defense 3"}
-                />
-              ) : (
-                <p className="hint">This beacon watches as far as towers can.</p>
-              )}
-              <p className="hint">A bow inside shoots as far as the tower sees (range {building.viewRange}).</p>
-            </section>
-          )}
-
-          {ownBuilding === BuildingType.castle && at !== null && building !== null && (
-            <section className="selection__actions">
-              <h3>{CASTLE_LEVEL_NAMES[building.level] ?? "Castle"}</h3>
-              {castleUpgradeCost(building.level) !== null && (
-                <ActionButton
-                  label={`Upgrade to ${CASTLE_LEVEL_NAMES[building.level + 1]}`}
-                  hotkey="U"
-                  cost={castleUpgradeCost(building.level) as ResourceMap}
-                  icons={icons}
-                  enabled={can(castleUpgradeCost(building.level) as ResourceMap) && !building.acted}
-                  onClick={() => void game.upgradeBuildingAt(at)}
-                  title={building.level === 1 ? "Castle: +1 view and defense, unlocks research" : "Citadel: +1 view and defense"}
-                />
-              )}
-              {building.level >= 2 ? (
-                RESEARCH.map(({ type, label, key }) => (
-                  <ActionButton key={type} label={label} hotkey={key} cost={researchCostOf(type)} icons={icons} enabled={can(researchCostOf(type)) && !building.acted} onClick={() => void game.researchAt(type, at)} />
-                ))
-              ) : (
-                <p className="hint">Research unlocks once your Keep becomes a Castle.</p>
-              )}
-              <p className="hint">If this falls, the kingdom falls with it.</p>
-            </section>
+          {ownBuilding !== null && building !== null && (
+            <p className="hint">This building's actions are in the menu on the right.</p>
           )}
         </>
       )}
