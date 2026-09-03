@@ -249,106 +249,61 @@ export const NewGamePage = () => {
   }
 
   return (
-    <SplitLayout pageTitle="New Game">
+    <SplitLayout pageTitle="New Game" maxW="880px">
       {error !== null && <ErrorBox>{error}</ErrorBox>}
 
       <VStack as="form" onSubmit={handleSubmit} gap="4" align="stretch">
-        <Field.Root>
-          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Name</Field.Label>
-          <Input
-            type="text"
-            value={formState.name}
-            onChange={(event) =>
-              setFormState((current) => ({ ...current, name: event.target.value }))
-            }
-            required
-            bg="white"
-            color="brand.contrast"
-            fontWeight="900"
-            border="none"
-          />
-        </Field.Root>
-
-        <Field.Root>
-          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Size</Field.Label>
-          <NativeSelect.Root>
-            <NativeSelect.Field
-              value={String(formState.size)}
-              onChange={(event) =>
-                setFormState((current) => ({ ...current, size: Number(event.target.value) }))
-              }
-              bg="white"
-              color="brand.contrast"
-              fontWeight="900"
-              border="none"
-            >
-              <option value="25">Small (25x25)</option>
-              <option value="40">Medium (40x40)</option>
-              <option value="55">Large (55x55)</option>
-              <option value="70">Huge (70x70)</option>
-            </NativeSelect.Field>
-          </NativeSelect.Root>
-        </Field.Root>
-
-        <Field.Root>
-          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
-            Water: {Math.round(formState.waterLevel * 100)}%
-          </Field.Label>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(formState.waterLevel * 100)}
-            onChange={(event) =>
-              setFormState((current) => ({ ...current, waterLevel: Number(event.target.value) / 100 }))
-            }
-          />
-        </Field.Root>
-
-        <Field.Root>
-          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
-            Forest: {Math.round(formState.forestDensity * 100)}%
-          </Field.Label>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(formState.forestDensity * 100)}
-            onChange={(event) =>
-              setFormState((current) => ({ ...current, forestDensity: Number(event.target.value) / 100 }))
-            }
-          />
-        </Field.Root>
-
-        <Field.Root>
-          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
-            Mountain: {Math.round(formState.mountainDensity * 100)}%
-          </Field.Label>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(formState.mountainDensity * 100)}
-            onChange={(event) =>
-              setFormState((current) => ({ ...current, mountainDensity: Number(event.target.value) / 100 }))
-            }
-          />
-        </Field.Root>
-
-        <Box>
-          <canvas ref={canvasRef} style={{ borderRadius: "8px", maxWidth: "100%" }} />
-          <Button
-            type="button"
-            mt="2"
-            size="sm"
-            bg="brand.contrast"
-            color="brand.solid"
-            _hover={{ bg: "#3d3d3b" }}
-            onClick={() => setSeed(Math.random().toString(36).slice(2, 10))}
-          >
-            🎲 New map
-          </Button>
-        </Box>
+        {!formState.aiOpponent && (
+          <>
+            {friendNames.length > 0 && (
+              <Field.Root>
+                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Invite a friend</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={formState.inviteFriend}
+                    onChange={(event) =>
+                      setFormState((current) => ({
+                        ...current,
+                        inviteFriend: event.target.value,
+                        inviteEmail: event.target.value !== "" ? "" : current.inviteEmail,
+                      }))
+                    }
+                    bg="white"
+                    color="brand.contrast"
+                    fontWeight="900"
+                    border="none"
+                  >
+                    <option value="">No one yet — share the link later</option>
+                    {friendNames.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                </NativeSelect.Root>
+              </Field.Root>
+            )}
+            {formState.inviteFriend === "" && (
+              <Field.Root>
+                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
+                  {friendNames.length > 0 ? "…or invite by email" : "Invite by email"}
+                </Field.Label>
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={formState.inviteEmail}
+                  onChange={(event) =>
+                    setFormState((current) => ({ ...current, inviteEmail: event.target.value }))
+                  }
+                  bg="white"
+                  color="brand.contrast"
+                  fontWeight="900"
+                  border="none"
+                />
+              </Field.Root>
+            )}
+          </>
+        )}
 
         <Field.Root>
           <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Alliance</Field.Label>
@@ -414,57 +369,105 @@ export const NewGamePage = () => {
           </NativeSelect.Root>
         </Field.Root>
 
-        {!formState.aiOpponent && (
-          <>
-            {friendNames.length > 0 && (
-              <Field.Root>
-                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Invite a friend</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    value={formState.inviteFriend}
-                    onChange={(event) =>
-                      setFormState((current) => ({
-                        ...current,
-                        inviteFriend: event.target.value,
-                        inviteEmail: event.target.value !== "" ? "" : current.inviteEmail,
-                      }))
-                    }
-                    bg="white"
-                    color="brand.contrast"
-                    fontWeight="900"
-                    border="none"
-                  >
-                    <option value="">No one yet — share the link later</option>
-                    {friendNames.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </NativeSelect.Field>
-                </NativeSelect.Root>
-              </Field.Root>
-            )}
-            {formState.inviteFriend === "" && (
-              <Field.Root>
-                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
-                  {friendNames.length > 0 ? "…or invite by email" : "Invite by email"}
-                </Field.Label>
-                <Input
-                  type="email"
-                  placeholder="email@example.com"
-                  value={formState.inviteEmail}
+        <Flex gap="6" direction={{ base: "column", md: "row" }} align="flex-start">
+          <VStack flex="1" gap="4" align="stretch" minW="0">
+            <Field.Root>
+              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Name</Field.Label>
+              <Input
+                type="text"
+                value={formState.name}
+                onChange={(event) =>
+                  setFormState((current) => ({ ...current, name: event.target.value }))
+                }
+                required
+                bg="white"
+                color="brand.contrast"
+                fontWeight="900"
+                border="none"
+              />
+            </Field.Root>
+
+            <Field.Root>
+              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
+                Water: {Math.round(formState.waterLevel * 100)}%
+              </Field.Label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(formState.waterLevel * 100)}
+                onChange={(event) =>
+                  setFormState((current) => ({ ...current, waterLevel: Number(event.target.value) / 100 }))
+                }
+              />
+            </Field.Root>
+
+            <Field.Root>
+              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
+                Forest: {Math.round(formState.forestDensity * 100)}%
+              </Field.Label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(formState.forestDensity * 100)}
+                onChange={(event) =>
+                  setFormState((current) => ({ ...current, forestDensity: Number(event.target.value) / 100 }))
+                }
+              />
+            </Field.Root>
+
+            <Field.Root>
+              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
+                Mountain: {Math.round(formState.mountainDensity * 100)}%
+              </Field.Label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(formState.mountainDensity * 100)}
+                onChange={(event) =>
+                  setFormState((current) => ({ ...current, mountainDensity: Number(event.target.value) / 100 }))
+                }
+              />
+            </Field.Root>
+
+            <Field.Root>
+              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Size</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  value={String(formState.size)}
                   onChange={(event) =>
-                    setFormState((current) => ({ ...current, inviteEmail: event.target.value }))
+                    setFormState((current) => ({ ...current, size: Number(event.target.value) }))
                   }
                   bg="white"
                   color="brand.contrast"
                   fontWeight="900"
                   border="none"
-                />
-              </Field.Root>
-            )}
-          </>
-        )}
+                >
+                  <option value="25">Small (25x25)</option>
+                  <option value="40">Medium (40x40)</option>
+                  <option value="55">Large (55x55)</option>
+                  <option value="70">Huge (70x70)</option>
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </Field.Root>
+          </VStack>
+
+          <VStack flex="1" gap="2" align="stretch" minW="0">
+            <canvas ref={canvasRef} style={{ borderRadius: "8px", maxWidth: "100%" }} />
+            <Button
+              type="button"
+              size="sm"
+              bg="brand.contrast"
+              color="brand.solid"
+              _hover={{ bg: "#3d3d3b" }}
+              onClick={() => setSeed(Math.random().toString(36).slice(2, 10))}
+            >
+              🎲 New map
+            </Button>
+          </VStack>
+        </Flex>
 
         <HStack gap="4">
           <ChakraLink asChild flex="1" textDecoration="none" _hover={{ textDecoration: "none" }}>

@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 
 type SplitLayoutProps = {
   readonly pageTitle?: string;
+  /** Card width; pages with side-by-side content pass a wider one */
+  readonly maxW?: string;
   readonly children: ReactNode;
 };
 
@@ -12,7 +14,7 @@ type SplitLayoutProps = {
  * the page's content floats in a centred parchment column — the same layout
  * on a phone as on a desktop.
  */
-export const SplitLayout = ({ pageTitle, children }: SplitLayoutProps) => {
+export const SplitLayout = ({ pageTitle, maxW = "440px", children }: SplitLayoutProps) => {
   return (
     <Flex
       minH="100vh"
@@ -27,7 +29,7 @@ export const SplitLayout = ({ pageTitle, children }: SplitLayoutProps) => {
     >
       <VStack
         w="100%"
-        maxW="440px"
+        maxW={maxW}
         gap="4"
         align="stretch"
         bg="rgba(247, 238, 216, 0.95)"
