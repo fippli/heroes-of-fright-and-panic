@@ -54,8 +54,9 @@ const renderMapPreview = (
 
   ctx.canvas.width = canvasWidth * dpr;
   ctx.canvas.height = canvasHeight * dpr;
-  ctx.canvas.style.width = `${canvasWidth}px`;
-  ctx.canvas.style.height = `${canvasHeight}px`;
+  // Fill the column; the buffer keeps the map's aspect ratio
+  ctx.canvas.style.width = "100%";
+  ctx.canvas.style.height = "auto";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   ctx.fillStyle = "#1d1d1b";
@@ -190,21 +191,28 @@ export const NewGamePage = () => {
     };
   }, [navigate]);
 
+  // Regenerating the map on every slider tick lags; the sliders bump
+  // previewTick only when released, and the ref keeps the values fresh
+  const [previewTick, setPreviewTick] = useState(0);
+  const formStateRef = useRef(formState);
+  formStateRef.current = formState;
+
   const renderPreview = useCallback(() => {
     const canvas = canvasRef.current;
     if (canvas === null) return;
     const ctx = canvas.getContext("2d");
     if (ctx === null) return;
 
+    const current = formStateRef.current;
     const random = createRandom(seed);
     const config = {
-      forestDensity: formState.forestDensity,
-      mountainDensity: formState.mountainDensity,
-      waterLevel: formState.waterLevel,
+      forestDensity: current.forestDensity,
+      mountainDensity: current.mountainDensity,
+      waterLevel: current.waterLevel,
     };
-    const tiles = GameMap.generate(formState.size, random, config) as Tile[];
-    renderMapPreview(ctx, tiles, formState.size);
-  }, [seed, formState.size, formState.forestDensity, formState.mountainDensity, formState.waterLevel]);
+    const tiles = GameMap.generate(current.size, random, config) as Tile[];
+    renderMapPreview(ctx, tiles, current.size);
+  }, [seed, previewTick, formState.size]);
 
   useEffect(() => {
     if (!isCheckingAuth) {
@@ -277,6 +285,22 @@ export const NewGamePage = () => {
       />
 
       <VStack as="form" onSubmit={handleSubmit} gap="4" align="stretch">
+        <Field.Root>
+          <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Name</Field.Label>
+          <Input
+            type="text"
+            value={formState.name}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, name: event.target.value }))
+            }
+            required
+            bg="white"
+            color="brand.contrast"
+            fontWeight="900"
+            border="none"
+          />
+        </Field.Root>
+
         <Field.Root>
           <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Players</Field.Label>
           <VStack gap="2" align="stretch" w="100%">
@@ -368,28 +392,14 @@ export const NewGamePage = () => {
         <Flex gap="6" direction={{ base: "column", md: "row" }} align="flex-start">
           <VStack flex="1" gap="4" align="stretch" minW="0">
             <Field.Root>
-              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Name</Field.Label>
-              <Input
-                type="text"
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((current) => ({ ...current, name: event.target.value }))
-                }
-                required
-                bg="white"
-                color="brand.contrast"
-                fontWeight="900"
-                border="none"
-              />
-            </Field.Root>
-
-            <Field.Root>
               <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
                 Water: {Math.round(formState.waterLevel * 100)}%
               </Field.Label>
               <input
                 type="range"
                 style={{ width: "100%" }}
+                onPointerUp={() => setPreviewTick((tick) => tick + 1)}
+                onKeyUp={() => setPreviewTick((tick) => tick + 1)}
                 min={0}
                 max={100}
                 value={Math.round(formState.waterLevel * 100)}
@@ -406,6 +416,8 @@ export const NewGamePage = () => {
               <input
                 type="range"
                 style={{ width: "100%" }}
+                onPointerUp={() => setPreviewTick((tick) => tick + 1)}
+                onKeyUp={() => setPreviewTick((tick) => tick + 1)}
                 min={0}
                 max={100}
                 value={Math.round(formState.forestDensity * 100)}
@@ -422,6 +434,8 @@ export const NewGamePage = () => {
               <input
                 type="range"
                 style={{ width: "100%" }}
+                onPointerUp={() => setPreviewTick((tick) => tick + 1)}
+                onKeyUp={() => setPreviewTick((tick) => tick + 1)}
                 min={0}
                 max={100}
                 value={Math.round(formState.mountainDensity * 100)}
@@ -431,31 +445,28 @@ export const NewGamePage = () => {
               />
             </Field.Root>
 
-            <Field.Root>
-              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Size</Field.Label>
-              <HStack gap="0" w="100%" borderRadius="md" overflow="hidden" border="2px solid" borderColor="brand.contrast">
-                {SIZES.map(({ label, value }) => (
-                  <Button
-                    key={label}
-                    type="button"
-                    flex="1"
-                    size="sm"
-                    borderRadius="0"
-                    bg={formState.size === value ? "brand.contrast" : "white"}
-                    color={formState.size === value ? "brand.solid" : "brand.contrast"}
-                    fontWeight="900"
-                    _hover={{ bg: formState.size === value ? "#3d3d3b" : "rgba(0, 0, 0, 0.1)" }}
-                    onClick={() => setFormState((current) => ({ ...current, size: value }))}
-                    title={`${value}x${value}`}
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </HStack>
-            </Field.Root>
           </VStack>
 
           <VStack flex="1" gap="2" align="stretch" minW="0">
+            <HStack gap="0" w="100%" borderRadius="md" overflow="hidden" border="2px solid" borderColor="brand.contrast">
+              {SIZES.map(({ label, value }) => (
+                <Button
+                  key={label}
+                  type="button"
+                  flex="1"
+                  size="sm"
+                  borderRadius="0"
+                  bg={formState.size === value ? "brand.contrast" : "white"}
+                  color={formState.size === value ? "brand.solid" : "brand.contrast"}
+                  fontWeight="900"
+                  _hover={{ bg: formState.size === value ? "#3d3d3b" : "rgba(0, 0, 0, 0.1)" }}
+                  onClick={() => setFormState((current) => ({ ...current, size: value }))}
+                  title={`${value}x${value}`}
+                >
+                  {label}
+                </Button>
+              ))}
+            </HStack>
             <canvas ref={canvasRef} style={{ borderRadius: "8px", maxWidth: "100%" }} />
             <Button
               type="button"
