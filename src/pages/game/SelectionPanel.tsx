@@ -114,7 +114,7 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
       : undefined;
 
   return (
-    <section className="panel selection" hidden={!open}>
+    <section className={`selection${open ? " selection--open" : ""}`}>
       {selected !== null && (
         <>
           <header className="selection__head">

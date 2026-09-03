@@ -25,6 +25,16 @@ const DRAG_THRESHOLD_PX = 6;
 
 type Pointer = { readonly id: number; x: number; y: number };
 
+/**
+ * Receiver for grab-and-drop gestures on the board. `start` is asked on every
+ * press; returning true claims the gesture (a piece was grabbed). `end` fires
+ * on release — with wasDrag false for a plain click (the click event follows).
+ */
+export type DragDelegate = {
+  readonly start: (world: Coordinate) => boolean;
+  readonly end: (world: Coordinate, wasDrag: boolean) => void;
+};
+
 export class Canvas {
   readonly canvas: HTMLCanvasElement;
   readonly ctx: CanvasRenderingContext2D;
@@ -39,13 +49,16 @@ export class Canvas {
   // Pending debounced write of the view center to the URL
   private viewUrlTimer: number | null = null;
 
-  // Active pointers (mouse button held or touches), for drag and pinch
+  // Active pointers (mouse button held or touches), for grabbing and pinch
   private readonly pointers = new Map<number, Pointer>();
   private dragging = false;
   private pressStart: Coordinate | null = null;
   private pinchStartDistance: number | null = null;
   private pinchStartScale = 1;
   private suppressNextClick = false;
+  // Grab-and-drop: the game claims presses that land on a movable piece
+  private dragDelegate: DragDelegate | null = null;
+  private dragClaimed = false;
 
   constructor(canvasElement: HTMLCanvasElement, wrapperElement: HTMLDivElement) {
     this.canvas = canvasElement;
@@ -56,7 +69,7 @@ export class Canvas {
 
     this.canvas.width = this.DOMElement.clientWidth;
     this.canvas.height = this.DOMElement.clientHeight;
-    // Pointer events handle panning/pinch; the browser must not scroll or zoom the page
+    // Pointer events handle piece grabbing and pinch; the browser must not scroll or zoom the page
     this.canvas.style.touchAction = "none";
 
     this.canvas.addEventListener("pointermove", (event) => this.onPointerMove(event));
@@ -112,6 +125,19 @@ export class Canvas {
   private screenPoint(event: PointerEvent | WheelEvent): Coordinate {
     const rect = this.canvas.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  /** Convert a canvas-space point to world (map) coordinates */
+  private toWorld(point: Coordinate): Coordinate {
+    return {
+      x: (point.x - this.translation.x) / this.scale,
+      y: (point.y - this.translation.y) / this.scale,
+    };
+  }
+
+  /** Register the receiver for grab-and-drop gestures (piece dragging) */
+  drag(delegate: DragDelegate) {
+    this.dragDelegate = delegate;
   }
 
   /**
@@ -213,7 +239,10 @@ export class Canvas {
     window.history.replaceState(window.history.state, "", url);
   }
 
-  // ---- pointer handling: hover, drag-to-pan, pinch-to-zoom ----
+  // ---- pointer handling: hover, piece grabbing, pinch navigation ----
+  // One pointer never pans: a press either grabs a piece (chess-style) or is a
+  // click. The map is navigated by edge scrolling, arrow keys, the wheel, and
+  // on touch by a two-finger pinch/drag.
 
   private onPointerDown(event: PointerEvent) {
     const point = this.screenPoint(event);
@@ -223,7 +252,13 @@ export class Canvas {
     if (this.pointers.size === 1) {
       this.pressStart = point;
       this.dragging = false;
+      this.dragClaimed = this.dragDelegate?.start(this.toWorld(point)) === true;
     } else if (this.pointers.size === 2) {
+      // A second finger means navigation: put a grabbed piece back down
+      if (this.dragClaimed) {
+        this.dragDelegate?.end(this.toWorld(point), false);
+        this.dragClaimed = false;
+      }
       this.pinchStartDistance = this.pointerDistance();
       this.pinchStartScale = this.scale;
       this.dragging = true;
@@ -239,31 +274,38 @@ export class Canvas {
     if (pointer === undefined) return;
 
     if (this.pointers.size === 2 && this.pinchStartDistance !== null) {
+      // Two fingers: pinch zooms, moving them together pans
+      const before = this.pointerMidpoint();
       pointer.x = point.x;
       pointer.y = point.y;
+      const after = this.pointerMidpoint();
+      this.translate(
+        this.translation.x + after.x - before.x,
+        this.translation.y + after.y - before.y,
+      );
       const ratio = this.pointerDistance() / this.pinchStartDistance;
       const wanted = Math.round(this.pinchStartScale * ratio);
       this.setZoom(Math.min(3, Math.max(1, wanted)), this.pointerMidpoint());
       return;
     }
 
-    const dx = point.x - pointer.x;
-    const dy = point.y - pointer.y;
     pointer.x = point.x;
     pointer.y = point.y;
 
     if (!this.dragging && this.pressStart !== null) {
       const travelled = Math.hypot(point.x - this.pressStart.x, point.y - this.pressStart.y);
-      if (travelled < DRAG_THRESHOLD_PX) return;
-      this.dragging = true;
-    }
-    if (this.dragging) {
-      this.translate(this.translation.x + dx, this.translation.y + dy);
+      if (travelled >= DRAG_THRESHOLD_PX) this.dragging = true;
     }
   }
 
   private onPointerUp(event: PointerEvent) {
     this.pointers.delete(event.pointerId);
+    if (this.dragClaimed && this.pointers.size === 0) {
+      // A cancelled gesture (or a mere tap) puts the piece back; a real drag drops it
+      const dropped = this.dragging && event.type !== "pointercancel";
+      this.dragDelegate?.end(this.toWorld(this.screenPoint(event)), dropped);
+      this.dragClaimed = false;
+    }
     if (this.dragging) {
       // The browser will fire a click for this press; it was a drag, not a tap
       this.suppressNextClick = true;
@@ -293,7 +335,10 @@ export class Canvas {
 
   /** Scroll the view when the mouse is near an edge. Call once per frame. */
   private edgeScroll() {
-    if (this.dragging || this.pointers.size > 0) return;
+    // Keep scrolling while a piece is being dragged so it can be dropped
+    // beyond the current view; stay still during pinches and plain presses.
+    if (this.pointers.size > 1) return;
+    if (this.pointers.size === 1 && !this.dragClaimed) return;
     const delta = edgeScrollDelta(
       this.screenMouse,
       this,

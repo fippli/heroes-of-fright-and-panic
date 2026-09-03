@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 
 const SHORTCUTS: readonly (readonly [string, string])[] = [
+  ["Drag a piece", "Grab one of your pieces and drop it to move or attack, like on a chess board"],
   ["Click", "Select your piece or building; click again to move, attack, or open its menu"],
-  ["Drag / wheel / + −", "Pan and zoom the map (touch: drag and pinch)"],
+  ["Edges / arrows / wheel", "Scroll the map at the screen edge or with arrow keys; wheel or + − zooms (touch: two-finger drag and pinch)"],
   ["H T W R K", "Pick a building to place (house, tower, wall, church, dock), then click a tile in your kingdom"],
   ["P", "Spawn a peasant (house selected)"],
   ["S D B", "Sword, shield, bow for the selected peasant"],

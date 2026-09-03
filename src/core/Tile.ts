@@ -19,6 +19,8 @@ export class Tile {
   explored: boolean = false;
   /** A farm next to a homestead or manor: drawn with livestock */
   pasture: boolean = false;
+  /** The piece is being dragged: keep its tile drawn but lift the piece off it */
+  hidePiece: boolean = false;
   readonly landscape: Landscape | null;
   readonly building?: Building;
   readonly piece?: Piece;
@@ -77,7 +79,7 @@ export class Tile {
         if (this.steed !== null && this.piece === undefined) {
           imageAssets.itemImage(this.steed)?.renderCentered(ctx, this.x, this.y);
         }
-        this.piece?.render(ctx, this, imageAssets);
+        if (!this.hidePiece) this.piece?.render(ctx, this, imageAssets);
       }
     } else if (this.isRemembered()) {
       // Discovered but out of sight: the last-seen terrain, building and

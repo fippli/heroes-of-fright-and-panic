@@ -151,6 +151,74 @@ export class Game {
     this.nightPlayer = createPlayer({ type: "night" });
     this.dialog = new Dialog();
     this.imageAssets = imageAssets;
+    // Chess-style movement: pressing on an own piece grabs it, releasing drops it
+    canvas.drag({
+      start: (world) => this.dragStart(world),
+      end: (world, wasDrag) => this.dragEnd(world, wasDrag),
+    });
+  }
+
+  // ---- drag-and-drop: grab a piece and place it like on a chess board ----
+
+  // The tile the grabbed piece stands on, and the tiles it may be dropped on
+  private dragFrom: Tile | null = null;
+  private dragTargets: ReadonlySet<string> = new Set();
+
+  private dragStart(world: Coordinate): boolean {
+    if (this.myPlayerType === null || !this.isMyTurn || this.gameOver) return false;
+    // Build/target modes resolve on click; a press must not steal their tile
+    if (this.pendingBuild !== null || this.pendingTarget !== null) return false;
+    const tile = this.findTile(world);
+    if (tile === undefined || tile.piece?.owner?.type !== this.myPlayerType) return false;
+
+    this.dragFrom = tile;
+    tile.hidePiece = true;
+    this.selectedTile = tile;
+    this.dragTargets = this.computeDragTargets(tile);
+    this.canvas.canvas.style.cursor = "grabbing";
+    this.notify();
+    return true;
+  }
+
+  /** Tiles the grabbed piece may be dropped on, validated by the shared engine */
+  private computeDragTargets(source: Tile): ReadonlySet<string> {
+    const state = this.lastServerState;
+    const myPlayer = this.myPlayerType;
+    if (state === null || myPlayer === null) return new Set();
+    const targets = new Set<string>();
+    // Move stats are small (at most king + steed = 4), so checking the nearby
+    // tiles against the engine once per grab is cheap
+    source.getTilesInRange(this.tiles, 4).forEach((tile) => {
+      if (tile === source) return;
+      const allowed = predictAction(state, {
+        type: "move",
+        player: myPlayer,
+        from: { row: source.row, column: source.column },
+        to: { row: tile.row, column: tile.column },
+      });
+      if (allowed !== null) targets.add(`${tile.row},${tile.column}`);
+    });
+    return targets;
+  }
+
+  private dragEnd(world: Coordinate, wasDrag: boolean): void {
+    const source = this.dragFrom;
+    if (source !== null) source.hidePiece = false;
+    this.dragFrom = null;
+    this.dragTargets = new Set();
+    this.canvas.canvas.style.cursor = "";
+    if (source === null) return;
+    if (!wasDrag) {
+      // A tap, not a drag: the piece settles back; the click event selects it
+      this.notify();
+      return;
+    }
+    const target = this.findTile(world);
+    if (target === undefined || target === source) {
+      this.notify();
+      return;
+    }
+    void this.actFromTile(source, target);
   }
 
   /**
@@ -350,6 +418,20 @@ export class Game {
     if (this.selectedTile != null) {
       this.selectedTile = this.findTile({ row: this.selectedTile.row, column: this.selectedTile.column });
     }
+    // Same for a piece being dragged; if it no longer stands there, drop the drag
+    if (this.dragFrom !== null) {
+      const current = this.findTile({ row: this.dragFrom.row, column: this.dragFrom.column });
+      this.dragFrom =
+        current !== undefined && current.piece?.owner?.type === this.myPlayerType
+          ? current
+          : null;
+      if (this.dragFrom !== null) {
+        this.dragFrom.hidePiece = true;
+      } else {
+        this.dragTargets = new Set();
+        this.canvas.canvas.style.cursor = "";
+      }
+    }
     this.gameOver = parsed.gameOver;
     this.winner = parsed.winner;
 
@@ -541,6 +623,16 @@ export class Game {
       });
     }
 
+    // A grabbed piece: outline every tile it may be dropped on (attackable
+    // enemies stay red via the selection rendering below)
+    if (this.dragFrom !== null) {
+      this.tiles.forEach((tile) => {
+        if (this.dragTargets.has(`${tile.row},${tile.column}`)) {
+          Hexagon.render(canvas.ctx, tile.x, tile.y, "#80deea99");
+        }
+      });
+    }
+
     // Render selected tile highlight and valid moves/attacks
     if (this.selectedTile !== undefined && this.selectedTile !== null) {
       // Show attackable enemies (red)
@@ -562,6 +654,19 @@ export class Game {
     const hoveredTile = this.findTile(canvas.mousePosition);
     if (hoveredTile !== undefined) {
       hoveredTile.renderHovered(canvas.ctx);
+    }
+
+    // The grabbed piece rides the cursor, slightly lifted, above everything
+    if (this.dragFrom !== null && this.dragFrom.piece !== undefined) {
+      const mouse = canvas.mousePosition;
+      if (Number.isFinite(mouse.x) && Number.isFinite(mouse.y)) {
+        this.dragFrom.piece.renderAt(
+          canvas.ctx,
+          mouse.x,
+          mouse.y - Hexagon.height / 6,
+          this.imageAssets,
+        );
+      }
     }
 
     canvas.ctx.restore();
@@ -783,49 +888,46 @@ export class Game {
       this.selectedTile.piece?.owner?.type === myPlayer &&
       myPlayer !== null
     ) {
-      const from: TilePosition = {
-        row: this.selectedTile.row,
-        column: this.selectedTile.column,
-      };
-
-      const action: GameAction = ((): GameAction => {
-        if (this.isEnemyTile(clickedTile, myPlayer)) {
-          return {
-            type: "attack",
-            player: myPlayer,
-            attackerPosition: from,
-            targetPosition: tilePosition,
-          };
-        }
-        return {
-          type: "move",
-          player: myPlayer,
-          from,
-          to: tilePosition,
-        };
-      })();
-
-      const success = await this.sendAction(action);
-
-      if (success) {
-        // Re-select the acting piece wherever it now lives (it moves on a
-        // successful move, stays put on an attack or harvest).
-        const movedTile = this.findTile(tilePosition);
-        const originalTile = this.findTile(from);
-        if (movedTile?.piece?.owner?.type === myPlayer) {
-          this.selectedTile = movedTile;
-        } else if (originalTile?.piece?.owner?.type === myPlayer) {
-          this.selectedTile = originalTile;
-        } else {
-          this.selectedTile = undefined;
-        }
-      }
-      this.notify();
+      await this.actFromTile(this.selectedTile, clickedTile);
     } else {
       // No actionable selection - just (de)select the clicked tile
       this.selectedTile = clickedTile;
       this.notify();
     }
+  }
+
+  /** Resolve "this piece acts on that tile" — attack an enemy, otherwise move — and send it */
+  private async actFromTile(source: Tile, target: Tile): Promise<void> {
+    const myPlayer = this.myPlayerType;
+    if (myPlayer === null) return;
+
+    const from: TilePosition = { row: source.row, column: source.column };
+    const tilePosition: TilePosition = { row: target.row, column: target.column };
+    const action: GameAction = this.isEnemyTile(target, myPlayer)
+      ? {
+          type: "attack",
+          player: myPlayer,
+          attackerPosition: from,
+          targetPosition: tilePosition,
+        }
+      : { type: "move", player: myPlayer, from, to: tilePosition };
+
+    const success = await this.sendAction(action);
+
+    if (success) {
+      // Re-select the acting piece wherever it now lives (it moves on a
+      // successful move, stays put on an attack or harvest).
+      const movedTile = this.findTile(tilePosition);
+      const originalTile = this.findTile(from);
+      if (movedTile?.piece?.owner?.type === myPlayer) {
+        this.selectedTile = movedTile;
+      } else if (originalTile?.piece?.owner?.type === myPlayer) {
+        this.selectedTile = originalTile;
+      } else {
+        this.selectedTile = undefined;
+      }
+    }
+    this.notify();
   }
 
   // ============================================

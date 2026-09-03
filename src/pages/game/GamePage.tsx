@@ -327,6 +327,7 @@ export const GamePage = () => {
           <Banner notice={ui?.notice ?? null} />
           <button type="button" className="action-btn help-toggle" onClick={() => setHelpOpen(true)} title="How to play (?)">?</button>
           <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
+          {ui !== null && gameRef.current !== null && <SelectionPanel game={gameRef.current} ui={ui} />}
           <div className="canvas-wrapper" ref={wrapperRef}>
             <canvas id="canvas" ref={canvasRef} width="600" height="600" />
           </div>
@@ -345,7 +346,6 @@ export const GamePage = () => {
             )}
           </div>
           <div className="sidebar__scroll">
-            {ui !== null && gameRef.current !== null && <SelectionPanel game={gameRef.current} ui={ui} />}
             {ui !== null && <EconomyPanel ui={ui} />}
             {opponentOpen && (
               <section className="panel">

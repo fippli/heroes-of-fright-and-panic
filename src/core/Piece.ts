@@ -76,13 +76,26 @@ export class Piece {
     position: TilePosition,
     imageAssets: ImageAssets,
   ): void {
+    this.renderAt(
+      ctx,
+      Hexagon.x(position.row, position.column),
+      Hexagon.y(position.row),
+      imageAssets,
+    );
+  }
+
+  /** Draw the piece centered on arbitrary world coordinates (used by drag ghosts) */
+  renderAt(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    imageAssets: ImageAssets,
+  ): void {
     ctx.save();
     if (this.acted) {
       // A piece that has used its action rests until the phase ends
       ctx.globalAlpha = 0.55;
     }
-    const x = Hexagon.x(position.row, position.column);
-    const y = Hexagon.y(position.row);
     // Prefer a dedicated sprite: mounted (horse/boat) beats armoured beats
     // base. Without one, layer the steed underneath the base figure.
     const mounted = this.steed === "horse" || this.steed === "boat" ? this.steed : null;
