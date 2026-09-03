@@ -52,6 +52,9 @@ export const TopBar = ({ ui }: { readonly ui: GameUiState }) => {
           {String(((clock.time % 24) + 24) % 24).padStart(2, "0")}:00
         </span>
       </div>
+      <div className={`topbar__turn${ui.isMyTurn ? " topbar__turn--mine" : ""}`}>
+        {ui.isMyTurn ? "Your turn" : "Opponents turn"}
+      </div>
     </header>
   );
 };

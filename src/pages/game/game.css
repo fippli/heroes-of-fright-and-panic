@@ -148,6 +148,18 @@ body:has(.game-body) {
   margin-left: auto;
 }
 
+.topbar__turn {
+  padding: 4px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.topbar__turn--mine {
+  background: rgba(156, 204, 101, 0.25);
+  color: #dcedc8;
+}
+
 .banner {
   position: absolute;
   top: 12px;

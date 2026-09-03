@@ -123,8 +123,13 @@ export class Canvas {
   }
 
   private screenPoint(event: PointerEvent | WheelEvent): Coordinate {
+    // Measure against the content box (clientLeft/Top skip the border), which
+    // is exactly the area the drawing buffer is displayed in
     const rect = this.canvas.getBoundingClientRect();
-    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    return {
+      x: event.clientX - rect.left - this.canvas.clientLeft,
+      y: event.clientY - rect.top - this.canvas.clientTop,
+    };
   }
 
   /** Convert a canvas-space point to world (map) coordinates */
@@ -351,6 +356,15 @@ export class Canvas {
   }
 
   init() {
+    // Keep the drawing buffer the same size as the canvas's content box (the
+    // area inside its border): CSS stretches the buffer to fill it, so any
+    // mismatch skews the map and puts the mouse mapping off.
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    if (width > 0 && height > 0 && (this.canvas.width !== width || this.canvas.height !== height)) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+    }
     this.edgeScroll();
     this.clear();
     this.ctx.setTransform(this.scale, 0, 0, this.scale, this.translation.x, this.translation.y);

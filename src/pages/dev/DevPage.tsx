@@ -127,6 +127,7 @@ export const DevPage = () => {
   return (
     <div className="game-body">
       <div id="app">
+        <div className="columns">
         <div className="board">
           <div className="canvas-wrapper" ref={wrapperRef}>
             <canvas id="canvas" ref={canvasRef} width="600" height="600" />
@@ -278,6 +279,7 @@ export const DevPage = () => {
             />
           </section>
         </aside>
+        </div>
       </div>
     </div>
   );

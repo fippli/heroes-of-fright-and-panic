@@ -11,24 +11,28 @@ const RESEARCH: readonly { readonly type: ResearchType; readonly label: string; 
   { type: ResearchType.queen, label: "Queen", key: "7" },
 ];
 
+const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower", castle: "Castle", wall: "Wall", church: "Church", dock: "Dock" };
+
 /**
- * Actions of the selected own building, shown in the right sidebar next to
- * the build menu (the left panel keeps the piece inventory).
+ * The selected building, shown entirely in the right sidebar next to the
+ * build menu: its identity, and its actions when it is yours (the left
+ * panel is for pieces only).
  */
 export const BuildingActions = ({ game, ui }: { readonly game: Game; readonly ui: GameUiState }) => {
   const selected = ui.selected;
   const building = selected?.buildingInfo ?? null;
   const ownBuilding = selected?.building ?? null;
   const at = selected !== null ? { row: selected.row, column: selected.column } : null;
-  if (ownBuilding === null || building === null || at === null) return null;
-  const actionable: readonly BuildingType[] = [
-    BuildingType.house,
-    BuildingType.dock,
-    BuildingType.church,
-    BuildingType.tower,
-    BuildingType.castle,
-  ];
-  if (!actionable.includes(ownBuilding)) return null;
+  if (building === null || at === null) return null;
+
+  const title =
+    building.type === BuildingType.house
+      ? HOUSE_LEVEL_NAMES[building.level] ?? "House"
+      : building.type === BuildingType.castle
+        ? CASTLE_LEVEL_NAMES[building.level] ?? "Castle"
+        : building.type === BuildingType.tower
+          ? TOWER_LEVEL_NAMES[building.level] ?? "Tower"
+          : BUILDING_LABEL[building.type] ?? building.type;
 
   const icons = ui.icons;
   const can = (cost: ResourceMap): boolean => ui.isPlayer && ui.isMyTurn && affordable(ui.resources, cost);
@@ -48,6 +52,19 @@ export const BuildingActions = ({ game, ui }: { readonly game: Game; readonly ui
 
   return (
     <section className="panel">
+      <header className="selection__head">
+        <div>
+          <h2>{title}</h2>
+          <span className="selection__meta">
+            <span className={`owner owner--${building.owner}`}>{building.owner}</span>
+            {at.row},{at.column} · view range {building.viewRange}
+          </span>
+        </div>
+        {ui.sprites.building !== null && (
+          <img src={ui.sprites.building} alt={title} style={{ width: 48, height: 48, imageRendering: "pixelated" }} />
+        )}
+      </header>
+
       {ownBuilding === BuildingType.house && (
         <div className="selection__actions">
           <h3>{HOUSE_LEVEL_NAMES[building.level] ?? "House"}</h3>

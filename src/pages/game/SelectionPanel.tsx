@@ -1,4 +1,3 @@
-import { BuildingType, HOUSE_LEVEL_NAMES, CASTLE_LEVEL_NAMES, TOWER_LEVEL_NAMES } from "@shared/building";
 import { EquipmentType, createEquipment } from "@shared/equipment";
 import { PieceKind } from "@shared/piece";
 import { createResourceMap, type ResourceMap } from "@shared/player/resource-map";
@@ -7,7 +6,6 @@ import { costEntries, type GameUiState, type TargetMode } from "../../core/ui-st
 import { ActionButton, affordable } from "./ActionButton";
 
 const KIND_LABEL: Record<string, string> = { peasant: "Peasant", king: "King", priest: "Priest", archAngel: "Archangel" };
-const BUILDING_LABEL: Record<string, string> = { house: "House", tower: "Tower", castle: "Castle", wall: "Wall", church: "Church", dock: "Dock" };
 const ITEM_LABEL: Record<string, string> = { sword: "Sword", shield: "Shield", bow: "Bow", helmet: "Helmet", torso: "Cuirass", legs: "Greaves", horse: "Horse", boat: "Boat" };
 
 type SlotProps = {
@@ -56,12 +54,12 @@ const Slot = ({ label, item, sprite, side, buy, icons }: SlotProps) => {
  */
 export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui: GameUiState }) => {
   const selected = ui.selected;
-  const open = selected !== null;
   const piece = selected?.pieceInfo ?? null;
-  const building = selected?.buildingInfo ?? null;
+  // Buildings live entirely in the right menu; this panel is for pieces
+  // (and a steed waiting on the ground)
+  const open = selected !== null && (piece !== null || selected.steed !== null);
   const at = selected !== null ? { row: selected.row, column: selected.column } : null;
   const ownPiece = selected?.piece ?? null;
-  const ownBuilding = selected?.building ?? null;
   const can = (cost: ResourceMap): boolean => ui.isPlayer && ui.isMyTurn && affordable(ui.resources, cost);
   const pieceCan = (cost: ResourceMap): boolean => can(cost) && piece?.acted !== true;
   const icons = ui.icons;
@@ -82,16 +80,10 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
   const title =
     piece !== null
       ? KIND_LABEL[piece.kind] ?? piece.kind
-      : building !== null
-        ? building.type === BuildingType.house
-          ? HOUSE_LEVEL_NAMES[building.level] ?? "House"
-          : building.type === BuildingType.castle
-            ? CASTLE_LEVEL_NAMES[building.level] ?? "Castle"
-            : building.type === BuildingType.tower
-              ? TOWER_LEVEL_NAMES[building.level] ?? "Tower"
-              : BUILDING_LABEL[building.type] ?? building.type
+      : selected?.steed !== null && selected?.steed !== undefined
+        ? ITEM_LABEL[selected.steed] ?? selected.steed
         : selected?.landscape ?? "Tile";
-  const owner = piece?.owner ?? building?.owner ?? null;
+  const owner = piece?.owner ?? null;
 
   const has = (item: string): string | null =>
     piece !== null && (piece.equipment.includes(item) || piece.steed === item) ? item : null;
@@ -110,9 +102,9 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
   return (
     <section className="selection">
       {!open && (
-        <p className="hint">Select one of your pieces or buildings to see it here. Grab a piece to move it.</p>
+        <p className="hint">Select one of your pieces to see it here. Grab a piece to move it.</p>
       )}
-      {selected !== null && (
+      {open && selected !== null && (
         <>
           <header className="selection__head">
             <div>
@@ -179,17 +171,6 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
               {ui.sprites.items[selected.steed] !== undefined && <img src={ui.sprites.items[selected.steed]} alt={selected.steed} />}
               <span className="selection__meta">A {ITEM_LABEL[selected.steed]?.toLowerCase() ?? selected.steed} waits here — move a piece onto this tile to mount it.</span>
             </div>
-          )}
-
-          {building !== null && piece === null && ui.sprites.building !== null && (
-            <div className="selection__portrait">
-              <img src={ui.sprites.building} alt={title} />
-              <span className="selection__meta">view range {building.viewRange}</span>
-            </div>
-          )}
-
-          {ownBuilding !== null && building !== null && (
-            <p className="hint">This building's actions are in the menu on the right.</p>
           )}
         </>
       )}
