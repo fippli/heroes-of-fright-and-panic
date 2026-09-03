@@ -48,6 +48,10 @@ Create a new game.
 
 When `aiOpponent` is true, the opponent's email is set to `"ai@bot"` and the game-action endpoint will automatically play AI turns.
 
+Instead of `inviteEmail`, the request may carry `inviteUsername` — a friend's claimed username. The function resolves it to the account's email with the service role, so emails never pass through the client. Games store `day_player_name`/`night_player_name` (stamped at create and join) so lists can show usernames instead of emails.
+
+Usernames and friendships live in the `profiles` and `friendships` tables, accessed directly from the client under RLS: usernames are readable by any signed-in player (no emails in the table), a friendship row is visible only to its two parties, requests are inserted by the requester and accepted by the addressee.
+
 ### game-state
 
 Fetch current game state. Response is filtered by fog of war based on the authenticated user's player role.

@@ -197,12 +197,12 @@ const GameCard = ({ game, userEmail, onDelete }: GameCardProps) => {
         <VStack gap="1" align="stretch">
           <HStack gap="2">
             <Text fontWeight="700" color="brand.contrast" minW="50px" fontSize="sm">day:</Text>
-            <Text color="brand.contrast" flex="1" fontSize="sm">{game.dayPlayerEmail ?? "Not assigned"}</Text>
+            <Text color="brand.contrast" flex="1" fontSize="sm">{game.dayPlayerName ?? game.dayPlayerEmail ?? "Not assigned"}</Text>
             <Text color="brand.contrast" fontSize="xs">{dayLastMove}</Text>
           </HStack>
           <HStack gap="2">
             <Text fontWeight="700" color="brand.contrast" minW="50px" fontSize="sm">night:</Text>
-            <Text color="brand.contrast" flex="1" fontSize="sm">{game.nightPlayerEmail ?? "Not assigned"}</Text>
+            <Text color="brand.contrast" flex="1" fontSize="sm">{game.nightPlayerName ?? game.nightPlayerEmail ?? "Not assigned"}</Text>
             <Text color="brand.contrast" fontSize="xs">{nightLastMove}</Text>
           </HStack>
         </VStack>

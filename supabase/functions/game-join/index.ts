@@ -6,6 +6,7 @@ import {
 import { rowToGame } from "@shared/game/converters.ts";
 import type { GameRow } from "@shared/game/types.ts";
 import { broadcastGameUpdate } from "../_shared/notify.ts";
+import { usernameOf } from "../_shared/profiles.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -73,10 +74,12 @@ Deno.serve(async (request) => {
   }
 
   const joinedAt = new Date();
+  const joinerName = await usernameOf(supabase, user.id);
   const { error: updateError } = await supabase
     .from("games")
     .update({
       [side === "day" ? "day_player_email" : "night_player_email"]: user.email,
+      [side === "day" ? "day_player_name" : "night_player_name"]: joinerName,
       updated_at: joinedAt.toISOString(),
     })
     .eq("id", gameId);

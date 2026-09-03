@@ -5,6 +5,7 @@ import {
   getUserFromRequest,
 } from "../_shared/supabase-client.ts";
 import { createGame } from "@shared/game/create-game.ts";
+import { resolveUsername, usernameOf } from "../_shared/profiles.ts";
 
 Deno.serve(async (request) => {
   const corsResponse = handleCors(request);
@@ -32,9 +33,28 @@ Deno.serve(async (request) => {
     const alliance = body.alliance ?? "day";
     const aiOpponent = body.aiOpponent === true;
     const AI_EMAIL = "ai@bot";
-    const inviteEmail = aiOpponent ? AI_EMAIL : (body.inviteEmail ?? null);
     const themeId = body.themeId ?? null;
     const mapConfig = body.mapConfig ?? undefined;
+
+    const supabase = createAdminClient();
+
+    // An invited friend arrives as a username; resolve it to the account's
+    // email here (service role), so emails never pass through the client.
+    let inviteEmail: string | null = aiOpponent ? AI_EMAIL : (body.inviteEmail ?? null);
+    let inviteName: string | null = null;
+    const inviteUsername = typeof body.inviteUsername === "string" ? body.inviteUsername.trim() : "";
+    if (!aiOpponent && inviteUsername !== "") {
+      const invited = await resolveUsername(supabase, inviteUsername);
+      if (invited === null) {
+        return new Response(
+          JSON.stringify({ error: `No player named "${inviteUsername}"` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      inviteEmail = invited.email;
+      inviteName = invited.username;
+    }
+    const creatorName = await usernameOf(supabase, user.id);
 
     const gameData = createGame({
       boardSize,
@@ -48,8 +68,10 @@ Deno.serve(async (request) => {
     // For AI opponent, set the opponent's email slot directly
     const dayPlayerEmail = alliance === "day" ? user.email : (aiOpponent ? AI_EMAIL : inviteEmail);
     const nightPlayerEmail = alliance === "night" ? user.email : (aiOpponent ? AI_EMAIL : inviteEmail);
+    const opponentName = aiOpponent ? "AI" : inviteName;
+    const dayPlayerName = alliance === "day" ? creatorName : opponentName;
+    const nightPlayerName = alliance === "night" ? creatorName : opponentName;
 
-    const supabase = createAdminClient();
     const { data: newGame, error } = await supabase
       .from("games")
       .insert({
@@ -63,6 +85,8 @@ Deno.serve(async (request) => {
         creator_email: gameData.creatorEmail,
         day_player_email: dayPlayerEmail,
         night_player_email: nightPlayerEmail,
+        day_player_name: dayPlayerName,
+        night_player_name: nightPlayerName,
         day_player_last_move: null,
         night_player_last_move: null,
         invited_email: gameData.invitedEmail,

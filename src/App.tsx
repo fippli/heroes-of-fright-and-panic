@@ -8,6 +8,7 @@ import { CallbackPage } from "./pages/auth/CallbackPage";
 import { GamesPage } from "./pages/games/GamesPage";
 import { NewGamePage } from "./pages/games/NewGamePage";
 import { LoadGamesPage } from "./pages/games/LoadGamesPage";
+import { FriendsPage } from "./pages/friends/FriendsPage";
 import { AboutPage } from "./pages/about/AboutPage";
 import { GamePage } from "./pages/game/GamePage";
 import { AdminPage } from "./pages/admin/AdminPage";
@@ -31,6 +32,7 @@ export const App = () => {
       <Route path="/games" element={<GamesPage />} />
       <Route path="/games/new" element={<NewGamePage />} />
       <Route path="/games/list" element={<LoadGamesPage />} />
+      <Route path="/friends" element={<FriendsPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/game/:id" element={<GamePage />} />
       <Route path="/admin" element={<AdminPage />} />

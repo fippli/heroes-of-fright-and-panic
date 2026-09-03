@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { Field } from "@chakra-ui/react";
 import { NativeSelect } from "@chakra-ui/react";
 import { gamesApi } from "../../lib/api";
+import { profilesApi } from "../../lib/profiles";
 import { themesApi, type Theme } from "../../lib/theme-api";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
@@ -90,6 +91,8 @@ type CreateFormState = {
   readonly size: number;
   readonly alliance: "day" | "night";
   readonly inviteEmail: string;
+  /** A friend's username picked from the dropdown; wins over inviteEmail */
+  readonly inviteFriend: string;
   readonly themeId: string;
   readonly forestDensity: number;
   readonly mountainDensity: number;
@@ -106,11 +109,13 @@ export const NewGamePage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [themes, setThemes] = useState<readonly Theme[]>([]);
+  const [friendNames, setFriendNames] = useState<readonly string[]>([]);
   const [formState, setFormState] = useState<CreateFormState>({
     name: "",
     size: 40,
     alliance: "day",
     inviteEmail: "",
+    inviteFriend: "",
     themeId: "",
     forestDensity: defaultMapConfig.forestDensity,
     mountainDensity: defaultMapConfig.mountainDensity,
@@ -138,6 +143,18 @@ export const NewGamePage = () => {
       }
 
       setIsCheckingAuth(false);
+
+      profilesApi
+        .friends()
+        .then((entries) => {
+          setFriendNames(
+            entries
+              .filter((entry) => entry.status === "friends")
+              .map((entry) => entry.username)
+              .sort(),
+          );
+        })
+        .catch(console.error);
 
       themesApi
         .getAll()
@@ -199,8 +216,10 @@ export const NewGamePage = () => {
         name: trimmedName,
         size: formState.size,
         alliance: formState.alliance,
+        inviteUsername:
+          formState.inviteFriend !== "" ? formState.inviteFriend : null,
         inviteEmail:
-          formState.inviteEmail.trim() !== ""
+          formState.inviteFriend === "" && formState.inviteEmail.trim() !== ""
             ? formState.inviteEmail.trim()
             : null,
         themeId: formState.themeId !== "" ? formState.themeId : null,
@@ -348,6 +367,7 @@ export const NewGamePage = () => {
                 ...current,
                 aiOpponent: event.target.checked,
                 inviteEmail: event.target.checked ? "" : current.inviteEmail,
+                inviteFriend: event.target.checked ? "" : current.inviteFriend,
               }))
             }
             style={{ width: "auto" }}
@@ -383,21 +403,55 @@ export const NewGamePage = () => {
         </Field.Root>
 
         {!formState.aiOpponent && (
-          <Field.Root>
-            <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Invite</Field.Label>
-            <Input
-              type="email"
-              placeholder="email@example.com"
-              value={formState.inviteEmail}
-              onChange={(event) =>
-                setFormState((current) => ({ ...current, inviteEmail: event.target.value }))
-              }
-              bg="white"
-              color="brand.contrast"
-              fontWeight="900"
-              border="none"
-            />
-          </Field.Root>
+          <>
+            {friendNames.length > 0 && (
+              <Field.Root>
+                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Invite a friend</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={formState.inviteFriend}
+                    onChange={(event) =>
+                      setFormState((current) => ({
+                        ...current,
+                        inviteFriend: event.target.value,
+                        inviteEmail: event.target.value !== "" ? "" : current.inviteEmail,
+                      }))
+                    }
+                    bg="white"
+                    color="brand.contrast"
+                    fontWeight="900"
+                    border="none"
+                  >
+                    <option value="">No one yet — share the link later</option>
+                    {friendNames.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                </NativeSelect.Root>
+              </Field.Root>
+            )}
+            {formState.inviteFriend === "" && (
+              <Field.Root>
+                <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
+                  {friendNames.length > 0 ? "…or invite by email" : "Invite by email"}
+                </Field.Label>
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={formState.inviteEmail}
+                  onChange={(event) =>
+                    setFormState((current) => ({ ...current, inviteEmail: event.target.value }))
+                  }
+                  bg="white"
+                  color="brand.contrast"
+                  fontWeight="900"
+                  border="none"
+                />
+              </Field.Root>
+            )}
+          </>
         )}
 
         <HStack gap="4">

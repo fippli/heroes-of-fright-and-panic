@@ -13,6 +13,9 @@ export type Game = {
   creatorEmail?: string | null;
   dayPlayerEmail?: string | null;
   nightPlayerEmail?: string | null;
+  /** Usernames stamped at create/join time; older games have only emails */
+  dayPlayerName?: string | null;
+  nightPlayerName?: string | null;
   dayPlayerLastMove?: string | null;
   nightPlayerLastMove?: string | null;
 };
@@ -29,7 +32,7 @@ export const gamesApi = {
     const { data, error } = await supabase
       .from("games")
       .select(
-        "id, name, size, current_player, game_over, winner, created_at, updated_at, creator_email, day_player_email, night_player_email, day_player_last_move, night_player_last_move",
+        "id, name, size, current_player, game_over, winner, created_at, updated_at, creator_email, day_player_email, night_player_email, day_player_name, night_player_name, day_player_last_move, night_player_last_move",
       )
       .or(
         `creator_email.eq.${email},day_player_email.eq.${email},night_player_email.eq.${email},invited_email.eq.${email}`,
@@ -53,6 +56,8 @@ export const gamesApi = {
       creatorEmail: row.creator_email ?? null,
       dayPlayerEmail: row.day_player_email ?? null,
       nightPlayerEmail: row.night_player_email ?? null,
+      dayPlayerName: row.day_player_name ?? null,
+      nightPlayerName: row.night_player_name ?? null,
       dayPlayerLastMove: row.day_player_last_move ?? null,
       nightPlayerLastMove: row.night_player_last_move ?? null,
     }));
@@ -63,6 +68,8 @@ export const gamesApi = {
     size: number;
     alliance: "day" | "night";
     inviteEmail?: string | null;
+    /** A friend's username; the server resolves it to their account */
+    inviteUsername?: string | null;
     themeId?: string | null;
     mapConfig?: { forestDensity: number; mountainDensity: number; waterLevel: number } | null;
     aiOpponent?: boolean;

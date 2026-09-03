@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import { useAdmin } from "../../lib/use-admin";
 import { supabase } from "../../lib/supabase";
 import { SplitLayout } from "../../components/SplitLayout";
+import { profilesApi, type Profile } from "../../lib/profiles";
+import { UsernameClaim } from "../friends/UsernameClaim";
 
 type AuthUser = {
   id: string;
@@ -14,6 +16,8 @@ type AuthUser = {
 export const GamesPage = () => {
   const [_user, setUser] = useState<AuthUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileChecked, setProfileChecked] = useState(false);
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
 
@@ -35,6 +39,15 @@ export const GamesPage = () => {
 
       setUser({ id: data.user.id, email: data.user.email });
       setIsCheckingAuth(false);
+
+      // A username is claimed once, right here at the hub
+      try {
+        const own = await profilesApi.getOwn();
+        if (!controller.signal.aborted) setProfile(own);
+      } catch (profileError) {
+        console.error("Could not load profile:", profileError);
+      }
+      if (!controller.signal.aborted) setProfileChecked(true);
     })();
 
     return () => {
@@ -55,6 +68,15 @@ export const GamesPage = () => {
     return null;
   }
 
+  // First visit after signing in: claim a username before anything else
+  if (profileChecked && profile === null) {
+    return (
+      <SplitLayout pageTitle="Games">
+        <UsernameClaim onClaimed={setProfile} />
+      </SplitLayout>
+    );
+  }
+
   return (
     <SplitLayout pageTitle="Games">
       <VStack gap="4" w="100%" align="stretch">
@@ -69,6 +91,13 @@ export const GamesPage = () => {
           <Link to="/games/list">
             <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
               Load Game
+            </Button>
+          </Link>
+        </ChakraLink>
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/friends">
+            <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+              Friends
             </Button>
           </Link>
         </ChakraLink>
