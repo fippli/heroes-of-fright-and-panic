@@ -654,6 +654,7 @@ export class Game {
     const hoveredTile = this.findTile(canvas.mousePosition);
     if (hoveredTile !== undefined) {
       hoveredTile.renderHovered(canvas.ctx);
+      this.renderHoverLabel(hoveredTile);
     }
 
     // The grabbed piece rides the cursor, slightly lifted, above everything
@@ -671,6 +672,74 @@ export class Game {
 
     canvas.ctx.restore();
 
+  }
+
+  /** What the hovered tile shows: "You see water", "You remember a house", "Unexplored" */
+  private hoverText(tile: Tile): string | null {
+    if (!tile.explored && !tile.isRemembered()) return "Unexplored";
+    const seen = tile.explored ? "You see" : "You remember";
+
+    const whose = (owner: { type: PlayerType } | undefined): string =>
+      owner?.type === this.myPlayerType ? "your" : owner?.type === "day" ? "day's" : "night's";
+
+    const pieceNames: Record<string, string> = { peasant: "peasant", king: "king", priest: "priest", archAngel: "archangel" };
+    const piece = tile.hidePiece ? undefined : tile.piece;
+    if (piece !== undefined && tile.explored) {
+      return `${seen} ${whose(piece.owner)} ${pieceNames[piece.kind] ?? piece.kind}`;
+    }
+
+    const buildingNames: Record<string, string> = { house: "a house", tower: "a tower", castle: "a castle", wall: "a wall", church: "a church", dock: "a dock" };
+    if (tile.building !== undefined) {
+      return `${seen} ${whose(tile.building.owner)} ${(buildingNames[tile.building.type] ?? tile.building.type).replace(/^a /, "")}`;
+    }
+
+    if (tile.steed !== null) {
+      return `${seen} a ${tile.steed} waiting here`;
+    }
+
+    const landNames: Record<string, string> = {
+      grass: "grass",
+      farm: "a farm",
+      tree: "a tree",
+      sand: "sand",
+      water: "water",
+      mountain: "a mountain",
+    };
+    const land = tile.landscape?.type;
+    if (land === undefined || land === LandscapeType.unexplored) return "Unexplored";
+    return `${seen} ${landNames[land] ?? land}`;
+  }
+
+  /** Small label riding the cursor, drawn in screen space so zoom doesn't scale it */
+  private renderHoverLabel(tile: Tile): void {
+    const text = this.hoverText(tile);
+    if (text === null) return;
+    const ctx = this.canvas.ctx;
+    const mouse = this.canvas.mousePosition;
+    if (!Number.isFinite(mouse.x) || !Number.isFinite(mouse.y)) return;
+    const screenX = mouse.x * this.canvas.scale + this.canvas.translation.x;
+    const screenY = mouse.y * this.canvas.scale + this.canvas.translation.y;
+
+    ctx.save();
+    ctx.resetTransform();
+    ctx.font = "13px Alagard, sans-serif";
+    const padding = 6;
+    const width = ctx.measureText(text).width + padding * 2;
+    const height = 22;
+    // Keep the label inside the canvas, flipping to the left of the cursor at the edge
+    const x = Math.min(screenX + 16, this.canvas.width - width - 4);
+    const y = Math.max(4, screenY - height - 10);
+
+    ctx.fillStyle = "rgba(20, 16, 12, 0.92)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#f5f0d0";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x + padding, y + height / 2 + 1);
+    ctx.restore();
   }
 
   /**
@@ -881,12 +950,15 @@ export class Game {
     }
 
     // If we have a selected tile with our own piece, the click resolves to a
-    // concrete engine action: attack an enemy, otherwise move.
+    // concrete engine action: attack an enemy, otherwise move. Outside our
+    // turn, clicks only ever select, so anything can be inspected while the
+    // opponent plays.
     if (
       this.selectedTile !== undefined &&
       this.selectedTile !== null &&
       this.selectedTile.piece?.owner?.type === myPlayer &&
-      myPlayer !== null
+      myPlayer !== null &&
+      this.isMyTurn
     ) {
       await this.actFromTile(this.selectedTile, clickedTile);
     } else {
