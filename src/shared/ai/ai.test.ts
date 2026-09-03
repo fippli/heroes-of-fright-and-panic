@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createGame } from "../game/create-game.ts";
+import { createResourceMap } from "../player/resource-map.ts";
 import { generateAllActions, pickAction, playAiPhase } from "./index.ts";
 
 const gameWithoutDayPieces = () => {
@@ -11,6 +12,8 @@ const gameWithoutDayPieces = () => {
     updatedAt: new Date(),
     gameOver: false,
     tiles: game.tiles.map((tile) => (tile.piece?.owner === "day" ? { ...tile, piece: null } : tile)),
+    // No pieces AND no resources: the starting house/castle offer nothing affordable
+    dayPlayer: { ...game.dayPlayer, resources: createResourceMap() },
   };
 };
 

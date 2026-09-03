@@ -1,12 +1,12 @@
-import { LandscapeType, grass as grassLandscape } from "@shared/map/landscape.ts";
+import { LandscapeType, grass as grassLandscape, farm as farmLandscape } from "@shared/map/landscape.ts";
 import { GameMap, defaultMapConfig, type MapConfig } from "@shared/map/map.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
 import { createKing, createPeasant } from "@shared/piece/index.ts";
-import { createCastleBuilding } from "@shared/building/index.ts";
+import { createCastleBuilding, createHouseBuilding } from "@shared/building/index.ts";
 import { createPlayer } from "@shared/player/index.ts";
 import { createResourceMap } from "@shared/player/resource-map.ts";
-import { replaceTile, findNeighborTiles } from "@shared/tile/index.ts";
+import { replaceTile, findNeighborTiles, findTilesInRange, findTile } from "@shared/tile/index.ts";
 import { createRandom } from "@shared/utils/random.ts";
 import { hasWalkablePath } from "@shared/movement/index.ts";
 
@@ -141,7 +141,7 @@ export const createGame = (params: CreateGameParams) => {
     },
   );
 
-  const tiles = replaceTile(
+  const tilesWithNightPeasant = replaceTile(
     tilesWithNightKeep,
     {
       row: nightPeasantTile.row,
@@ -149,6 +149,11 @@ export const createGame = (params: CreateGameParams) => {
       piece: createPeasant("night"),
     },
   );
+
+  // One house each near the keep, by the woods where possible, so both
+  // economies produce from the very first turn
+  const tilesWithDayHouse = placeStartingHouse(dayKingTile, tilesWithNightPeasant, "day");
+  const tiles = placeStartingHouse(nightKingTile, tilesWithDayHouse, "night");
 
   const dayPlayerEmail =
     params.alliance === "day"
@@ -202,6 +207,102 @@ const clearStartingArea = (
     },
     tiles as Tile[],
   );
+};
+
+/**
+ * Every kingdom starts with one house near the keep, on grass and — when the
+ * terrain allows — next to a tree, so wood production runs from the first
+ * turn and a bad first purchase can never lock a player out of the economy.
+ * Adjacent grass becomes farmland, exactly as when a house is built in play.
+ */
+const placeStartingHouse = (
+  keep: Tile,
+  tiles: ReadonlyArray<Tile>,
+  owner: PlayerType,
+): ReadonlyArray<Tile> => {
+  const resolve = (position: { row: number; column: number }): Tile | undefined =>
+    findTile(tiles, position);
+  const grassNear = (range: number, allowPiece: boolean): Tile[] =>
+    findTilesInRange(tiles, keep, range)
+      .map(resolve)
+      .filter(
+        (tile): tile is Tile =>
+          tile !== undefined &&
+          tile.landscape?.type === LandscapeType.grass &&
+          tile.building === null &&
+          (allowPiece || tile.piece === null) &&
+          !(tile.row === keep.row && tile.column === keep.column),
+      );
+  // Widen the search on shorelines and other grass-poor starts; as a last
+  // resort share the tile with a piece (pieces and buildings coexist)
+  const searches: ReadonlyArray<readonly [number, boolean]> = [
+    [2, false], [3, false], [4, false], [5, false], [6, false], [6, true],
+  ];
+  const grassCandidates = searches.reduce<Tile[]>(
+    (found, [range, allowPiece]) => (found.length > 0 ? found : grassNear(range, allowPiece)),
+    [],
+  );
+
+  // Some generated maps have no grass at all near a start (or anywhere);
+  // terraform a nearby sand tile then, like the start-clearing step does
+  const sandCandidates =
+    grassCandidates.length > 0
+      ? []
+      : findTilesInRange(tiles, keep, 4)
+          .map(resolve)
+          .filter(
+            (tile): tile is Tile =>
+              tile !== undefined &&
+              tile.landscape?.type === LandscapeType.sand &&
+              tile.building === null &&
+              !(tile.row === keep.row && tile.column === keep.column),
+          );
+  const terraform = grassCandidates.length === 0;
+  const candidates = terraform ? sandCandidates : grassCandidates;
+  if (candidates.length === 0) return tiles;
+
+  // The most productive spot wins: trees make wood, grass becomes farmland
+  const yieldAround = (tile: Tile): number =>
+    findNeighborTiles(tiles, tile).reduce((sum, neighbor) => {
+      if (neighbor.landscape?.type === LandscapeType.tree) return sum + 2;
+      if (neighbor.landscape?.type === LandscapeType.grass && neighbor.building === null) return sum + 1;
+      return sum;
+    }, 0);
+  const best = [...candidates].sort((a, b) => yieldAround(b) - yieldAround(a))[0];
+  if (best === undefined) return tiles;
+
+  const withHouse = replaceTile(tiles, {
+    row: best.row,
+    column: best.column,
+    building: createHouseBuilding(owner),
+    ...(terraform && { landscape: grassLandscape() }),
+  });
+  // Same rule as building a house in play: surrounding grass turns to farmland
+  const withFarms = findNeighborTiles(withHouse, best)
+    .filter(
+      (neighbor) =>
+        neighbor.landscape?.type === LandscapeType.grass &&
+        neighbor.building === null,
+    )
+    .reduce(
+      (acc, neighbor) => replaceTile(acc, { ...neighbor, landscape: farmLandscape() }),
+      withHouse,
+    );
+
+  // A house that would produce nothing gets a patch of farmland dug from the
+  // sand, so no start is ever locked out of the economy
+  if (yieldAround(best) > 0) return withFarms;
+  return findNeighborTiles(withFarms, best)
+    .filter(
+      (neighbor) =>
+        neighbor.landscape?.type === LandscapeType.sand &&
+        neighbor.building === null,
+    )
+    .slice(0, 2)
+    .reduce(
+      (acc, neighbor) => replaceTile(acc, { ...neighbor, landscape: farmLandscape() }),
+      withFarms,
+    );
 };
 
 const findAdjacentGrass = (

@@ -265,4 +265,47 @@ describe("createGame", () => {
     expect(game.dayPlayer.research.hasQueen).toBe(false);
 
   });
+
+  it("gives each kingdom a starting house near its keep with working production", async () => {
+    const { BuildingType } = await import("@shared/building/index.ts");
+    const { calculateProduction } = await import("@shared/production/index.ts");
+    const hexDistance = (a: { row: number; column: number }, b: { row: number; column: number }) => {
+      const q = (t: { row: number; column: number }) => t.column - Math.floor((t.row - (t.row & 1)) / 2);
+      const dq = q(a) - q(b);
+      const dr = a.row - b.row;
+      return (Math.abs(dq) + Math.abs(dq + dr) + Math.abs(dr)) / 2;
+    };
+
+    // Realistic board sizes; tiny boards can generate all-ocean maps where
+    // no game is playable at all, house or not
+    for (const seed of [1, 7, 42, "abc"]) {
+      const game = createGame({
+        boardSize: 24,
+        name: "test",
+        alliance: "day",
+        creatorEmail: "creator@test.com",
+        inviteEmail: null,
+        seed,
+      });
+
+      for (const owner of ["day", "night"] as const) {
+        const keep = game.tiles.find(
+          (tile) => tile.building?.type === BuildingType.castle && tile.building.owner === owner,
+        );
+        const houses = game.tiles.filter(
+          (tile) => tile.building?.type === BuildingType.house && tile.building.owner === owner,
+        );
+        expect(houses).toHaveLength(1);
+        expect(keep).toBeDefined();
+        const house = houses[0];
+        if (house === undefined || keep === undefined) continue;
+        // Placed as near the keep as the terrain allows (search widens to 6)
+        expect(hexDistance(house, keep)).toBeLessThanOrEqual(6);
+
+        // The house must feed the economy from turn one (farms and/or wood)
+        const production = calculateProduction(owner, game.tiles, game.dayPlayer.research);
+        expect((production.wood ?? 0) + (production.food ?? 0)).toBeGreaterThan(0);
+      }
+    }
+  });
 });
