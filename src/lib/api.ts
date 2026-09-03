@@ -67,6 +67,8 @@ export const gamesApi = {
     name: string;
     size: number;
     alliance: "day" | "night";
+    /** Map generation seed, so the game matches the previewed map */
+    seed?: string;
     inviteEmail?: string | null;
     /** A friend's username; the server resolves it to their account */
     inviteUsername?: string | null;

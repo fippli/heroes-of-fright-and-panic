@@ -124,7 +124,7 @@ export const NewGamePage = () => {
   });
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const seedRef = useRef(Math.random().toString(36).slice(2, 10));
+  const [seed, setSeed] = useState(() => Math.random().toString(36).slice(2, 10));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -184,7 +184,7 @@ export const NewGamePage = () => {
     const ctx = canvas.getContext("2d");
     if (ctx === null) return;
 
-    const random = createRandom(seedRef.current);
+    const random = createRandom(seed);
     const config = {
       forestDensity: formState.forestDensity,
       mountainDensity: formState.mountainDensity,
@@ -192,7 +192,7 @@ export const NewGamePage = () => {
     };
     const tiles = GameMap.generate(formState.size, random, config) as Tile[];
     renderMapPreview(ctx, tiles, formState.size);
-  }, [formState.size, formState.forestDensity, formState.mountainDensity, formState.waterLevel]);
+  }, [seed, formState.size, formState.forestDensity, formState.mountainDensity, formState.waterLevel]);
 
   useEffect(() => {
     if (!isCheckingAuth) {
@@ -216,6 +216,7 @@ export const NewGamePage = () => {
         name: trimmedName,
         size: formState.size,
         alliance: formState.alliance,
+        seed,
         inviteUsername:
           formState.inviteFriend !== "" ? formState.inviteFriend : null,
         inviteEmail:
@@ -336,6 +337,17 @@ export const NewGamePage = () => {
 
         <Box>
           <canvas ref={canvasRef} style={{ borderRadius: "8px", maxWidth: "100%" }} />
+          <Button
+            type="button"
+            mt="2"
+            size="sm"
+            bg="brand.contrast"
+            color="brand.solid"
+            _hover={{ bg: "#3d3d3b" }}
+            onClick={() => setSeed(Math.random().toString(36).slice(2, 10))}
+          >
+            🎲 New map
+          </Button>
         </Box>
 
         <Field.Root>

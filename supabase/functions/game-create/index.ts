@@ -56,6 +56,10 @@ Deno.serve(async (request) => {
     }
     const creatorName = await usernameOf(supabase, user.id);
 
+    const seed =
+      typeof body.seed === "string" || typeof body.seed === "number"
+        ? body.seed
+        : undefined;
     const gameData = createGame({
       boardSize,
       name,
@@ -63,6 +67,7 @@ Deno.serve(async (request) => {
       creatorEmail: user.email,
       inviteEmail,
       mapConfig,
+      seed,
     });
 
     // For AI opponent, set the opponent's email slot directly
