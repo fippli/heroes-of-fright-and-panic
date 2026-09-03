@@ -3,6 +3,16 @@ import type { Landscape, LandscapeType } from "./landscape.ts";
 import type { Building, BuildingType } from "@shared/building/index.ts";
 import type { Steed, SteedType } from "@shared/steed/index.ts";
 
+/**
+ * A river overlay crossing the tile between two of its edges (direction
+ * indices from hex.ts: 0 = E … 5 = NE). The tile keeps its landscape — the
+ * river flows over grass or sand like a tree stands on its ground.
+ */
+export type RiverSegment = {
+  readonly entry: number;
+  readonly exit: number;
+};
+
 export type Tile = {
   readonly column: number;
   readonly row: number;
@@ -10,6 +20,7 @@ export type Tile = {
   readonly piece: Piece | null;
   readonly building: Building | null;
   readonly steed?: Steed | null;
+  readonly river?: RiverSegment | null;
 };
 
 /**
@@ -25,6 +36,7 @@ export type RememberedTile = {
     readonly level: number;
   } | null;
   readonly steed: SteedType | null;
+  readonly river?: RiverSegment | null;
 };
 
 export type TilePosition = {

@@ -63,6 +63,8 @@ export type ServerTile = {
   } | null;
   /** A steed left on the tile (bought at a house), waiting to be mounted */
   steed?: { type: string } | null;
+  /** River overlay connecting two edges of the tile (directions 0=E … 5=NE) */
+  river?: { entry: number; exit: number } | null;
 };
 
 export type ServerGameState = {

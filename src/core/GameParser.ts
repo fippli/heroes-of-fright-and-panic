@@ -51,6 +51,7 @@ const parseTile = (tile: ServerTile): Tile =>
         : undefined,
     piece: tile.piece != null ? parsePiece(tile.piece) : undefined,
     steed: tile.steed != null ? tile.steed.type : null,
+    river: tile.river ?? null,
   });
 
 type ServerPiece = NonNullable<ServerTile["piece"]>;

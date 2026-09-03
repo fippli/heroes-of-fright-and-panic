@@ -83,3 +83,29 @@ export const findNeighbors = <T extends TilePosition>(
   origin: TilePosition,
   tiles: T[],
 ): T[] => tiles.filter((tile) => isNeighborTo(tile, origin));
+
+/**
+ * Neighbor offsets by edge direction, clockwise from east:
+ * 0 = E, 1 = SE, 2 = SW, 3 = W, 4 = NW, 5 = NE.
+ * Rivers use these indices to say which two edges they connect.
+ */
+const OFFSETS_EVEN_ROW: ReadonlyArray<readonly [number, number]> = [
+  [0, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0],
+];
+const OFFSETS_ODD_ROW: ReadonlyArray<readonly [number, number]> = [
+  [0, 1], [1, 1], [1, 0], [0, -1], [-1, 0], [-1, 1],
+];
+
+export const neighborAt = (
+  origin: TilePosition,
+  direction: number,
+): TilePosition => {
+  const index = ((direction % 6) + 6) % 6;
+  const offsets = origin.row % 2 === 0 ? OFFSETS_EVEN_ROW : OFFSETS_ODD_ROW;
+  const offset = offsets[index] ?? [0, 0];
+  return { row: origin.row + offset[0], column: origin.column + offset[1] };
+};
+
+/** The edge of the neighbor that touches `direction`'s edge of the origin */
+export const oppositeDirection = (direction: number): number =>
+  (((direction + 3) % 6) + 6) % 6;

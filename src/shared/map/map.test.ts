@@ -103,3 +103,42 @@ describe("generateMap connectivity", () => {
     expect(largest).toBeLessThan(land * 0.45);
   });
 });
+
+describe("rivers", () => {
+  const findTileAt = (tiles: ReadonlyArray<Tile>, position: { row: number; column: number }) =>
+    tiles.find((tile) => tile.row === position.row && tile.column === position.column);
+
+  it("flow from the mountains to the sea without sharp bends", async () => {
+    const { neighborAt, oppositeDirection } = await import("./hex.ts");
+    let sawRiver = false;
+
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const tiles = generateMap(40, lcg(seed));
+      const riverTiles = tiles.filter((tile) => tile.river != null);
+      if (riverTiles.length === 0) continue;
+      sawRiver = true;
+
+      riverTiles.forEach((tile) => {
+        const river = tile.river;
+        if (river == null) return;
+        // Two shapes suffice: the turn is always 120° or straight, never 60°
+        const turn = ((river.exit - river.entry) % 6 + 6) % 6;
+        expect([2, 3, 4]).toContain(turn);
+        // Rivers overlay land, never water or mountains
+        expect([LandscapeType.grass, LandscapeType.sand, LandscapeType.farm]).toContain(
+          tile.landscape?.type,
+        );
+        // Downstream continuity: the exit leads to the next segment or the sea
+        const downstream = findTileAt(tiles, neighborAt(tile, river.exit));
+        expect(downstream).toBeDefined();
+        if (downstream?.river != null) {
+          expect(downstream.river.entry).toBe(oppositeDirection(river.exit));
+        } else {
+          expect(downstream?.landscape?.type).toBe(LandscapeType.water);
+        }
+      });
+    }
+
+    expect(sawRiver).toBe(true);
+  });
+});

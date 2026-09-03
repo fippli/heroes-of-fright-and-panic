@@ -11,6 +11,7 @@ import type { RandomFunction } from "@shared/utils/random.ts";
 import { createNoise } from "@shared/utils/noise.ts";
 import type { Tile, TilePosition } from "./tile.ts";
 import { findNeighborTiles } from "@shared/tile/index.ts";
+import { neighborAt, oppositeDirection } from "./hex.ts";
 
 // ============================================
 // MAP CONFIGURATION
@@ -188,6 +189,8 @@ export const generateMap = (
   const elevationNoise = createNoise(random, 4, 2.0, 0.5);
   const forestNoise = createNoise(random, 3, 2.0, 0.5);
   const mountainNoise = createNoise(random, 2, 2.0, 0.5);
+  // Elevation per tile, kept for river tracing after the terrain settles
+  const elevations = new Map<string, number>();
 
   const tiles = Array.from({ length: size * size }, (_, tileNumber) => {
     const column = tileNumber % size;
@@ -209,11 +212,116 @@ export const generateMap = (
 
     const landscape = landscapeFromNoise(elevation, forest, mountains, config);
 
+    elevations.set(`${row},${column}`, elevation);
     return { column, row, landscape, piece: null, building: null, steed: null } as Tile;
   });
 
   const withBeaches = createBeaches(tiles);
-  return connectLand(cleanupSand(withBeaches));
+  const settled = connectLand(cleanupSand(withBeaches));
+  return traceRivers(settled, elevations, random, size);
+};
+
+// ============================================
+// RIVERS
+// ============================================
+
+/**
+ * Rivers spring from a mountain, descend the elevation field and empty into
+ * the sea. They are overlays: each river tile keeps its landscape and gets a
+ * `river` segment connecting the entry and exit edges. Sharp 60° bends are
+ * never generated, so two sprite shapes (straight, gentle bend) rotated in
+ * 60° steps can draw every segment.
+ */
+const traceRivers = (
+  tiles: ReadonlyArray<Tile>,
+  elevations: ReadonlyMap<string, number>,
+  random: RandomFunction,
+  size: number,
+): Tile[] => {
+  const byKey = new Map(tiles.map((tile) => [`${tile.row},${tile.column}`, tile]));
+  const elevationOf = (position: TilePosition): number =>
+    elevations.get(`${position.row},${position.column}`) ?? 0;
+  const landscapeOf = (position: TilePosition): LandscapeType | null =>
+    byKey.get(`${position.row},${position.column}`)?.landscape?.type ?? null;
+
+  const springs = tiles
+    .filter((tile) => tile.landscape?.type === LandscapeType.mountain)
+    .sort(() => random() - 0.5);
+  const wanted = Math.max(1, Math.round(size / 20));
+
+  type Segment = { readonly position: TilePosition; readonly entry: number; readonly exit: number };
+  const riverKeys = new Set<string>();
+  const committed: Segment[] = [];
+
+  const traceFrom = (spring: Tile): Segment[] | null => {
+    // Step off the mountain onto the lowest neighboring land tile
+    const firstDirection = [0, 1, 2, 3, 4, 5]
+      .filter((direction) => {
+        const type = landscapeOf(neighborAt(spring, direction));
+        return type !== null && type !== LandscapeType.water && type !== LandscapeType.mountain;
+      })
+      .sort((a, b) => elevationOf(neighborAt(spring, a)) - elevationOf(neighborAt(spring, b)))[0];
+    if (firstDirection === undefined) return null;
+
+    const path: Segment[] = [];
+    let position = neighborAt(spring, firstDirection);
+    let entry = oppositeDirection(firstDirection);
+
+    for (let step = 0; step < size; step += 1) {
+      const key = `${position.row},${position.column}`;
+      if (riverKeys.has(key) || path.some((segment) => `${segment.position.row},${segment.position.column}` === key)) {
+        return null; // never cross another river
+      }
+      // No sharp bends: the exit must not share a corner with the entry
+      const exits = [2, 3, 4]
+        .map((turn) => (entry + turn) % 6)
+        .filter((direction) => landscapeOf(neighborAt(position, direction)) !== null);
+      const toSea = exits.find(
+        (direction) => landscapeOf(neighborAt(position, direction)) === LandscapeType.water,
+      );
+      if (toSea !== undefined) {
+        path.push({ position, entry, exit: toSea });
+        return path;
+      }
+      const onward = exits
+        .filter((direction) => landscapeOf(neighborAt(position, direction)) !== LandscapeType.mountain)
+        .sort(
+          (a, b) =>
+            elevationOf(neighborAt(position, a)) - elevationOf(neighborAt(position, b)) +
+            (random() - 0.5) * 0.02,
+        )[0];
+      if (onward === undefined) return null;
+      path.push({ position, entry, exit: onward });
+      position = neighborAt(position, onward);
+      entry = oppositeDirection(onward);
+    }
+    return null; // never reached the sea
+  };
+
+  let placed = 0;
+  for (const spring of springs) {
+    if (placed >= wanted) break;
+    const path = traceFrom(spring);
+    if (path === null || path.length < 2) continue;
+    path.forEach((segment) => {
+      committed.push(segment);
+      riverKeys.add(`${segment.position.row},${segment.position.column}`);
+    });
+    placed += 1;
+  }
+
+  if (committed.length === 0) return tiles as Tile[];
+  const segmentsByKey = new Map(
+    committed.map((segment) => [`${segment.position.row},${segment.position.column}`, segment]),
+  );
+  return tiles.map((tile) => {
+    const segment = segmentsByKey.get(`${tile.row},${tile.column}`);
+    if (segment === undefined) return tile as Tile;
+    // Rivers carve valleys: forest on a river tile gives way to grass
+    const landscape =
+      tile.landscape?.type === LandscapeType.tree ? grass() : tile.landscape;
+    return { ...tile, landscape, river: { entry: segment.entry, exit: segment.exit } } as Tile;
+  });
 };
 
 // ============================================

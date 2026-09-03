@@ -24,6 +24,7 @@ import { GameMap } from "@shared/map/map";
 import { defaultMapConfig } from "@shared/map/map";
 import { createRandom } from "@shared/utils/random";
 import { LandscapeType } from "@shared/map/landscape";
+import { neighborAt as hexNeighborAt } from "@shared/map/hex";
 import type { Tile } from "@shared/map/tile";
 
 // ============================================
@@ -81,6 +82,27 @@ const renderMapPreview = (
     ctx.closePath();
     ctx.fillStyle = color;
     ctx.fill();
+  });
+
+  // Rivers on top: a stroke between the two edge midpoints of each segment
+  const centerOf = (row: number, column: number): readonly [number, number] => [
+    column * hexWidth + (row % 2 === 1 ? hexWidth / 2 : 0) + hexWidth / 2 + 5,
+    row * hexHeight * 0.75 + hexHeight / 2 + 5,
+  ];
+  ctx.strokeStyle = "#3d7ab5";
+  ctx.lineWidth = Math.max(1.5, hexRadius / 2);
+  ctx.lineCap = "round";
+  tiles.forEach((tile) => {
+    if (tile.river == null) return;
+    const [cx, cy] = centerOf(tile.row, tile.column);
+    const enter = hexNeighborAt(tile, tile.river.entry);
+    const exit = hexNeighborAt(tile, tile.river.exit);
+    const [ex, ey] = centerOf(enter.row, enter.column);
+    const [xx, xy] = centerOf(exit.row, exit.column);
+    ctx.beginPath();
+    ctx.moveTo((cx + ex) / 2, (cy + ey) / 2);
+    ctx.quadraticCurveTo(cx, cy, (cx + xx) / 2, (cy + xy) / 2);
+    ctx.stroke();
   });
 };
 

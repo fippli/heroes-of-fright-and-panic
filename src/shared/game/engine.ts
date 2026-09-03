@@ -932,7 +932,7 @@ export const getSpectatorGameState = (game: Game): Game => {
   const filteredTiles = game.tiles.map((tile) => {
     const key = `${tile.row},${tile.column}`;
     if (day.has(key) || night.has(key)) return tile;
-    return { ...tile, piece: null, building: null, landscape: unexploredLandscape(), steed: null } as Tile;
+    return { ...tile, piece: null, building: null, landscape: unexploredLandscape(), steed: null, river: null } as Tile;
   });
   return {
     ...game,
@@ -1155,6 +1155,7 @@ export const rememberVisible = (game: Game): Game => {
                 level: buildingLevel(tile.building),
               },
         steed: tile.steed?.type ?? null,
+        river: tile.river ?? null,
       };
     });
     return { ...player, explored };
@@ -1180,6 +1181,7 @@ const tileFromMemory = (tile: Tile, seen: RememberedTile): Tile => ({
           level: seen.building.level,
         },
   steed: seen.steed === null ? null : createSteed(seen.steed),
+  river: seen.river ?? null,
 });
 
 /** The memory map is served through the tiles themselves; keep it off the wire */
@@ -1210,6 +1212,7 @@ export const getFilteredGameState = (
       building: null,
       landscape: unexploredLandscape(),
       steed: null,
+      river: null,
     } as Tile;
   });
 

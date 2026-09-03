@@ -1,5 +1,5 @@
 import * as hex from "@shared/map/hex";
-import type { TilePosition } from "@shared/map/tile";
+import type { RiverSegment, TilePosition } from "@shared/map/tile";
 import type { ImageAssets } from "../images";
 import type { Building } from "./Building";
 import { Hexagon } from "./Hexagon";
@@ -26,6 +26,8 @@ export class Tile {
   readonly piece?: Piece;
   /** Steed lying on the tile (horse/boat), mounted by moving a piece onto it */
   readonly steed: string | null;
+  /** River overlay crossing the tile between two edges */
+  readonly river: RiverSegment | null;
 
   constructor({
     row,
@@ -35,6 +37,7 @@ export class Tile {
     piece,
     building,
     steed,
+    river,
   }: {
     row: number;
     column: number;
@@ -43,10 +46,12 @@ export class Tile {
     piece?: Piece;
     building?: Building;
     steed?: string | null;
+    river?: RiverSegment | null;
   }) {
     this.piece = piece;
     this.building = building;
     this.steed = steed ?? null;
+    this.river = river ?? null;
     this.x = Hexagon.x(row, column);
     this.y = Hexagon.y(row);
     this.row = row;
@@ -75,6 +80,7 @@ export class Tile {
     if (this.explored) {
       if (this.landscape !== null) {
         this.landscape.render(ctx, this, imageAssets);
+        this.renderRiver(ctx);
         this.building?.render(ctx, this, imageAssets);
         if (this.steed !== null && this.piece === undefined) {
           imageAssets.itemImage(this.steed)?.renderCentered(ctx, this.x, this.y);
@@ -86,6 +92,7 @@ export class Tile {
       // waiting steed under a shadow — never pieces (they may have moved,
       // and an enemy could be standing here right now).
       this.landscape?.render(ctx, this, imageAssets);
+      this.renderRiver(ctx);
       this.building?.render(ctx, this, imageAssets);
       if (this.steed !== null) {
         imageAssets.itemImage(this.steed)?.renderCentered(ctx, this.x, this.y);
@@ -96,6 +103,39 @@ export class Tile {
       Landscape.unexplored(ctx, this.x, this.y, imageAssets);
     }
 
+    ctx.restore();
+  }
+
+  /**
+   * The river overlay: a stroke from the entry edge's midpoint through the
+   * tile center to the exit edge's midpoint. The midpoint of a shared edge is
+   * exactly halfway between the two hex centers, so no vertex math is needed.
+   */
+  private renderRiver(ctx: CanvasRenderingContext2D): void {
+    if (this.river === null) return;
+    const edgeMid = (direction: number): { x: number; y: number } => {
+      const neighbor = hex.neighborAt(this, direction);
+      return {
+        x: (this.x + Hexagon.x(neighbor.row, neighbor.column)) / 2,
+        y: (this.y + Hexagon.y(neighbor.row)) / 2,
+      };
+    };
+    const from = edgeMid(this.river.entry);
+    const to = edgeMid(this.river.exit);
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#3d7ab5";
+    ctx.lineWidth = Hexagon.height / 4;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.quadraticCurveTo(this.x, this.y, to.x, to.y);
+    ctx.stroke();
+    // A lighter mid-channel gives it a hint of current
+    ctx.strokeStyle = "#6aa5d8";
+    ctx.lineWidth = Hexagon.height / 10;
+    ctx.stroke();
     ctx.restore();
   }
 
