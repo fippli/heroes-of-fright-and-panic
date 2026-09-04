@@ -46,6 +46,8 @@ export type ServerTile = {
     owner?: PlayerType;
     level?: number;
     acted?: boolean;
+    /** Curtain-wall edges this wall joins toward (0=E … 5=NE) */
+    connections?: number[] | null;
   } | null;
   piece: {
     kind: PieceKind;
@@ -66,6 +68,9 @@ export type ServerTile = {
   /** River overlay connecting two edges of the tile (directions 0=E … 5=NE) */
   river?: { entry: number; exit: number } | null;
 };
+
+/** Building fields as they arrive on the wire */
+export type ServerBuilding = NonNullable<ServerTile["building"]>;
 
 export type ServerGameState = {
   id: string;

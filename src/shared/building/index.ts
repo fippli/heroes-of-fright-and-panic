@@ -22,6 +22,12 @@ export type Building = {
   readonly level?: number;
   /** Set once the building has used its action this phase */
   readonly acted?: boolean;
+  /**
+   * Walls raised between towers record which hex edges they join toward
+   * (direction indices 0=E … 5=NE), so the renderer can draw a continuous
+   * curtain wall. Hand-placed walls have none and render as before.
+   */
+  readonly connections?: ReadonlyArray<number>;
 };
 
 export const MAX_HOUSE_LEVEL = 3;

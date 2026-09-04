@@ -47,7 +47,7 @@ export const BuildMenu = ({ game, ui }: { readonly game: Game; readonly ui: Game
         <p className="hint">
           {ui.pendingBuild !== null
             ? "Click a highlighted tile to place it. Esc cancels."
-            : "Pick a building, then click a tile inside your kingdom (what you can see). Docks go on sand by the water; a castle is made by walking your king into a tower."}
+            : "Pick a building, then click a tile inside your kingdom (what you can see). Docks go on sand by the water; a castle is made by walking your king into a tower. Towers link to nearby towers with a curtain wall (1 stone per segment, forests and mountains count for free) — hover to preview it."}
         </p>
       </section>
     </>

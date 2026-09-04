@@ -62,6 +62,8 @@ import {
 import type { Game } from "./types.ts";
 import { getPlayer, withPlayer } from "./state.ts";
 import { validateMove, executeMove, findDistance } from "../movement/index.ts";
+import { planTowerWalls } from "../walls/index.ts";
+import { addResources, createResourceMap } from "../player/resource-map.ts";
 import {
   canAffordCost,
   payForCost,
@@ -284,12 +286,31 @@ export const handleBuild = (
   }
 
   const player = getPlayer(game, action.player);
-  const cost = costOfBuilding(action.buildingType);
+
+  // Towers are wall connectors: placing one raises a curtain wall to the
+  // nearest friendly towers, paid for up front (1 stone per new segment)
+  const wallPlan =
+    action.buildingType === BuildingType.tower
+      ? planTowerWalls(game.tiles, action.position, action.player)
+      : null;
+  const cost =
+    wallPlan !== null && wallPlan.newWallCount > 0
+      ? addResources(
+          costOfBuilding(action.buildingType),
+          createResourceMap({ stone: wallPlan.newWallCount }),
+        )
+      : costOfBuilding(action.buildingType);
 
   if (!canAffordCost(player, cost)) {
     return {
       game,
-      result: { success: false, error: "Cannot afford this building" },
+      result: {
+        success: false,
+        error:
+          wallPlan !== null && wallPlan.newWallCount > 0
+            ? `Cannot afford the tower and its ${wallPlan.newWallCount} wall segments`
+            : "Cannot afford this building",
+      },
     };
   }
 
@@ -301,6 +322,22 @@ export const handleBuild = (
     if (action.buildingType === BuildingType.house) {
       return convertAdjacentGrassToFarm(withBuilding, action.position);
     }
+    if (wallPlan !== null) {
+      return wallPlan.walls.reduce((acc, wall) => {
+        const existing = findTile(acc, wall.position);
+        if (existing === undefined) return acc;
+        const merged =
+          existing.building !== null
+            ? {
+                ...existing.building,
+                connections: [
+                  ...new Set([...(existing.building.connections ?? []), ...wall.edges]),
+                ].sort((a, b) => a - b),
+              }
+            : { ...createBuilding(BuildingType.wall, action.player), connections: wall.edges };
+        return replaceTile(acc, { ...existing, building: merged });
+      }, withBuilding);
+    }
     return withBuilding;
   })();
 
@@ -309,9 +346,13 @@ export const handleBuild = (
     action.player,
     updatedPlayer,
   );
+  const wallNote =
+    wallPlan !== null && wallPlan.walls.length > 0
+      ? ` — curtain wall raised (${wallPlan.newWallCount} new segments)`
+      : "";
   return {
     game: afterBuild,
-    result: { success: true, message: `Built ${action.buildingType}` },
+    result: { success: true, message: `Built ${action.buildingType}${wallNote}` },
   };
 };
 
@@ -1153,6 +1194,7 @@ export const rememberVisible = (game: Game): Game => {
                 type: tile.building.type,
                 owner: tile.building.owner,
                 level: buildingLevel(tile.building),
+                connections: tile.building.connections ?? null,
               },
         steed: tile.steed?.type ?? null,
         river: tile.river ?? null,
@@ -1179,6 +1221,7 @@ const tileFromMemory = (tile: Tile, seen: RememberedTile): Tile => ({
       : {
           ...createBuilding(seen.building.type, seen.building.owner),
           level: seen.building.level,
+          ...(seen.building.connections != null && { connections: seen.building.connections }),
         },
   steed: seen.steed === null ? null : createSteed(seen.steed),
   river: seen.river ?? null,

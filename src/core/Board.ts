@@ -22,6 +22,9 @@ import { Tile } from "./Tile";
 import { LandscapeType } from "./Landscape";
 import { boundsOfTiles, focusPoint } from "./viewport";
 import { predictAction } from "./predict";
+import { planTowerWalls, type WallPlan } from "@shared/walls";
+import { neighborAt } from "@shared/map/hex";
+import type { Tile as EngineTile } from "@shared/map/tile";
 import type { GameUiState, Notice, TargetMode } from "./ui-state";
 
 /**
@@ -348,7 +351,55 @@ export class Game {
   setPendingBuild(buildingType: BuildingType | null): void {
     this.pendingBuild =
       buildingType === null || buildingType === this.pendingBuild ? null : buildingType;
+    this.towerPlanCache = null;
     this.notify();
+  }
+
+  // Cached curtain-wall plan for the tile currently hovered in tower build mode
+  private towerPlanCache: { readonly key: string; readonly plan: WallPlan | null } | null = null;
+
+  /** What wall a tower placed on this tile would raise; null when not applicable */
+  private towerWallPlan(tile: Tile): WallPlan | null {
+    if (this.pendingBuild !== BuildingType.tower || this.myPlayerType === null) return null;
+    if (!tile.explored || tile.building !== undefined || tile.landscape?.type !== LandscapeType.grass) {
+      return null;
+    }
+    const cacheKey = `${tile.row},${tile.column}`;
+    if (this.towerPlanCache?.key === cacheKey) return this.towerPlanCache.plan;
+    const state = this.lastServerState;
+    const plan =
+      state === null
+        ? null
+        : planTowerWalls(
+            state.tiles as unknown as ReadonlyArray<EngineTile>,
+            { row: tile.row, column: tile.column },
+            this.myPlayerType,
+          );
+    this.towerPlanCache = { key: cacheKey, plan };
+    return plan;
+  }
+
+  /** Ghost of the curtain wall the hovered tower placement would raise */
+  private renderTowerWallGhost(tile: Tile): void {
+    const plan = this.towerWallPlan(tile);
+    if (plan === null || plan.walls.length === 0) return;
+    const ctx = this.canvas.ctx;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(216, 208, 192, 0.55)";
+    ctx.lineWidth = Hexagon.height / 5;
+    plan.walls.forEach((wall) => {
+      const x = Hexagon.x(wall.position.row, wall.position.column);
+      const y = Hexagon.y(wall.position.row);
+      wall.edges.forEach((direction) => {
+        const neighbor = neighborAt(wall.position, direction);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo((x + Hexagon.x(neighbor.row, neighbor.column)) / 2, (y + Hexagon.y(neighbor.row)) / 2);
+        ctx.stroke();
+      });
+    });
+    ctx.restore();
   }
 
   /** Pick a target for the selected piece/building on the next click; same mode again cancels */
@@ -418,6 +469,8 @@ export class Game {
     if (this.selectedTile != null) {
       this.selectedTile = this.findTile({ row: this.selectedTile.row, column: this.selectedTile.column });
     }
+    // The wall-plan cache is stale the moment the board changes
+    this.towerPlanCache = null;
     // Same for a piece being dragged; if it no longer stands there, drop the drag
     if (this.dragFrom !== null) {
       const current = this.findTile({ row: this.dragFrom.row, column: this.dragFrom.column });
@@ -654,6 +707,7 @@ export class Game {
     const hoveredTile = this.findTile(canvas.mousePosition);
     if (hoveredTile !== undefined) {
       hoveredTile.renderHovered(canvas.ctx);
+      this.renderTowerWallGhost(hoveredTile);
       this.renderHoverLabel(hoveredTile);
     }
 
@@ -712,7 +766,13 @@ export class Game {
 
   /** Small label riding the cursor, drawn in screen space so zoom doesn't scale it */
   private renderHoverLabel(tile: Tile): void {
-    const text = this.hoverText(tile);
+    const plan = this.towerWallPlan(tile);
+    const text =
+      plan !== null
+        ? plan.linkedTowers.length > 0
+          ? `Tower + curtain wall (${plan.newWallCount} stone)`
+          : "Tower — no tower in range to link"
+        : this.hoverText(tile);
     if (text === null) return;
     const ctx = this.canvas.ctx;
     const mouse = this.canvas.mousePosition;

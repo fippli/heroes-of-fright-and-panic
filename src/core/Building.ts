@@ -1,4 +1,5 @@
 import { BuildingType } from "@shared/building";
+import { neighborAt } from "@shared/map/hex";
 import type { ImageAssets } from "../images";
 import { Hexagon } from "./Hexagon";
 import type { Player } from "@shared/player";
@@ -21,6 +22,8 @@ export class Building {
   readonly viewRange: number;
   readonly level: number;
   readonly acted: boolean;
+  /** Curtain-wall edges this wall joins toward; hand-placed walls have none */
+  readonly connections: ReadonlyArray<number> | null;
 
   constructor({
     type,
@@ -31,6 +34,7 @@ export class Building {
     owner,
     level,
     acted,
+    connections,
   }: {
     type: BuildingType;
     walkable?: boolean;
@@ -40,9 +44,11 @@ export class Building {
     owner: Player;
     level?: number;
     acted?: boolean;
+    connections?: ReadonlyArray<number> | null;
   }) {
     this.level = level ?? 1;
     this.acted = acted ?? false;
+    this.connections = connections ?? null;
     this.walkable = walkable ?? true;
     this.viewRange = viewRange ?? 1;
     this.type = type;
@@ -63,6 +69,14 @@ export class Building {
 
     ctx.clip(Hexagon.path(x, y, Hexagon.clipRadius));
 
+    // Curtain-wall segments draw as a continuous rampart between their
+    // edges instead of the standalone wall sprite
+    if (this.type === BuildingType.wall && this.connections !== null && this.connections.length > 0) {
+      this.renderCurtainWall(ctx, position, x, y);
+      ctx.restore();
+      return;
+    }
+
     imageAssets.buildingImage(this.owner, this.type, this.level).renderCentered(ctx, x, y);
 
     // Upgraded houses wear their level as gold pips in the top-right corner
@@ -77,6 +91,43 @@ export class Building {
       }
     }
 
+    ctx.restore();
+  }
+
+  /** Stone rampart from the tile center out to each connected edge midpoint */
+  private renderCurtainWall(
+    ctx: CanvasRenderingContext2D,
+    position: TilePosition,
+    x: number,
+    y: number,
+  ): void {
+    const edgeMid = (direction: number): { x: number; y: number } => {
+      const neighbor = neighborAt(position, direction);
+      return {
+        x: (x + Hexagon.x(neighbor.row, neighbor.column)) / 2,
+        y: (y + Hexagon.y(neighbor.row)) / 2,
+      };
+    };
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    (this.connections ?? []).forEach((direction) => {
+      const mid = edgeMid(direction);
+      // Dark base course, lighter cap on top
+      ctx.strokeStyle = "#4a4440";
+      ctx.lineWidth = Hexagon.height / 3.2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(mid.x, mid.y);
+      ctx.stroke();
+      ctx.strokeStyle = this.owner?.type === "night" ? "#8d84a8" : "#a89c84";
+      ctx.lineWidth = Hexagon.height / 6;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(mid.x, mid.y);
+      ctx.stroke();
+    });
     ctx.restore();
   }
 

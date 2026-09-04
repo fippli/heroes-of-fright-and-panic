@@ -34,6 +34,7 @@ export type RememberedTile = {
     readonly type: BuildingType;
     readonly owner: PlayerType;
     readonly level: number;
+    readonly connections?: ReadonlyArray<number> | null;
   } | null;
   readonly steed: SteedType | null;
   readonly river?: RiverSegment | null;

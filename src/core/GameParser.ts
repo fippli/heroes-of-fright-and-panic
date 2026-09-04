@@ -44,6 +44,7 @@ const parseTile = (tile: ServerTile): Tile =>
             viewRange: tile.building.viewRange ?? 1,
             level: tile.building.level ?? 1,
             acted: tile.building.acted ?? false,
+            connections: tile.building.connections ?? null,
             owner: createPlayer({
               type: tile.building.owner ?? "day",
             }),
