@@ -126,15 +126,18 @@ export class Tile {
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#3d7ab5";
-    ctx.lineWidth = Hexagon.height / 4;
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.quadraticCurveTo(this.x, this.y, to.x, to.y);
+    // Shallow banks fading into a dark, deep mid-channel
+    ctx.strokeStyle = "#7db3de";
+    ctx.lineWidth = Hexagon.height / 4;
     ctx.stroke();
-    // A lighter mid-channel gives it a hint of current
-    ctx.strokeStyle = "#6aa5d8";
-    ctx.lineWidth = Hexagon.height / 10;
+    ctx.strokeStyle = "#4a86bd";
+    ctx.lineWidth = Hexagon.height / 6;
+    ctx.stroke();
+    ctx.strokeStyle = "#27567f";
+    ctx.lineWidth = Hexagon.height / 12;
     ctx.stroke();
     ctx.restore();
   }

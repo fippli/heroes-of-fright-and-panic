@@ -89,8 +89,6 @@ const renderMapPreview = (
     column * hexWidth + (row % 2 === 1 ? hexWidth / 2 : 0) + hexWidth / 2 + 5,
     row * hexHeight * 0.75 + hexHeight / 2 + 5,
   ];
-  ctx.strokeStyle = "#3d7ab5";
-  ctx.lineWidth = Math.max(1.5, hexRadius / 2);
   ctx.lineCap = "round";
   tiles.forEach((tile) => {
     if (tile.river == null) return;
@@ -102,6 +100,12 @@ const renderMapPreview = (
     ctx.beginPath();
     ctx.moveTo((cx + ex) / 2, (cy + ey) / 2);
     ctx.quadraticCurveTo(cx, cy, (cx + xx) / 2, (cy + xy) / 2);
+    // Light banks, dark deep middle
+    ctx.strokeStyle = "#7db3de";
+    ctx.lineWidth = Math.max(1.5, hexRadius / 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#27567f";
+    ctx.lineWidth = Math.max(1, hexRadius / 4);
     ctx.stroke();
   });
 };
