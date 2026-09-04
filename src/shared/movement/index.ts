@@ -33,7 +33,17 @@ export const canWalkOnTile = (
   player: PlayerType,
 ): boolean => {
   if (tile.landscape === null) return false;
-  if (!getWalkableLandscape(piece).includes(tile.landscape.type)) return false;
+  const walkable = getWalkableLandscape(piece).includes(tile.landscape.type);
+  // A boat waiting on water makes its tile boardable: stepping onto it
+  // mounts the boat, which is the only way a land piece ever enters water
+  const boardableBoat =
+    !walkable &&
+    tile.landscape.type === LandscapeType.water &&
+    tile.steed != null &&
+    tile.steed.enablesWaterTravel &&
+    piece.canMountSteed &&
+    piece.steed === null;
+  if (!walkable && !boardableBoat) return false;
   if (tile.building !== null && !isBuildingWalkableBy(tile.building, player)) return false;
   return true;
 };

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createKing, createPeasant, type Piece } from "../piece/index.ts";
 import { createCastleBuilding } from "../building/index.ts";
 import { createHorse, createSteed, SteedType } from "../steed/index.ts";
-import { grass } from "../map/landscape.ts";
+import { grass, sand, water } from "../map/landscape.ts";
 import type { Steed } from "../steed/index.ts";
 import type { Tile } from "../map/tile.ts";
 import { createPlayer } from "../player/index.ts";
@@ -150,5 +150,37 @@ describe("movement split across a phase", () => {
     });
     expect(second.result.success).toBe(false);
     expect(second.result.error).toContain("already acted");
+  });
+});
+
+describe("boats", () => {
+  it("a peasant boards a waiting boat and sails on across the water", () => {
+    const start = gameOf([
+      { ...tile(0, 0, createPeasant("day")), landscape: sand() },
+      { ...tile(0, 1), landscape: water(), steed: createSteed(SteedType.boat) },
+      { ...tile(0, 2), landscape: water() },
+      { ...tile(0, 3), landscape: sand() },
+      ...kingdoms(),
+    ]);
+
+    // Board the boat: the water tile is enterable because a boat waits there
+    const boarded = handleMove(start, { type: "move", player: "day", from: { row: 0, column: 0 }, to: { row: 0, column: 1 } });
+    expect(boarded.result.success).toBe(true);
+    expect(pieceAt(boarded.game, 0, 1)?.steed?.type).toBe(SteedType.boat);
+
+    // The boat's move bonus applies on arrival: one step of sailing remains
+    const sailed = handleMove(boarded.game, { type: "move", player: "day", from: { row: 0, column: 1 }, to: { row: 0, column: 2 } });
+    expect(sailed.result.success).toBe(true);
+    expect(pieceAt(sailed.game, 0, 2)?.steed?.type).toBe(SteedType.boat);
+  });
+
+  it("water without a boat stays impassable", () => {
+    const start = gameOf([
+      { ...tile(0, 0, createPeasant("day")), landscape: sand() },
+      { ...tile(0, 1), landscape: water() },
+      ...kingdoms(),
+    ]);
+    const swim = handleMove(start, { type: "move", player: "day", from: { row: 0, column: 0 }, to: { row: 0, column: 1 } });
+    expect(swim.result.success).toBe(false);
   });
 });

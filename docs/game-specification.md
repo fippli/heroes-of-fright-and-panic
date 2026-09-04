@@ -154,7 +154,7 @@ Equipment is for peasants only. Each peasant can carry at most one of each type.
 
 ## Steeds
 
-Horses are bought at houses and placed on an adjacent tile; boats are built at docks and placed on adjacent water. Pieces pick them up by moving onto the tile.
+Horses are bought at houses and placed on an adjacent tile; boats are built at docks and placed on adjacent water. Pieces pick them up by moving onto the tile — a waiting boat makes its water tile enterable (the one way onto water without a steed), and boarding mounts it, ready to sail.
 
 | Type  | Cost    | Effect |
 |-------|---------|--------|
