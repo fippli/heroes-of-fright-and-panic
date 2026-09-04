@@ -19,9 +19,9 @@ describe("Building", () => {
       expect(cost.stone).toBe(0);
     });
 
-    it("tower costs 5 wood", () => {
-      expect(buildingCostOf(BuildingType.tower).wood).toBe(5);
-      expect(buildingCostOf(BuildingType.tower).stone).toBe(0);
+    it("tower costs 5 stone", () => {
+      expect(buildingCostOf(BuildingType.tower).stone).toBe(5);
+      expect(buildingCostOf(BuildingType.tower).wood).toBe(0);
     });
 
     it("wall costs 1 stone", () => {

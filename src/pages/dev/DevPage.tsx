@@ -216,7 +216,7 @@ export const DevPage = () => {
                 <strong>H</strong> — Build House (1 wood)
               </div>
               <div>
-                <strong>T</strong> — Build Tower (10 stone)
+                <strong>T</strong> — Build Tower (5 stone + wall)
               </div>
               <div>
                 <strong>W</strong> — Build Wall (1 stone)

@@ -53,7 +53,7 @@ export const buildingCostOf = (buildingType: BuildingType): ResourceMap => {
     case BuildingType.house:
       return createResourceMap({ wood: 1 });
     case BuildingType.tower:
-      return createResourceMap({ wood: 5 });
+      return createResourceMap({ stone: 5 });
     case BuildingType.wall:
       return createResourceMap({ stone: 1 });
     case BuildingType.church:
@@ -99,7 +99,7 @@ export const towerUpgradeCost = (level: number): ResourceMap | null => {
     case 1:
       return createResourceMap({ stone: 8 });
     case 2:
-      return createResourceMap({ gold: 5 });
+      return createResourceMap({ stone: 12 });
     default:
       return null;
   }

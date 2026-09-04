@@ -125,7 +125,7 @@ There are six building types. All buildings have 1 defense and 0 hearts.
 | Type   | Cost                | View Range | Walkable By  | Special |
 |--------|---------------------|------------|-------------|---------|
 | House  | 1 wood              | 1          | Both players | Spawns peasants. Adjacent grass converts to farm. |
-| Tower  | 5 wood + curtain wall | 2/3/4 by tier | Both players | Watchpost → Watchtower (8 stone) → Beacon (5 gold). A bow inside shoots at the tower's range. |
+| Tower  | 5 stone + curtain wall | 2/3/4 by tier | Both players | Watchpost → Watchtower (8 stone) → Beacon (12 stone). A bow inside shoots at the tower's range. |
 
 **Curtain walls**: towers are wall connectors. Placing a tower automatically raises a wall along the shortest run to the nearest friendly towers (up to two, within 6 tiles), at 1 stone per new segment — paid up front with the tower, and the build is refused if unaffordable. Forests, mountains and water count as wall for free (the run passes through them without building), and existing hand-placed walls are joined rather than rebuilt. Hovering a tile in tower build mode previews the wall and its cost.
 | Castle | Fixed from the start | 2/3/4 by tier | Both players | Your kingdom seat: Keep → Castle (8 stone, unlocks research) → Citadel (12 stone + 3 iron). If it falls, you lose. |

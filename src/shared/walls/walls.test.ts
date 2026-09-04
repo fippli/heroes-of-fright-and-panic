@@ -29,7 +29,7 @@ const gameOf = (tiles: ReadonlyArray<Tile>): Game => ({
   updatedAt: new Date("2026-09-04T10:00:00Z"),
   size: 8,
   tiles,
-  dayPlayer: createPlayer({ type: "day", resources: createResourceMap({ wood: 5, stone: 3 }) }),
+  dayPlayer: createPlayer({ type: "day", resources: createResourceMap({ stone: 8 }) }),
   nightPlayer: createPlayer({ type: "night" }),
   currentPlayer: "day",
   clock: { time: 8, hasDawned: true, hasDusked: false },
@@ -106,8 +106,7 @@ describe("handleBuild with curtain walls", () => {
     expect(wallAt(1)?.type).toBe(BuildingType.wall);
     expect(wallAt(2)?.type).toBe(BuildingType.wall);
     expect(wallAt(1)?.connections).toEqual([0, 3]);
-    // Tower 5 wood + 2 wall segments of stone
-    expect(built.game.dayPlayer.resources.wood).toBe(0);
+    // Tower 5 stone + 2 wall segments of stone
     expect(built.game.dayPlayer.resources.stone).toBe(1);
   });
 
@@ -120,7 +119,7 @@ describe("handleBuild with curtain walls", () => {
     ]);
     const broke: Game = {
       ...start,
-      dayPlayer: { ...start.dayPlayer, resources: createResourceMap({ wood: 5 }) },
+      dayPlayer: { ...start.dayPlayer, resources: createResourceMap({ stone: 5 }) },
     };
     const built = handleBuild(broke, { type: "build", player: "day", buildingType: BuildingType.tower, position: { row: 0, column: 3 } });
     expect(built.result.success).toBe(false);

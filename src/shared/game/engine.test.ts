@@ -1326,7 +1326,7 @@ describe("docks", () => {
 });
 
 describe("tower tiers", () => {
-  it("upgrades a watchpost to a watchtower for stone, then a beacon for gold", () => {
+  it("upgrades a watchpost to a watchtower, then a beacon, both for stone", () => {
     const base = placePiece(make5x5GrassTiles(), 2, 2, createPeasant("day"));
     const tile = base.find((t) => t.row === 2 && t.column === 3)!;
     const game = makeGame({ tiles: replaceTile(base, { ...tile, building: createTowerBuilding("day") }) });
@@ -1343,7 +1343,7 @@ describe("tower tiers", () => {
     expect(second.result.success).toBe(true);
     const beacon = second.game.tiles.find((t) => t.row === 2 && t.column === 3)!.building!;
     expect([beacon.level, beacon.viewRange, beacon.defense]).toEqual([3, 4, 3]);
-    expect(second.game.dayPlayer.resources.gold).toBe(game.dayPlayer.resources.gold - 5);
+    expect(second.game.dayPlayer.resources.stone).toBe(game.dayPlayer.resources.stone - 8 - 12);
 
     const third = handleUpgradeBuilding(second.game, { type: "upgradeBuilding", player: "day", position: { row: 2, column: 3 } });
     expect(third.result.success).toBe(false);
