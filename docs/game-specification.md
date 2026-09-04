@@ -291,7 +291,7 @@ Each player begins with: **5 wood, 2 stone**.
 
 ### Starting Conditions
 
-- Clock starts at 06:00; Day plays first. The clock flips 06:00 ↔ 18:00 when a phase ends.
+- Clock starts at 06:00; Day plays first. Every action — a move, a build, an upgrade, research — counts one hour on the clock, stalling at the phase's last hour (17:00 by day, 05:00 by night); ending the phase flips it to 18:00 or 06:00.
 - **Day player**: Keep with the king inside plus a peasant, in a random quadrant of the map.
 - **Night player**: the same, in the diagonally opposite quadrant.
 - Keeps stand on grass near the coast but never on the beach — at least three tiles inland where the terrain allows (maps that cannot offer decent starts are rerolled).

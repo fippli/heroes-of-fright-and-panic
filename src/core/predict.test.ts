@@ -45,7 +45,8 @@ describe("predictAction", () => {
     });
 
     expect(predicted).not.toBeNull();
-    expect(predicted!.clock.time).toBe(state.clock.time);
+    // Every action counts an hour on the clock
+    expect(predicted!.clock.time).toBe(state.clock.time + 1);
     const moved = predicted!.tiles.find(
       (tile) => tile.row === target!.row && tile.column === target!.column,
     );

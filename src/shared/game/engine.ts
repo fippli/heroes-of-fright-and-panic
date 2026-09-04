@@ -125,6 +125,25 @@ export const endPhase = (game: Game, playerType: PlayerType): Game => {
   return triggerProduction(flipped, flipped.currentPlayer);
 };
 
+/**
+ * Every action costs an hour. The clock stalls at the phase's last hour
+ * (17:00 by day, 05:00 by night) — only ending the phase moves it past
+ * dusk or dawn, so the sun never sets in the middle of a round.
+ */
+export const tickClock = (game: Game): Game => {
+  const time = ((game.clock.time % 24) + 24) % 24;
+  const isDay = time >= 6 && time < 18;
+  const next = (time + 1) % 24;
+  const stalled = isDay
+    ? next >= 18
+      ? 17
+      : next
+    : next >= 6 && next < 18
+      ? 5
+      : next;
+  return { ...game, clock: { ...game.clock, time: stalled } };
+};
+
 /** Mark the piece on a tile as having used its action this phase */
 const restPiece = (tiles: ReadonlyArray<Tile>, position: TilePosition): ReadonlyArray<Tile> => {
   const tile = findTile(tiles, position);
