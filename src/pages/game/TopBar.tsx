@@ -20,11 +20,19 @@ export const TopBar = ({ ui }: { readonly ui: GameUiState }) => {
       <div className="topbar__group topbar__resources">
         {RESOURCES.map(({ key, label }) => {
           const gain = ui.production[key] ?? 0;
+          const upkeep = key === "food" ? ui.round.total : 0;
+          const title =
+            key === "food"
+              ? `${label}: +${gain} at ${next}, −${upkeep} eaten (one per piece)`
+              : gain > 0
+                ? `${label}: +${gain} at ${next}`
+                : label;
           return (
-            <div key={key} className="topbar__item" title={gain > 0 ? `${label}: +${gain} at ${next}` : label}>
+            <div key={key} className="topbar__item" title={title}>
               <img src={ui.icons[key]} alt={label} />
               <span className="topbar__value">{ui.resources[key] ?? 0}</span>
               {gain > 0 && <span className="topbar__gain">+{gain}</span>}
+              {upkeep > 0 && <span className="topbar__upkeep">−{upkeep}</span>}
             </div>
           );
         })}

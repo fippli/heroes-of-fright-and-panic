@@ -49,7 +49,7 @@ import {
   pieceWithEquipment,
   pieceWithHealing,
 } from "../piece/index.ts";
-import { createPlayer, playerWithResearch, type Player } from "../player/index.ts";
+import { createPlayer, playerWithResearch, playerWithResources, type Player } from "../player/index.ts";
 import { canResearch, applyResearch } from "../research/index.ts";
 import { createSteed, SteedType } from "../steed/index.ts";
 import {
@@ -122,7 +122,42 @@ export const endPhase = (game: Game, playerType: PlayerType): Game => {
     },
     currentPlayer: toNight ? "night" : "day",
   };
-  return triggerProduction(flipped, flipped.currentPlayer);
+  return feedPieces(triggerProduction(flipped, flipped.currentPlayer), flipped.currentPlayer);
+};
+
+/**
+ * Every piece eats one food as its phase begins (right after production).
+ * A larder that cannot feed everyone leaves the unfed pieces too hungry to
+ * act this phase — harsh, but nobody starves to death.
+ */
+const feedPieces = (game: Game, playerType: PlayerType): Game => {
+  const player = getPlayer(game, playerType);
+  const mouths = game.tiles.filter(
+    (tile) => tile.piece !== null && tile.piece.owner === playerType,
+  );
+  if (mouths.length === 0) return game;
+
+  const food = player.resources.food ?? 0;
+  const eaten = Math.min(food, mouths.length);
+  const shortfall = mouths.length - eaten;
+  const fed = withPlayer(
+    game,
+    playerType,
+    playerWithResources(player, { ...player.resources, food: food - eaten }),
+  );
+  if (shortfall === 0) return fed;
+
+  const hungryKeys = new Set(
+    mouths.slice(-shortfall).map((tile) => `${tile.row},${tile.column}`),
+  );
+  return {
+    ...fed,
+    tiles: fed.tiles.map((tile) =>
+      tile.piece !== null && hungryKeys.has(`${tile.row},${tile.column}`)
+        ? { ...tile, piece: { ...tile.piece, acted: true } }
+        : tile,
+    ),
+  };
 };
 
 /**
@@ -375,6 +410,9 @@ export const handleBuild = (
   };
 };
 
+/** Each house works at most this many fields */
+export const FARMS_PER_HOUSE = 3;
+
 const convertAdjacentGrassToFarm = (
   tiles: ReadonlyArray<Tile>,
   housePosition: TilePosition,
@@ -386,6 +424,7 @@ const convertAdjacentGrassToFarm = (
         neighbor.landscape?.type === LandscapeType.grass &&
         neighbor.building === null,
     )
+    .slice(0, FARMS_PER_HOUSE)
     .reduce(
       (acc, neighbor) =>
         replaceTile(acc, { ...neighbor, landscape: farmLandscape() }),

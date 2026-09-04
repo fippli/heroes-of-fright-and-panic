@@ -129,6 +129,11 @@ body:has(.game-body) {
   color: #9ccc65;
 }
 
+.topbar__upkeep {
+  font-size: 0.7rem;
+  color: #ef9a9a;
+}
+
 .topbar__item {
   display: flex;
   align-items: center;

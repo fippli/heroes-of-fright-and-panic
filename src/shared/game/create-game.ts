@@ -379,6 +379,7 @@ const placeStartingHouse = (
         neighbor.landscape?.type === LandscapeType.grass &&
         neighbor.building === null,
     )
+    .slice(0, 3)
     .reduce(
       (acc, neighbor) => replaceTile(acc, { ...neighbor, landscape: farmLandscape() }),
       withHouse,

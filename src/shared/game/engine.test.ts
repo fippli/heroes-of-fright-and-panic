@@ -358,10 +358,13 @@ describe("handleBuild", () => {
       position: { row: 2, column: 3 },
     });
 
-    // Check that neighbors of the new house are now farms
-    // (2,3) neighbors on same row: (2,2) has a piece, (2,4) should be farm
-    const neighborTile = after.tiles.find((t) => t.row === 2 && t.column === 4);
-    expect(neighborTile?.landscape?.type).toBe(LandscapeType.farm);
+    // A house works at most three fields, all adjacent to it
+    const farms = after.tiles.filter((t) => t.landscape?.type === LandscapeType.farm);
+    expect(farms.length).toBe(3);
+    farms.forEach((farm) => {
+      expect(Math.abs(farm.row - 2)).toBeLessThanOrEqual(1);
+      expect(Math.abs(farm.column - 3)).toBeLessThanOrEqual(1);
+    });
   });
 
   it("rejects building on non-grass terrain", () => {
