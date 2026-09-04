@@ -96,33 +96,48 @@ describe("createGame", () => {
     expect(hex.isNeighborTo(nightKingTile, nightPeasantTile)).toBe(true);
   });
 
-  it("places day player near bottom-left and night player near top-right", () => {
-    const boardSize = 15;
-    const game = createGame({
-      boardSize,
-      name: "test",
-      alliance: "day",
-      creatorEmail: "creator@test.com",
-      inviteEmail: null,
-    });
+  it("places kings inland on grass, in opposite quadrants that vary by seed", async () => {
+    const { LandscapeType } = await import("@shared/map/landscape.ts");
+    const { findNeighborTiles } = await import("@shared/tile/index.ts");
+    const boardSize = 24;
+    const dayQuadrants = new Set<string>();
 
-    const dayKingTile = game.tiles.find(
-      (tile) => tile.piece?.owner === "day" && tile.piece?.kind === PieceKind.king,
-    );
-    const nightKingTile = game.tiles.find(
-      (tile) => tile.piece?.owner === "night" && tile.piece?.kind === PieceKind.king,
-    );
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const game = createGame({
+        boardSize,
+        name: "test",
+        alliance: "day",
+        creatorEmail: "creator@test.com",
+        inviteEmail: null,
+        seed,
+      });
+      const dayKing = game.tiles.find(
+        (tile) => tile.piece?.owner === "day" && tile.piece?.kind === PieceKind.king,
+      );
+      const nightKing = game.tiles.find(
+        (tile) => tile.piece?.owner === "night" && tile.piece?.kind === PieceKind.king,
+      );
+      expect(dayKing).toBeDefined();
+      expect(nightKing).toBeDefined();
+      if (dayKing === undefined || nightKing === undefined) continue;
 
-    expect(dayKingTile).toBeDefined();
-    expect(nightKingTile).toBeDefined();
+      // On grass, never on the beach, with a fully grassy first ring
+      for (const king of [dayKing, nightKing]) {
+        expect(king.landscape?.type).toBe(LandscapeType.grass);
+        findNeighborTiles(game.tiles, king).forEach((neighbor) => {
+          expect([LandscapeType.grass, LandscapeType.farm]).toContain(neighbor.landscape?.type);
+        });
+      }
 
-    // Day starts near bottom-left (high row, low column)
-    expect(dayKingTile!.row).toBeGreaterThan(boardSize / 2);
-    expect(dayKingTile!.column).toBeLessThan(boardSize / 2);
+      // Diagonally opposite quadrants
+      const half = boardSize / 2;
+      expect(dayKing.row < half).toBe(!(nightKing.row < half));
+      expect(dayKing.column < half).toBe(!(nightKing.column < half));
+      dayQuadrants.add(`${dayKing.row < half}-${dayKing.column < half}`);
+    }
 
-    // Night starts near top-right (low row, high column)
-    expect(nightKingTile!.row).toBeLessThan(boardSize / 2);
-    expect(nightKingTile!.column).toBeGreaterThan(boardSize / 2);
+    // The quadrant is rolled per game, not fixed
+    expect(dayQuadrants.size).toBeGreaterThan(1);
   });
 
   it("initializes players with starting resources (5 wood, 2 stone)", () => {

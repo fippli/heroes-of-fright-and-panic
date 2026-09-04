@@ -7,7 +7,8 @@ import { createCastleBuilding, createHouseBuilding } from "@shared/building/inde
 import { createPlayer } from "@shared/player/index.ts";
 import { createResourceMap } from "@shared/player/resource-map.ts";
 import { replaceTile, findNeighborTiles, findTilesInRange, findTile } from "@shared/tile/index.ts";
-import { createRandom } from "@shared/utils/random.ts";
+import { neighborAt } from "@shared/map/hex.ts";
+import { createRandom, type RandomFunction } from "@shared/utils/random.ts";
 import { hasWalkablePath } from "@shared/movement/index.ts";
 
 type CreateGameParams = {
@@ -53,40 +54,41 @@ const generateBoard = (
     ) as Tile;
     const startCandidates = walkableTiles.length > 0 ? walkableTiles : [fallbackTile];
 
-    const maxRow = boardSize - 1;
-    const maxCol = boardSize - 1;
-
-    const dayKingTile = startCandidates.reduce((closest, tile) => {
-      const distance = Math.sqrt(
-        Math.pow(maxRow - tile.row, 2) + Math.pow(tile.column, 2),
-      );
-      const closestDistance = Math.sqrt(
-        Math.pow(maxRow - closest.row, 2) + Math.pow(closest.column, 2),
-      );
-      return distance < closestDistance ? tile : closest;
-    }, startCandidates[0]);
-
-    const nightKingTile = startCandidates.reduce((closest, tile) => {
-      const distance = Math.sqrt(
-        Math.pow(tile.row, 2) + Math.pow(maxCol - tile.column, 2),
-      );
-      const closestDistance = Math.sqrt(
-        Math.pow(closest.row, 2) + Math.pow(maxCol - closest.column, 2),
-      );
-      return distance < closestDistance ? tile : closest;
-    }, startCandidates[0]);
+    // Each game rolls the day player into a random quadrant; night starts in
+    // the diagonally opposite one, keeping the two kingdoms far apart.
+    const coastDistance = computeCoastDistance(generatedTiles);
+    const dayQuadrant = Math.min(3, Math.floor(random() * 4));
+    const nightQuadrant = 3 - dayQuadrant;
+    const dayKingTile =
+      pickStartTile(generatedTiles, coastDistance, dayQuadrant, boardSize, random, null) ??
+      startCandidates[0] ??
+      fallbackTile;
+    const nightKingTile =
+      pickStartTile(generatedTiles, coastDistance, nightQuadrant, boardSize, random, dayKingTile) ??
+      startCandidates.at(-1) ??
+      fallbackTile;
 
     const tilesWithDayClearing = clearStartingArea(dayKingTile, generatedTiles);
     const tilesWithBothClearings = clearStartingArea(nightKingTile, tilesWithDayClearing);
 
     const connected = hasWalkablePath(tilesWithBothClearings, dayKingTile, nightKingTile);
+    // Decent starts stand on grass, clear of the beach; a map that cannot
+    // offer that is rerolled while attempts remain
+    const goodStarts = [dayKingTile, nightKingTile].every(
+      (king) =>
+        king.landscape?.type === LandscapeType.grass &&
+        (coastDistance.get(`${king.row},${king.column}`) ?? Number.POSITIVE_INFINITY) >= 2,
+    );
 
-    if (!connected && attemptIndex < MAX_GENERATION_ATTEMPTS - 1) {
+    if ((!connected || !goodStarts) && attemptIndex < MAX_GENERATION_ATTEMPTS - 1) {
       return attempt(attemptIndex + 1);
     }
 
-    const dayPeasantTile = findAdjacentGrass(dayKingTile, tilesWithBothClearings);
-    const nightPeasantTile = findAdjacentGrass(nightKingTile, tilesWithBothClearings);
+    const dayPeasantTile = findAdjacentGrass(dayKingTile, tilesWithBothClearings, [nightKingTile]);
+    const nightPeasantTile = findAdjacentGrass(nightKingTile, tilesWithBothClearings, [
+      dayKingTile,
+      dayPeasantTile,
+    ]);
 
     return {
       tiles: tilesWithBothClearings,
@@ -180,6 +182,99 @@ export const createGame = (params: CreateGameParams) => {
     winner: null,
     mapConfig,
   };
+};
+
+/** Ideal distance from the keep to the nearest coast (sand or water) */
+const COAST_CLEARANCE = 3;
+
+/**
+ * Hex-step distance from every tile to the nearest sand or water tile
+ * (multi-source BFS). 0 for the coast itself, Infinity on all-land maps.
+ */
+const computeCoastDistance = (
+  tiles: ReadonlyArray<Tile>,
+): ReadonlyMap<string, number> => {
+  const positionKey = (tile: { row: number; column: number }): string =>
+    `${tile.row},${tile.column}`;
+  const byKey = new Map(tiles.map((tile) => [positionKey(tile), tile]));
+  const distances = new Map<string, number>();
+  let frontier = tiles.filter(
+    (tile) =>
+      tile.landscape?.type === LandscapeType.sand ||
+      tile.landscape?.type === LandscapeType.water,
+  );
+  frontier.forEach((tile) => distances.set(positionKey(tile), 0));
+
+  let depth = 0;
+  while (frontier.length > 0) {
+    depth += 1;
+    const next: Tile[] = [];
+    for (const tile of frontier) {
+      for (let direction = 0; direction < 6; direction += 1) {
+        const neighborPosition = neighborAt(tile, direction);
+        const neighborKey = positionKey(neighborPosition);
+        const neighbor = byKey.get(neighborKey);
+        if (neighbor === undefined || distances.has(neighborKey)) continue;
+        distances.set(neighborKey, depth);
+        next.push(neighbor);
+      }
+    }
+    frontier = next;
+  }
+  return distances;
+};
+
+/**
+ * A starting spot inside the given quadrant (0=NW, 1=NE, 2=SW, 3=SE): grass,
+ * close to the coast but at least COAST_CLEARANCE tiles inland, chosen at
+ * random among the equally good spots. The clearance relaxes step by step on
+ * grass-poor maps, then any grass or walkable tile in the quadrant will do.
+ */
+const pickStartTile = (
+  tiles: ReadonlyArray<Tile>,
+  coastDistance: ReadonlyMap<string, number>,
+  quadrant: number,
+  boardSize: number,
+  random: RandomFunction,
+  avoid: Tile | null,
+): Tile | null => {
+  const half = boardSize / 2;
+  const inQuadrant = (tile: Tile): boolean => {
+    const north = tile.row < half;
+    const west = tile.column < half;
+    if (quadrant === 0) return north && west;
+    if (quadrant === 1) return north && !west;
+    if (quadrant === 2) return !north && west;
+    return !north && !west;
+  };
+  const distanceOf = (tile: Tile): number =>
+    coastDistance.get(`${tile.row},${tile.column}`) ?? Number.POSITIVE_INFINITY;
+  const notAvoided = (tile: Tile): boolean =>
+    avoid === null || tile.row !== avoid.row || tile.column !== avoid.column;
+
+  const grassHere = tiles.filter(
+    (tile) => inQuadrant(tile) && tile.landscape?.type === LandscapeType.grass && notAvoided(tile),
+  );
+
+  for (let clearance = COAST_CLEARANCE; clearance >= 1; clearance -= 1) {
+    const inland = grassHere.filter((tile) => distanceOf(tile) >= clearance);
+    if (inland.length === 0) continue;
+    // Close to the beach without standing on it: the smallest valid distance
+    const closest = Math.min(...inland.map(distanceOf));
+    const shoreline = inland.filter((tile) => distanceOf(tile) === closest);
+    return shoreline[Math.min(shoreline.length - 1, Math.floor(random() * shoreline.length))] ?? null;
+  }
+
+  if (grassHere.length > 0) {
+    return grassHere[Math.min(grassHere.length - 1, Math.floor(random() * grassHere.length))] ?? null;
+  }
+  const walkableHere = tiles.filter(
+    (tile) =>
+      inQuadrant(tile) &&
+      (tile.landscape?.type === LandscapeType.grass || tile.landscape?.type === LandscapeType.sand) &&
+      notAvoided(tile),
+  );
+  return walkableHere[Math.min(walkableHere.length - 1, Math.floor(random() * walkableHere.length))] ?? null;
 };
 
 const CLEARABLE_TYPES: ReadonlyArray<LandscapeType> = [
@@ -308,13 +403,16 @@ const placeStartingHouse = (
 const findAdjacentGrass = (
   tile: Tile,
   tiles: ReadonlyArray<Tile>,
+  avoid: ReadonlyArray<Tile> = [],
 ): Tile => {
-  const neighbors = findNeighborTiles(tiles, tile);
+  const taken = (candidate: Tile): boolean =>
+    avoid.some((other) => other.row === candidate.row && other.column === candidate.column);
+  const neighbors = findNeighborTiles(tiles, tile).filter((neighbor) => !taken(neighbor));
   const grassNeighbor = neighbors.find(
     (neighbor) =>
       neighbor.landscape?.type === LandscapeType.grass &&
       neighbor.piece === null,
   );
-  // Fallback: if no adjacent grass, use the first neighbor available
+  // Fallback: if no adjacent grass, use the first free neighbor available
   return grassNeighbor ?? neighbors.at(0) ?? tile;
 };

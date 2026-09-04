@@ -292,8 +292,9 @@ Each player begins with: **5 wood, 2 stone**.
 ### Starting Conditions
 
 - Clock starts at 06:00; Day plays first. The clock flips 06:00 ↔ 18:00 when a phase ends.
-- **Day player**: Keep with the king inside plus a peasant, near the bottom-left.
-- **Night player**: Keep with the king inside plus a peasant, near the top-right.
+- **Day player**: Keep with the king inside plus a peasant, in a random quadrant of the map.
+- **Night player**: the same, in the diagonally opposite quadrant.
+- Keeps stand on grass near the coast but never on the beach — at least three tiles inland where the terrain allows (maps that cannot offer decent starts are rerolled).
 - Each kingdom also starts with **one house** near its keep, placed on the most productive spot available (next to trees where possible); its surrounding grass becomes farmland, exactly as when a house is built in play. Both economies therefore produce from the first turn, and no opening purchase can lock a player out.
 - Trees and mountains are cleared from the starting area around each king.
 - Pieces may walk onto and through their own buildings; enemy walls block.
