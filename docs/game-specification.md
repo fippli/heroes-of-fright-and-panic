@@ -124,7 +124,7 @@ There are six building types. All buildings have 1 defense and 0 hearts.
 
 | Type   | Cost                | View Range | Walkable By  | Special |
 |--------|---------------------|------------|-------------|---------|
-| House  | 1 wood              | 1          | Both players | Spawns peasants. Up to **three** adjacent grass tiles convert to farm — each farm feeds only one house, so spread houses onto fresh grass. |
+| House  | 1 wood              | 1          | Both players | Spawns peasants. Up to **three** adjacent grass tiles convert to farm — but grass touching another house never becomes a farm (farms are unshared: `f h f f h f`, never `f h f h f`), so houses need room between them. |
 | Tower  | 5 stone + curtain wall | 2/3/4 by tier | Both players | Watchpost → Watchtower (8 stone) → Beacon (12 stone). A bow inside shoots at the tower's range. |
 
 **Curtain walls**: towers are wall connectors. Placing a tower automatically raises a wall along the shortest run to the nearest friendly towers (up to two, within 6 tiles), at 1 stone per new segment — paid up front with the tower, and the build is refused if unaffordable. Forests, mountains and water count as wall for free (the run passes through them without building), and existing hand-placed walls are joined rather than rebuilt. Hovering a tile in tower build mode previews the wall and its cost.

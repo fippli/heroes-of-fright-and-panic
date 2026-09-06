@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { endPhase, handleBuild, FARMS_PER_HOUSE } from "./engine.ts";
-import { BuildingType } from "../building/index.ts";
+import { BuildingType, createHouseBuilding } from "../building/index.ts";
 import { createPeasant } from "../piece/index.ts";
 import { grass, LandscapeType } from "../map/landscape.ts";
 import type { Tile } from "../map/tile.ts";
@@ -89,5 +89,37 @@ describe("farm cap", () => {
     );
     expect(farms.length).toBeLessThanOrEqual(FARMS_PER_HOUSE);
     expect(farms.length).toBeGreaterThan(0);
+  });
+
+  it("never farms grass between two houses (farms are unshared)", () => {
+    // f h f f h f — the tile touching both houses must stay grass
+    const game: Game = {
+      ...gameOf(
+        [
+          tile(0, 0),
+          tile(0, 1, { building: createHouseBuilding("day") }),
+          tile(0, 2, { piece: createPeasant("day") }), // sees the build site
+          tile(0, 3),
+          tile(0, 4),
+        ],
+        createResourceMap(),
+      ),
+      currentPlayer: "day",
+      dayPlayer: createPlayer({ type: "day", resources: createResourceMap({ wood: 2 }) }),
+    };
+    const built = handleBuild(game, {
+      type: "build",
+      player: "day",
+      buildingType: BuildingType.house,
+      position: { row: 0, column: 3 },
+    });
+    expect(built.result.success).toBe(true);
+
+    const landscapeAt = (column: number) =>
+      built.game.tiles.find((candidate) => candidate.row === 0 && candidate.column === column)
+        ?.landscape?.type;
+    // (0,2) touches both houses: stays grass. (0,4) touches only the new house: farmed.
+    expect(landscapeAt(2)).toBe(LandscapeType.grass);
+    expect(landscapeAt(4)).toBe(LandscapeType.farm);
   });
 });

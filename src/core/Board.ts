@@ -728,40 +728,27 @@ export class Game {
 
   }
 
-  /** What the hovered tile shows: "You see water", "You remember a house", "Unexplored" */
+  /** What the hovered tile shows, as a bare noun: "tree", "water", "house" */
   private hoverText(tile: Tile): string | null {
-    if (!tile.explored && !tile.isRemembered()) return "Unexplored";
-    const seen = tile.explored ? "You see" : "You remember";
-
-    const whose = (owner: { type: PlayerType } | undefined): string =>
-      owner?.type === this.myPlayerType ? "your" : owner?.type === "day" ? "day's" : "night's";
+    if (!tile.explored && !tile.isRemembered()) return "unexplored";
 
     const pieceNames: Record<string, string> = { peasant: "peasant", king: "king", priest: "priest", archAngel: "archangel" };
     const piece = tile.hidePiece ? undefined : tile.piece;
     if (piece !== undefined && tile.explored) {
-      return `${seen} ${whose(piece.owner)} ${pieceNames[piece.kind] ?? piece.kind}`;
+      return pieceNames[piece.kind] ?? piece.kind;
     }
 
-    const buildingNames: Record<string, string> = { house: "a house", tower: "a tower", castle: "a castle", wall: "a wall", church: "a church", dock: "a dock" };
     if (tile.building !== undefined) {
-      return `${seen} ${whose(tile.building.owner)} ${(buildingNames[tile.building.type] ?? tile.building.type).replace(/^a /, "")}`;
+      return tile.building.type;
     }
 
     if (tile.steed !== null) {
-      return `${seen} a ${tile.steed} waiting here`;
+      return tile.steed;
     }
 
-    const landNames: Record<string, string> = {
-      grass: "grass",
-      farm: "a farm",
-      tree: "a tree",
-      sand: "sand",
-      water: "water",
-      mountain: "a mountain",
-    };
     const land = tile.landscape?.type;
-    if (land === undefined || land === LandscapeType.unexplored) return "Unexplored";
-    return `${seen} ${landNames[land] ?? land}`;
+    if (land === undefined || land === LandscapeType.unexplored) return "unexplored";
+    return land;
   }
 
   /** Small label riding the cursor, drawn in screen space so zoom doesn't scale it */

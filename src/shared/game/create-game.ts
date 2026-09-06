@@ -3,7 +3,7 @@ import { GameMap, defaultMapConfig, type MapConfig } from "@shared/map/map.ts";
 import type { Tile } from "@shared/map/tile.ts";
 import type { PlayerType } from "@shared/piece/index.ts";
 import { createKing, createPeasant } from "@shared/piece/index.ts";
-import { createCastleBuilding, createHouseBuilding } from "@shared/building/index.ts";
+import { createCastleBuilding, createHouseBuilding, BuildingType } from "@shared/building/index.ts";
 import { createPlayer } from "@shared/player/index.ts";
 import { createResourceMap } from "@shared/player/resource-map.ts";
 import { replaceTile, findNeighborTiles, findTilesInRange, findTile } from "@shared/tile/index.ts";
@@ -372,12 +372,18 @@ const placeStartingHouse = (
     building: createHouseBuilding(owner),
     ...(terraform && { landscape: grassLandscape() }),
   });
-  // Same rule as building a house in play: surrounding grass turns to farmland
+  // Same rule as building a house in play: surrounding grass turns to
+  // farmland, but never grass that touches another house (farms are unshared)
   const withFarms = findNeighborTiles(withHouse, best)
     .filter(
       (neighbor) =>
         neighbor.landscape?.type === LandscapeType.grass &&
-        neighbor.building === null,
+        neighbor.building === null &&
+        !findNeighborTiles(withHouse, neighbor).some(
+          (other) =>
+            other.building?.type === BuildingType.house &&
+            !(other.row === best.row && other.column === best.column),
+        ),
     )
     .slice(0, 3)
     .reduce(

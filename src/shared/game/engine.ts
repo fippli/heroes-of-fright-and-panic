@@ -417,12 +417,21 @@ const convertAdjacentGrassToFarm = (
   tiles: ReadonlyArray<Tile>,
   housePosition: TilePosition,
 ): ReadonlyArray<Tile> => {
+  // Farms are never shared: grass that touches any other house stays grass,
+  // so houses need room between them to work their own fields
+  const touchesAnotherHouse = (candidate: Tile): boolean =>
+    findNeighborTiles(tiles, candidate).some(
+      (neighbor) =>
+        neighbor.building?.type === BuildingType.house &&
+        !(neighbor.row === housePosition.row && neighbor.column === housePosition.column),
+    );
   const neighbors = findNeighborTiles(tiles, housePosition);
   return neighbors
     .filter(
       (neighbor) =>
         neighbor.landscape?.type === LandscapeType.grass &&
-        neighbor.building === null,
+        neighbor.building === null &&
+        !touchesAnotherHouse(neighbor),
     )
     .slice(0, FARMS_PER_HOUSE)
     .reduce(
