@@ -107,9 +107,11 @@ export class Tile {
   }
 
   /**
-   * The river overlay: a stroke from the entry edge's midpoint through the
-   * tile center to the exit edge's midpoint. The midpoint of a shared edge is
-   * exactly halfway between the two hex centers, so no vertex math is needed.
+   * The river overlay: a gently wavy channel from the entry edge's midpoint
+   * through the tile to the exit edge's midpoint. Layered strokes fade from
+   * shallow banks to a dark mid-channel, with a few ripples riding the
+   * current. The wobble is seeded from the tile position, and both endpoints
+   * stay exactly on the edge midpoints so segments join across tiles.
    */
   private renderRiver(ctx: CanvasRenderingContext2D): void {
     if (this.river === null) return;
@@ -122,23 +124,63 @@ export class Tile {
     };
     const from = edgeMid(this.river.entry);
     const to = edgeMid(this.river.exit);
+    const seed = ((this.row * 73856093) ^ (this.column * 19349663)) >>> 0;
+
+    // Sample the quadratic through the center, pushed sideways by a sine
+    // that is zero at both ends (so neighboring tiles stay connected)
+    const samples = 9;
+    const points: Array<{ x: number; y: number }> = [];
+    for (let index = 0; index <= samples; index += 1) {
+      const t = index / samples;
+      const bx = (1 - t) * (1 - t) * from.x + 2 * (1 - t) * t * this.x + t * t * to.x;
+      const by = (1 - t) * (1 - t) * from.y + 2 * (1 - t) * t * this.y + t * t * to.y;
+      const wobble =
+        Math.sin(t * Math.PI * 2 + (seed % 7)) * Math.sin(t * Math.PI) * (Hexagon.height / 14);
+      // Perpendicular of the coarse direction from → to
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const length = Math.hypot(dx, dy) || 1;
+      points.push({ x: bx + (-dy / length) * wobble, y: by + (dx / length) * wobble });
+    }
+
+    const strokePath = (color: string, width: number): void => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      points.forEach((point, index) =>
+        index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y),
+      );
+      ctx.stroke();
+    };
 
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.quadraticCurveTo(this.x, this.y, to.x, to.y);
-    // Shallow banks fading into a dark, deep mid-channel
-    ctx.strokeStyle = "#7db3de";
-    ctx.lineWidth = Hexagon.height / 4;
-    ctx.stroke();
-    ctx.strokeStyle = "#4a86bd";
-    ctx.lineWidth = Hexagon.height / 6;
-    ctx.stroke();
-    ctx.strokeStyle = "#27567f";
-    ctx.lineWidth = Hexagon.height / 12;
-    ctx.stroke();
+    // Damp banks, then shallows fading into the dark mid-channel
+    strokePath("rgba(46, 62, 42, 0.45)", Hexagon.height / 3.4);
+    strokePath("#7db3de", Hexagon.height / 4);
+    strokePath("#4a86bd", Hexagon.height / 6);
+    strokePath("#27567f", Hexagon.height / 12);
+
+    // Ripples: short bright dashes riding the current
+    ctx.strokeStyle = "rgba(214, 236, 255, 0.7)";
+    ctx.lineWidth = 1;
+    for (let ripple = 0; ripple < 3; ripple += 1) {
+      const at = 2 + ((seed >> (ripple * 3)) % (samples - 3));
+      const a = points[at];
+      const b = points[at + 1];
+      if (a === undefined || b === undefined) continue;
+      const midX = (a.x + b.x) / 2;
+      const midY = (a.y + b.y) / 2;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const reach = Hexagon.height / 10;
+      ctx.beginPath();
+      ctx.moveTo(midX - (dx / length) * reach, midY - (dy / length) * reach);
+      ctx.lineTo(midX + (dx / length) * reach, midY + (dy / length) * reach);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

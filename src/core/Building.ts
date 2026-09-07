@@ -94,7 +94,11 @@ export class Building {
     ctx.restore();
   }
 
-  /** Stone rampart from the tile center out to each connected edge midpoint */
+  /**
+   * Stone rampart from the tile center out to each connected edge midpoint:
+   * a drop shadow, dark base course, lighter walkway, mortar joints across
+   * the run and pale merlons along the top — all drawn, no sprites.
+   */
   private renderCurtainWall(
     ctx: CanvasRenderingContext2D,
     position: TilePosition,
@@ -108,26 +112,67 @@ export class Building {
         y: (y + Hexagon.y(neighbor.row)) / 2,
       };
     };
+    const walkway = this.owner?.type === "night" ? "#847a99" : "#9a8f7a";
+    const baseWidth = Hexagon.height / 3;
+    const capWidth = Hexagon.height / 5;
 
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    (this.connections ?? []).forEach((direction) => {
-      const mid = edgeMid(direction);
-      // Dark base course, lighter cap on top
-      ctx.strokeStyle = "#4a4440";
-      ctx.lineWidth = Hexagon.height / 3.2;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(mid.x, mid.y);
-      ctx.stroke();
-      ctx.strokeStyle = this.owner?.type === "night" ? "#8d84a8" : "#a89c84";
-      ctx.lineWidth = Hexagon.height / 6;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(mid.x, mid.y);
-      ctx.stroke();
+
+    const segments = (this.connections ?? []).map((direction) => edgeMid(direction));
+    const strokeAll = (color: string, width: number, offsetY: number): void => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      segments.forEach((mid) => {
+        ctx.beginPath();
+        ctx.moveTo(x, y + offsetY);
+        ctx.lineTo(mid.x, mid.y + offsetY);
+        ctx.stroke();
+      });
+    };
+
+    // Ground shadow, dark stone base, then the lighter walkway on top
+    strokeAll("rgba(0, 0, 0, 0.3)", baseWidth, 2.5);
+    strokeAll("#3f3a35", baseWidth, 0);
+    strokeAll("#6a6156", baseWidth - 3, -1);
+    strokeAll(walkway, capWidth, -1.5);
+
+    // Mortar joints across each run, and merlons dotted along the top
+    segments.forEach((mid) => {
+      const dx = mid.x - x;
+      const dy = mid.y - y;
+      const length = Math.hypot(dx, dy) || 1;
+      const stepCount = Math.max(2, Math.round(length / (Hexagon.height / 5)));
+      for (let step = 1; step <= stepCount; step += 1) {
+        const t = step / (stepCount + 0.5);
+        const px = x + dx * t;
+        const py = y + dy * t - 1;
+        // Joint: a short dark tick across the walkway
+        ctx.strokeStyle = "rgba(43, 38, 33, 0.55)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px - (dy / length) * (capWidth / 2), py - 0.5 + (dx / length) * (capWidth / 2));
+        ctx.lineTo(px + (dy / length) * (capWidth / 2), py - 0.5 - (dx / length) * (capWidth / 2));
+        ctx.stroke();
+        // Merlon: a pale nub between joints
+        if (step < stepCount) {
+          const mt = (step + 0.5) / (stepCount + 0.5);
+          ctx.fillStyle = "#c2b79e";
+          ctx.fillRect(x + dx * mt - 1.5, y + dy * mt - capWidth / 2 - 2, 3, 3);
+        }
+      }
     });
+
+    // A little bastion where the runs meet the tile center
+    ctx.fillStyle = "#6a6156";
+    ctx.beginPath();
+    ctx.arc(x, y - 1, capWidth / 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = walkway;
+    ctx.beginPath();
+    ctx.arc(x, y - 1.5, capWidth / 2.2, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
