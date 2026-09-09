@@ -1,0 +1,340 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="dawnSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a86b9c"/>
+      <stop offset="0.35" stop-color="#d97f74"/>
+      <stop offset="0.7" stop-color="#eda45f"/>
+      <stop offset="1" stop-color="#f6c667"/>
+    </linearGradient>
+    <linearGradient id="duskSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141531"/>
+      <stop offset="0.45" stop-color="#26244f"/>
+      <stop offset="0.8" stop-color="#3a3468"/>
+      <stop offset="1" stop-color="#4a4178"/>
+    </linearGradient>
+    <linearGradient id="dawnGround" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9b366"/>
+      <stop offset="1" stop-color="#96933f"/>
+    </linearGradient>
+    <linearGradient id="duskGround" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d3a63"/>
+      <stop offset="1" stop-color="#23233f"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff3c4" stop-opacity="0.95"/>
+      <stop offset="0.55" stop-color="#ffd977" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffd977" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moonGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#e9e6ff" stop-opacity="0.9"/>
+      <stop offset="0.55" stop-color="#a8a4e0" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#a8a4e0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="clashCore" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#ffe9a8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <filter id="soft6" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- ============ SKIES ============ -->
+  <rect x="0" y="0" width="1100" height="1080" fill="url(#dawnSky)"/>
+  <!-- dusk sky with a jagged left border biting into the dawn side -->
+  <path d="M1010 0 L960 90 L1015 170 L945 260 L1000 350 L940 460 L995 560 L950 660 L1005 760 L955 860 L1000 960 L960 1080 L1920 1080 L1920 0 Z" fill="url(#duskSky)"/>
+  <!-- warm tongues licking into the night -->
+  <path d="M1010 0 L960 90 L1015 170 L945 260 L1000 350 L940 460 L995 560 L950 660 L1005 760 L955 860 L1000 960 L960 1080 L985 1080 L1030 940 L975 850 L1035 740 L980 640 L1030 540 L965 450 L1035 340 L975 250 L1045 160 L985 80 L1040 0 Z" fill="#e8875f" opacity="0.55"/>
+  <!-- violet tongues licking into the dawn -->
+  <path d="M1010 0 L960 90 L1015 170 L945 260 L1000 350 L940 460 L995 560 L950 660 L1005 760 L955 860 L1000 960 L960 1080 L930 1080 L965 950 L915 855 L975 755 L920 655 L965 555 L910 455 L972 345 L915 255 L985 165 L930 85 L975 0 Z" fill="#3a3468" opacity="0.5"/>
+
+  <!-- the burning seam -->
+  <path d="M985 0 L945 95 L1000 175 L935 265 L985 355 L930 465 L985 565 L940 665 L995 765 L945 865 L990 965 L950 1080"
+        fill="none" stroke="#ffdf9e" stroke-width="26" opacity="0.35" filter="url(#soft)"/>
+  <path d="M985 0 L945 95 L1000 175 L935 265 L985 355 L930 465 L985 565 L940 665 L995 765 L945 865 L990 965 L950 1080"
+        fill="none" stroke="#fff3cd" stroke-width="7" opacity="0.85" filter="url(#soft6)"/>
+
+  <!-- ============ SUN & MOON ============ -->
+  <circle cx="300" cy="215" r="230" fill="url(#sunGlow)"/>
+  <circle cx="300" cy="215" r="105" fill="#ffdf86"/>
+  <circle cx="300" cy="215" r="105" fill="none" stroke="#fff0bd" stroke-width="10" opacity="0.8"/>
+  <g stroke="#ffe9a8" stroke-width="8" stroke-linecap="round" opacity="0.55">
+    <line x1="300" y1="60" x2="300" y2="20"/>
+    <line x1="300" y1="370" x2="300" y2="410"/>
+    <line x1="145" y1="215" x2="105" y2="215"/>
+    <line x1="455" y1="215" x2="495" y2="215"/>
+    <line x1="192" y1="107" x2="164" y2="79"/>
+    <line x1="408" y1="323" x2="436" y2="351"/>
+    <line x1="192" y1="323" x2="164" y2="351"/>
+    <line x1="408" y1="107" x2="436" y2="79"/>
+  </g>
+
+  <circle cx="1640" cy="205" r="200" fill="url(#moonGlow)"/>
+  <circle cx="1640" cy="205" r="92" fill="#e9e4f6"/>
+  <circle cx="1673" cy="185" r="80" fill="#c9c2e8" opacity="0.55"/>
+  <circle cx="1615" cy="180" r="12" fill="#cfc8ea"/>
+  <circle cx="1662" cy="240" r="9" fill="#cfc8ea"/>
+  <circle cx="1602" cy="235" r="6" fill="#d8d2ef"/>
+
+  <!-- stars -->
+  <g fill="#e8e4ff">
+    <circle cx="1150" cy="120" r="3"/><circle cx="1240" cy="260" r="2.4"/><circle cx="1330" cy="80" r="2.6"/>
+    <circle cx="1420" cy="330" r="2.2"/><circle cx="1500" cy="150" r="3"/><circle cx="1560" cy="420" r="2.2"/>
+    <circle cx="1710" cy="380" r="2.6"/><circle cx="1790" cy="120" r="3.2"/><circle cx="1860" cy="290" r="2.4"/>
+    <circle cx="1240" cy="480" r="2"/><circle cx="1120" cy="360" r="2.2"/><circle cx="1390" cy="200" r="2"/>
+    <circle cx="1830" cy="480" r="2"/><circle cx="1660" cy="520" r="2.2"/><circle cx="1090" cy="220" r="2"/>
+    <path d="M1470 90 l4 12 12 4 -12 4 -4 12 -4 -12 -12 -4 12 -4 Z"/>
+    <path d="M1785 220 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3 Z"/>
+    <path d="M1180 300 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3 Z"/>
+  </g>
+
+  <!-- ============ GROUND ============ -->
+  <path d="M0 790 Q 300 760 620 782 T 1010 792 L 965 1080 L 0 1080 Z" fill="url(#dawnGround)"/>
+  <path d="M1010 792 Q 1300 770 1620 788 T 1920 778 L 1920 1080 L 965 1080 Z" fill="url(#duskGround)"/>
+  <!-- ground seam scorch -->
+  <path d="M1002 792 L 962 900 L 1000 990 L 958 1080 L 995 1080 L 1035 975 L 998 890 L 1040 800 Z" fill="#1c1626" opacity="0.35"/>
+  <path d="M1000 795 L 962 900 L 1000 990 L 960 1080" fill="none" stroke="#ffdf9e" stroke-width="14" opacity="0.3" filter="url(#soft6)"/>
+
+  <!-- ============ BACKDROPS: KEEPS ============ -->
+  <!-- Day keep, warm sandstone -->
+  <g opacity="0.92">
+    <rect x="120" y="600" width="70" height="190" fill="#d9b46a"/>
+    <rect x="250" y="580" width="70" height="210" fill="#d9b46a"/>
+    <rect x="176" y="660" width="88" height="130" fill="#cfa75d"/>
+    <polygon points="112,600 155,530 198,600" fill="#b8452e"/>
+    <polygon points="242,580 285,505 328,580" fill="#b8452e"/>
+    <rect x="150" y="530" width="8" height="46" fill="#8a5a33"/>
+    <path d="M158 534 L196 545 L158 558 Z" fill="#e2543a"/>
+    <rect x="142" y="640" width="18" height="26" rx="8" fill="#7a5a33"/>
+    <rect x="272" y="620" width="18" height="26" rx="8" fill="#7a5a33"/>
+    <rect x="205" y="700" width="30" height="46" rx="12" fill="#8a5a33"/>
+  </g>
+  <!-- Night citadel, spiky -->
+  <g opacity="0.95">
+    <polygon points="1600,790 1640,540 1680,790" fill="#2e3f66"/>
+    <polygon points="1680,790 1730,470 1780,790" fill="#31456f"/>
+    <polygon points="1780,790 1822,560 1864,790" fill="#2e3f66"/>
+    <polygon points="1628,588 1640,540 1652,588" fill="#6a5a9e"/>
+    <polygon points="1716,520 1730,470 1744,520" fill="#6a5a9e"/>
+    <rect x="1725" y="600" width="12" height="18" rx="5" fill="#9db8ff"/>
+    <rect x="1634" y="650" width="10" height="16" rx="4" fill="#9db8ff"/>
+    <rect x="1816" y="660" width="10" height="16" rx="4" fill="#9db8ff"/>
+    <rect x="1650" y="720" width="160" height="70" fill="#273757"/>
+    <rect x="1700" y="740" width="24" height="50" rx="10" fill="#141d33"/>
+  </g>
+
+  <!-- ============ ARCHANGEL over the night side ============ -->
+  <g transform="translate(1430 330)">
+    <path d="M0 0 Q-90 -70 -160 -34 Q-96 -18 -74 8 Q-120 6 -150 30 Q-92 34 -58 44 Z" fill="#d9d4f2" opacity="0.9"/>
+    <path d="M26 0 Q116 -70 186 -34 Q122 -18 100 8 Q146 6 176 30 Q118 34 84 44 Z" fill="#d9d4f2" opacity="0.9"/>
+    <path d="M-9 -4 Q-16 60 13 96 Q42 60 35 -4 Q13 -18 -9 -4 Z" fill="#8f86bb"/>
+    <path d="M2 20 Q13 34 24 20 L20 64 Q13 74 6 64 Z" fill="#a89fd0"/>
+    <circle cx="13" cy="-22" r="15" fill="#e6e1f7"/>
+    <ellipse cx="13" cy="-44" rx="20" ry="6" fill="none" stroke="#fff1b8" stroke-width="4" opacity="0.9"/>
+  </g>
+
+  <!-- ============ ARROWS crossing the divide ============ -->
+  <g stroke-linecap="round">
+    <g transform="translate(700 470) rotate(-12)">
+      <line x1="0" y1="0" x2="150" y2="0" stroke="#8a6a3a" stroke-width="5"/>
+      <polygon points="168,0 144,-8 144,8" fill="#f2ead2"/>
+      <polygon points="0,0 -16,-10 -6,0 -16,10" fill="#e2543a"/>
+    </g>
+    <g transform="translate(1290 402) rotate(192)">
+      <line x1="0" y1="0" x2="150" y2="0" stroke="#3a3155" stroke-width="5"/>
+      <polygon points="168,0 144,-8 144,8" fill="#c9c2ea"/>
+      <polygon points="0,0 -16,-10 -6,0 -16,10" fill="#6a5a9e"/>
+    </g>
+  </g>
+
+  <!-- ============ DAY ARMY (facing right) ============ -->
+  <!-- Priest with torch -->
+  <g transform="translate(320 712) scale(1.22)">
+    <ellipse cx="0" cy="86" rx="46" ry="12" fill="#6d6a2e" opacity="0.5"/>
+    <path d="M-26 84 Q-34 10 0 -10 Q34 10 26 84 Z" fill="#c04a35"/>
+    <circle cx="0" cy="-24" r="17" fill="#e8b98a"/>
+    <path d="M-20 -30 Q0 -52 20 -30 L20 -22 L-20 -22 Z" fill="#96331f"/>
+    <rect x="30" y="-58" width="7" height="120" rx="3" fill="#7a5a33"/>
+    <path d="M33 -64 Q22 -84 33 -104 Q44 -84 33 -64 Z" fill="#f6a53a"/>
+    <path d="M33 -70 Q28 -82 33 -94 Q38 -82 33 -70 Z" fill="#ffe08a"/>
+  </g>
+
+  <!-- Peasant with sword and shield -->
+  <g transform="translate(495 728) scale(1.22)">
+    <ellipse cx="0" cy="72" rx="46" ry="12" fill="#6d6a2e" opacity="0.5"/>
+    <path d="M-22 70 Q-28 12 0 -4 Q28 12 22 70 Z" fill="#7a8a3d"/>
+    <circle cx="2" cy="-18" r="15" fill="#e8b98a"/>
+    <path d="M-14 -24 Q2 -40 18 -24 L16 -14 L-12 -14 Z" fill="#b07a3f"/>
+    <ellipse cx="34" cy="24" rx="17" ry="26" fill="#8a5a33"/>
+    <ellipse cx="34" cy="24" rx="9" ry="15" fill="#c9a15e"/>
+    <line x1="-24" y1="30" x2="-58" y2="-16" stroke="#d8d3c4" stroke-width="8" stroke-linecap="round"/>
+    <rect x="-34" y="24" width="20" height="7" rx="3" fill="#7a5a33" transform="rotate(-53 -24 28)"/>
+  </g>
+
+  <!-- Archer kneeling, loosing -->
+  <g transform="translate(660 740) scale(1.22)">
+    <ellipse cx="0" cy="62" rx="48" ry="12" fill="#6d6a2e" opacity="0.5"/>
+    <path d="M-24 60 Q-26 16 -2 2 Q22 18 20 60 Z" fill="#8a6a3a"/>
+    <circle cx="4" cy="-12" r="14" fill="#e8b98a"/>
+    <path d="M-10 -18 Q4 -32 18 -18 L16 -8 L-8 -8 Z" fill="#5a7a3a"/>
+    <path d="M34 -34 Q66 2 34 38" fill="none" stroke="#7a5a33" stroke-width="7" stroke-linecap="round"/>
+    <line x1="34" y1="-34" x2="34" y2="38" stroke="#e8e4d8" stroke-width="2.5"/>
+    <line x1="8" y1="2" x2="52" y2="2" stroke="#7a5a33" stroke-width="4" stroke-linecap="round"/>
+    <polygon points="62,2 44,-4 44,8" fill="#e8e4d8"/>
+  </g>
+
+  <!-- Banner bearer -->
+  <g transform="translate(200 754) scale(1.15)">
+    <ellipse cx="0" cy="56" rx="40" ry="11" fill="#6d6a2e" opacity="0.5"/>
+    <path d="M-20 54 Q-24 6 0 -8 Q24 6 20 54 Z" fill="#a8763f"/>
+    <circle cx="0" cy="-22" r="14" fill="#e8b98a"/>
+    <rect x="22" y="-110" width="6" height="164" rx="3" fill="#7a5a33"/>
+    <path d="M28 -108 L96 -92 L28 -66 Z" fill="#e2543a"/>
+    <circle cx="46" cy="-88" r="7" fill="#ffdf86"/>
+  </g>
+
+  <!-- DAY KING on rearing white horse -->
+  <g transform="translate(830 700)">
+    <ellipse cx="10" cy="118" rx="86" ry="16" fill="#6d6a2e" opacity="0.55"/>
+    <!-- hind legs -->
+    <path d="M-44 40 Q-58 84 -46 116 L-30 116 Q-36 82 -22 52 Z" fill="#e2d9c4"/>
+    <path d="M6 52 Q0 88 12 116 L28 116 Q22 86 30 60 Z" fill="#f3ede0"/>
+    <!-- body rearing -->
+    <path d="M-52 46 Q-40 -12 22 -20 Q66 -24 84 -58 Q108 -66 112 -46 Q120 -30 100 -22 Q84 -14 74 4 Q60 40 24 56 Q-16 70 -52 46 Z" fill="#f3ede0"/>
+    <!-- front legs pawing -->
+    <path d="M62 -6 Q92 6 98 34 L84 42 Q74 18 54 12 Z" fill="#e2d9c4"/>
+    <path d="M40 8 Q68 24 70 52 L54 58 Q50 34 30 26 Z" fill="#f3ede0"/>
+    <!-- head -->
+    <path d="M94 -62 Q120 -70 132 -55 Q137 -45 127 -39 Q112 -34 100 -38 Z" fill="#f3ede0"/>
+    <path d="M104 -66 L110 -80 L118 -64 Z" fill="#e2d9c4"/>
+    <circle cx="115" cy="-52" r="3.4" fill="#4a3a2a"/>
+    <!-- mane & tail -->
+    <path d="M80 -58 Q64 -46 60 -26 Q76 -34 88 -48 Z" fill="#d0b884"/>
+    <path d="M-52 44 Q-84 52 -92 84 Q-66 76 -48 58 Z" fill="#d0b884"/>
+    <!-- rider -->
+    <path d="M-4 -28 Q-10 -74 12 -84 Q34 -74 26 -28 Q12 -16 -4 -28 Z" fill="#c04a35"/>
+    <path d="M-6 -30 Q-30 -6 -22 18 L-10 12 Q-12 -8 2 -22 Z" fill="#96331f"/>
+    <circle cx="12" cy="-96" r="14" fill="#e8b98a"/>
+    <path d="M-2 -104 L2 -118 L8 -106 L13 -122 L18 -106 L24 -118 L27 -104 Z" fill="#ffce4a"/>
+    <!-- sword arm raised to the clash -->
+    <path d="M24 -70 Q56 -84 84 -104 L90 -94 Q64 -72 34 -58 Z" fill="#c04a35"/>
+    <line x1="88" y1="-100" x2="168" y2="-152" stroke="#e8ddb8" stroke-width="9" stroke-linecap="round"/>
+    <line x1="98" y1="-118" x2="112" y2="-96" stroke="#8a5a33" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <!-- ============ NIGHT ARMY (facing left) ============ -->
+  <!-- NIGHT KING on rearing dark horse -->
+  <g transform="translate(1104 700) scale(-1 1)">
+    <ellipse cx="10" cy="118" rx="86" ry="16" fill="#141126" opacity="0.42"/>
+    <path d="M-44 40 Q-58 84 -46 116 L-30 116 Q-36 82 -22 52 Z" fill="#3c4570"/>
+    <path d="M6 52 Q0 88 12 116 L28 116 Q22 86 30 60 Z" fill="#4d5787"/>
+    <path d="M-52 46 Q-40 -12 22 -20 Q66 -24 84 -58 Q108 -66 112 -46 Q120 -30 100 -22 Q84 -14 74 4 Q60 40 24 56 Q-16 70 -52 46 Z" fill="#4d5787"/>
+    <path d="M-48 34 Q-34 -10 22 -18 Q60 -22 80 -54" fill="none" stroke="#8f86d9" stroke-width="4" opacity="0.6"/>
+    <path d="M62 -6 Q92 6 98 34 L84 42 Q74 18 54 12 Z" fill="#3c4570"/>
+    <path d="M40 8 Q68 24 70 52 L54 58 Q50 34 30 26 Z" fill="#4d5787"/>
+    <path d="M94 -62 Q120 -70 132 -55 Q137 -45 127 -39 Q112 -34 100 -38 Z" fill="#5b66a0"/>
+    <path d="M104 -66 L110 -80 L118 -64 Z" fill="#3c4570"/>
+    <circle cx="115" cy="-52" r="3.4" fill="#c9c2ea"/>
+    <path d="M80 -58 Q64 -46 60 -26 Q76 -34 88 -48 Z" fill="#4a4178"/>
+    <path d="M-52 44 Q-84 52 -92 84 Q-66 76 -48 58 Z" fill="#4a4178"/>
+    <path d="M-4 -28 Q-10 -74 12 -84 Q34 -74 26 -28 Q12 -16 -4 -28 Z" fill="#4a3d75"/>
+    <path d="M-6 -30 Q-34 -2 -24 26 L-12 18 Q-14 -6 2 -22 Z" fill="#332a56"/>
+    <circle cx="12" cy="-96" r="14" fill="#cbb8a2"/>
+    <path d="M-2 -104 L2 -118 L8 -106 L13 -122 L18 -106 L24 -118 L27 -104 Z" fill="#c9c2ea"/>
+    <path d="M24 -70 Q56 -84 84 -104 L90 -94 Q64 -72 34 -58 Z" fill="#4a3d75"/>
+    <line x1="88" y1="-100" x2="168" y2="-152" stroke="#b9c8e8" stroke-width="9" stroke-linecap="round"/>
+    <line x1="98" y1="-118" x2="112" y2="-96" stroke="#332a56" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <!-- Reaper with scythe -->
+  <g transform="translate(1305 716) scale(1.22)">
+    <ellipse cx="0" cy="82" rx="46" ry="12" fill="#141126" opacity="0.4"/>
+    <path d="M-28 80 Q-38 4 0 -14 Q38 4 28 80 Z" fill="#3a3161"/>
+    <path d="M-24 60 Q-30 8 0 -12" fill="none" stroke="#8f86d9" stroke-width="3" opacity="0.5"/>
+    <path d="M-14 -18 Q0 -40 14 -18 Q8 -6 -8 -6 Z" fill="#171331"/>
+    <circle cx="0" cy="-20" r="9" fill="#0c0a1e"/>
+    <rect x="-40" y="-92" width="7" height="164" rx="3" fill="#3a3155"/>
+    <path d="M-36 -90 Q6 -108 44 -84 Q10 -84 -24 -68 Q-34 -78 -36 -90 Z" fill="#b9c8e8"/>
+  </g>
+
+  <!-- Night peasant with spear and shield -->
+  <g transform="translate(1425 736) scale(1.22)">
+    <ellipse cx="0" cy="66" rx="44" ry="11" fill="#141126" opacity="0.4"/>
+    <path d="M-22 64 Q-28 8 0 -6 Q28 8 22 64 Z" fill="#48547e"/>
+    <path d="M-18 50 Q-24 6 0 -4" fill="none" stroke="#8f86d9" stroke-width="3" opacity="0.5"/>
+    <circle cx="-2" cy="-20" r="15" fill="#cbb8a2"/>
+    <path d="M-18 -26 Q-2 -42 14 -26 L12 -16 L-16 -16 Z" fill="#2b2547"/>
+    <ellipse cx="-34" cy="20" rx="17" ry="26" fill="#2b2547"/>
+    <ellipse cx="-34" cy="20" rx="9" ry="15" fill="#6a5a9e"/>
+    <line x1="22" y1="34" x2="64" y2="-52" stroke="#3a3155" stroke-width="7" stroke-linecap="round"/>
+    <polygon points="68,-62 52,-46 66,-42" fill="#b9c8e8"/>
+  </g>
+
+  <!-- Night rider silhouette -->
+  <g transform="translate(1565 736) scale(-0.66 0.66)">
+    <path d="M-44 40 Q-58 84 -46 116 L-30 116 Q-36 82 -22 52 Z" fill="#2a3050"/>
+    <path d="M6 52 Q0 88 12 116 L28 116 Q22 86 30 60 Z" fill="#333a5e"/>
+    <path d="M-52 46 Q-40 -12 22 -20 Q66 -24 84 -58 Q108 -66 112 -46 Q120 -30 100 -22 Q84 -14 74 4 Q60 40 24 56 Q-16 70 -52 46 Z" fill="#333a5e"/>
+    <path d="M-48 34 Q-34 -10 22 -18 Q60 -22 80 -54" fill="none" stroke="#8f86d9" stroke-width="4" opacity="0.5"/>
+    <path d="M94 -62 Q120 -70 132 -55 Q137 -45 127 -39 Q112 -34 100 -38 Z" fill="#333a5e"/>
+    <path d="M-4 -28 Q-10 -74 12 -84 Q34 -74 26 -28 Q12 -16 -4 -28 Z" fill="#2b2547"/>
+    <circle cx="12" cy="-96" r="14" fill="#cbb8a2"/>
+    <path d="M-16 -100 Q12 -116 40 -100 L34 -88 L-10 -88 Z" fill="#2b2547"/>
+    <line x1="30" y1="-70" x2="110" y2="-124" stroke="#3a3155" stroke-width="8" stroke-linecap="round"/>
+    <polygon points="122,-132 96,-122 108,-110" fill="#b9c8e8"/>
+  </g>
+
+  <!-- ============ THE CLASH ============ -->
+  <g transform="translate(967 556)">
+    <circle cx="0" cy="0" r="98" fill="url(#clashCore)" opacity="0.85"/>
+    <g stroke="#fff" stroke-width="6" stroke-linecap="round" transform="rotate(18)">
+      <line x1="0" y1="-58" x2="0" y2="-102"/>
+      <line x1="0" y1="58" x2="0" y2="96"/>
+      <line x1="-58" y1="0" x2="-96" y2="0"/>
+      <line x1="58" y1="0" x2="102" y2="0"/>
+    </g>
+    <g stroke="#ffdf86" stroke-width="4.5" stroke-linecap="round" opacity="0.9" transform="rotate(-8)">
+      <line x1="-40" y1="-40" x2="-74" y2="-74"/>
+      <line x1="40" y1="-40" x2="68" y2="-68"/>
+      <line x1="-40" y1="40" x2="-66" y2="66"/>
+      <line x1="40" y1="40" x2="76" y2="76"/>
+    </g>
+    <polygon points="0,-34 9,-9 34,0 9,9 0,34 -9,9 -34,0 -9,-9" fill="#fff"/>
+  </g>
+
+  <!-- embers drifting into the night -->
+  <g fill="#ffb84a">
+    <circle cx="1040" cy="470" r="4"/><circle cx="1085" cy="420" r="3"/><circle cx="1130" cy="500" r="3.4"/>
+    <circle cx="1070" cy="560" r="2.6"/><circle cx="1180" cy="440" r="2.4"/><circle cx="1105" cy="620" r="3"/>
+    <circle cx="1220" cy="560" r="2"/>
+  </g>
+  <!-- violet motes drifting into the dawn -->
+  <g fill="#8f86d9">
+    <circle cx="880" cy="480" r="4"/><circle cx="835" cy="430" r="3"/><circle cx="795" cy="520" r="3.2"/>
+    <circle cx="860" cy="590" r="2.6"/><circle cx="745" cy="470" r="2.4"/><circle cx="815" cy="620" r="2.8"/>
+  </g>
+
+  <!-- dust at the hooves -->
+  <g fill="#d8c890" opacity="0.5">
+    <circle cx="760" cy="810" r="20"/><circle cx="800" cy="824" r="14"/><circle cx="730" cy="826" r="12"/>
+  </g>
+  <g fill="#3a3560" opacity="0.55">
+    <circle cx="1170" cy="810" r="20"/><circle cx="1130" cy="824" r="14"/><circle cx="1200" cy="826" r="12"/>
+  </g>
+
+  <!-- foreground grass tufts -->
+  <g stroke="#6d6a2e" stroke-width="4" stroke-linecap="round" opacity="0.7">
+    <path d="M120 1000 q6 -22 0 -34"/><path d="M132 1002 q10 -16 4 -30"/>
+    <path d="M430 1044 q6 -22 0 -34"/><path d="M442 1046 q10 -16 4 -30"/>
+    <path d="M700 980 q6 -22 0 -34"/><path d="M712 982 q10 -16 4 -30"/>
+  </g>
+  <g stroke="#4a4178" stroke-width="4" stroke-linecap="round" opacity="0.7">
+    <path d="M1300 1000 q6 -22 0 -34"/><path d="M1312 1002 q10 -16 4 -30"/>
+    <path d="M1620 1044 q6 -22 0 -34"/><path d="M1632 1046 q10 -16 4 -30"/>
+    <path d="M1850 980 q6 -22 0 -34"/><path d="M1862 982 q10 -16 4 -30"/>
+  </g>
+</svg>
