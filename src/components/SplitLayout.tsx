@@ -25,7 +25,6 @@ export const SplitLayout = ({ pageTitle, maxW = "440px", children }: SplitLayout
       backgroundSize="cover"
       backgroundPosition="center bottom"
       backgroundAttachment="fixed"
-      style={{ imageRendering: "pixelated" }}
     >
       <VStack
         w="100%"

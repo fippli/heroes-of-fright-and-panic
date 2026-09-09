@@ -24,19 +24,18 @@ export const LandingPage = () => {
       backgroundImage="url(/img/hero.png)"
       backgroundSize="cover"
       backgroundPosition="center"
-      style={{ imageRendering: "pixelated" }}
     >
       <Flex position="relative" direction="column" align="center" gap="4" pt={{ base: "12", md: "16" }} px="6" textAlign="center">
         <Heading
           as="h1"
           fontSize={{ base: "3.4rem", md: "6rem" }}
           lineHeight="0.95"
-          color="#2b2117"
-          textShadow="0 3px 0 rgba(247, 238, 216, 0.9)"
+          color="#f2e6c8"
+          textShadow="0 3px 0 rgba(18, 14, 8, 0.9), 0 0 24px rgba(0, 0, 0, 0.6)"
         >
           Dusk and Dawn
         </Heading>
-        <Text fontSize={{ base: "1.1rem", md: "1.4rem" }} color="#54462f" maxW="34rem">
+        <Text fontSize={{ base: "1.1rem", md: "1.4rem" }} color="#e8dcc0" maxW="34rem" textShadow="0 1px 3px rgba(18, 14, 8, 0.9)">
           Two alliances, one island, twelve hours apiece. Build by day. Endure the night.
         </Text>
         <Flex gap="4" mt="2" wrap="wrap" justify="center">
@@ -73,7 +72,7 @@ export const LandingPage = () => {
             </Link>
           </ChakraLink>
         </Flex>
-        <ChakraLink asChild color="#6b5b44" fontSize="0.95rem" mt="1">
+        <ChakraLink asChild color="#d8c9a3" fontSize="0.95rem" textShadow="0 1px 3px rgba(18, 14, 8, 0.9)" mt="1">
           <Link to="/docs/game-specification">How the war is fought →</Link>
         </ChakraLink>
       </Flex>
