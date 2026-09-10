@@ -15,6 +15,7 @@ import { Field } from "@chakra-ui/react";
 import { NativeSelect } from "@chakra-ui/react";
 import { gamesApi } from "../../lib/api";
 import { profilesApi } from "../../lib/profiles";
+import { factionsApi, type Faction } from "../../lib/factions";
 import { AddFriendDialog } from "../friends/AddFriendDialog";
 import { themesApi, type Theme } from "../../lib/theme-api";
 import { supabase } from "../../lib/supabase";
@@ -119,6 +120,8 @@ type CreateFormState = {
   readonly size: number;
   readonly mapStyle: "island" | "forestLake";
   readonly alliance: "day" | "night";
+  /** The creator's faction reskin for their seat; "" = classic */
+  readonly factionId: string;
   /** The other seat: "" = open, "AI", a friend's username, or an email */
   readonly opponent: string;
   readonly themeId: string;
@@ -145,6 +148,7 @@ export const NewGamePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [themes, setThemes] = useState<readonly Theme[]>([]);
   const [friendNames, setFriendNames] = useState<readonly string[]>([]);
+  const [factions, setFactions] = useState<readonly Faction[]>([]);
   const [ownName, setOwnName] = useState<string | null>(null);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [formState, setFormState] = useState<CreateFormState>({
@@ -152,6 +156,7 @@ export const NewGamePage = () => {
     size: 40,
     mapStyle: "island",
     alliance: "day",
+    factionId: "",
     opponent: "",
     themeId: "",
     forestDensity: defaultMapConfig.forestDensity,
@@ -190,6 +195,11 @@ export const NewGamePage = () => {
               .sort(),
           );
         })
+        .catch(console.error);
+
+      factionsApi
+        .listOwn()
+        .then(setFactions)
         .catch(console.error);
 
       profilesApi
@@ -272,6 +282,7 @@ export const NewGamePage = () => {
         name: trimmedName,
         size: formState.size,
         alliance: formState.alliance,
+        factionId: formState.factionId !== "" ? formState.factionId : null,
         seed,
         aiOpponent,
         inviteUsername,
@@ -343,7 +354,7 @@ export const NewGamePage = () => {
                   <NativeSelect.Field
                     value={formState.alliance}
                     onChange={(event) =>
-                      setFormState((current) => ({ ...current, alliance: event.target.value as "day" | "night" }))
+                      setFormState((current) => ({ ...current, alliance: event.target.value as "day" | "night", factionId: "" }))
                     }
                     bg="white"
                     color="brand.contrast"
@@ -356,6 +367,36 @@ export const NewGamePage = () => {
                 </NativeSelect.Root>
               </Box>
             </Flex>
+            {factions.some((faction) => faction.type === formState.alliance) && (
+              <Flex gap="2">
+                <Flex w="150px" align="center" px="3" bg="rgba(0, 0, 0, 0.08)" borderRadius="md" fontWeight="700" color="brand.contrast" opacity={0.8}>
+                  Your faction
+                </Flex>
+                <Box flex="1">
+                  <NativeSelect.Root>
+                    <NativeSelect.Field
+                      value={formState.factionId}
+                      onChange={(event) =>
+                        setFormState((current) => ({ ...current, factionId: event.target.value }))
+                      }
+                      bg="white"
+                      color="brand.contrast"
+                      fontWeight="900"
+                      border="none"
+                    >
+                      <option value="">Classic</option>
+                      {factions
+                        .filter((faction) => faction.type === formState.alliance)
+                        .map((faction) => (
+                          <option key={faction.id} value={faction.id}>
+                            {faction.name}
+                          </option>
+                        ))}
+                    </NativeSelect.Field>
+                  </NativeSelect.Root>
+                </Box>
+              </Flex>
+            )}
             <Flex gap="2">
               <Box flex="1">
                 <Input

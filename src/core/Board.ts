@@ -1,5 +1,5 @@
 import type { Canvas } from "../canvas";
-import { type ImageAssets, defaultImageAssets } from "../images";
+import { type FactionSkins, type ImageAssets, defaultImageAssets } from "../images";
 import type { Coordinate } from "../types/coordinate";
 import { BuildingType } from "./Building";
 import { Clock } from "./Clock";
@@ -245,7 +245,15 @@ export class Game {
 
   /** Swap the sprite set; the next frame renders with it */
   setImageAssets(imageAssets: ImageAssets): void {
+    // Faction reskins belong to the game, not the theme; carry them over
+    imageAssets.factionSkins = this.imageAssets.factionSkins;
     this.imageAssets = imageAssets;
+    this.notify();
+  }
+
+  /** Attach the players' faction reskins (names and art) */
+  setFactionSkins(skins: FactionSkins): void {
+    this.imageAssets.factionSkins = skins;
     this.notify();
   }
 
@@ -328,6 +336,7 @@ export class Game {
                   : {
                       acted: selected.piece.acted,
                       kind: selected.piece.kind,
+                      name: this.imageAssets.pieceName(selected.piece.owner, selected.piece.kind),
                       owner: selected.piece.owner.type,
                       hearts: selected.piece.hearts,
                       maxHearts: selected.piece.maxHearts,
@@ -735,7 +744,11 @@ export class Game {
     const pieceNames: Record<string, string> = { peasant: "peasant", king: "king", priest: "priest", archAngel: "archangel" };
     const piece = tile.hidePiece ? undefined : tile.piece;
     if (piece !== undefined && tile.explored) {
-      return pieceNames[piece.kind] ?? piece.kind;
+      return (
+        this.imageAssets.pieceName(piece.owner, piece.kind)?.toLowerCase() ??
+        pieceNames[piece.kind] ??
+        piece.kind
+      );
     }
 
     if (tile.building !== undefined) {

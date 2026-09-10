@@ -64,6 +64,8 @@ export type TargetMode = "heal" | "horse" | "boat";
 export type PieceInfo = {
   readonly acted: boolean;
   readonly kind: PieceKind;
+  /** The owner's faction name for this tier, when a faction is chosen */
+  readonly name?: string;
   readonly owner: string;
   readonly hearts: number;
   readonly maxHearts: number;

@@ -34,6 +34,7 @@ Deno.serve(async (request) => {
     const aiOpponent = body.aiOpponent === true;
     const AI_EMAIL = "ai@bot";
     const themeId = body.themeId ?? null;
+    const factionId = typeof body.factionId === "string" ? body.factionId : null;
     const mapConfig = body.mapConfig ?? undefined;
 
     const supabase = createAdminClient();
@@ -77,6 +78,19 @@ Deno.serve(async (request) => {
     const dayPlayerName = alliance === "day" ? creatorName : opponentName;
     const nightPlayerName = alliance === "night" ? creatorName : opponentName;
 
+    // The creator's faction reskin: must be theirs and match their seat's type
+    let creatorFactionId: string | null = null;
+    if (factionId !== null) {
+      const { data: faction } = await supabase
+        .from("factions")
+        .select("id")
+        .eq("id", factionId)
+        .eq("owner_email", user.email)
+        .eq("type", alliance)
+        .maybeSingle();
+      creatorFactionId = faction?.id ?? null;
+    }
+
     const { data: newGame, error } = await supabase
       .from("games")
       .insert({
@@ -96,6 +110,8 @@ Deno.serve(async (request) => {
         night_player_last_move: null,
         invited_email: gameData.invitedEmail,
         theme_id: themeId,
+        day_faction_id: alliance === "day" ? creatorFactionId : null,
+        night_faction_id: alliance === "night" ? creatorFactionId : null,
         game_over: gameData.gameOver,
         winner: gameData.winner,
       })

@@ -189,21 +189,40 @@ const staticLandscapeImage = (type: LandscapeType): GameImage => {
   }
 };
 
+/** A player faction's reskin of the piece tiers: custom names and art */
+export type FactionSkin = {
+  readonly names: Readonly<Partial<Record<PieceKind, string>>>;
+  readonly images: Readonly<Partial<Record<PieceKind, GameImage>>>;
+};
+
+export type FactionSkins = Readonly<Partial<Record<"day" | "night", FactionSkin>>>;
+
 export class ImageAssets {
   readonly theme: ThemeImageAssets | undefined;
+  /** Per-side faction reskins; survives theme swaps (Board carries them over) */
+  factionSkins: FactionSkins = {};
 
   constructor(theme?: ThemeImageAssets) {
     this.theme = theme;
   }
 
   pieceImage(player: Player, kind: PieceKind): GameImage {
+    const factionImage = this.factionSkins[player.type]?.images[kind];
+    if (factionImage !== undefined) return factionImage;
     const themeImage = this.theme?.pieceImage(player, kind);
     if (themeImage !== undefined) return themeImage;
     return staticPieceImage(player, kind);
   }
 
+  /** The faction's name for a piece tier, or undefined for the classic name */
+  pieceName(player: Player, kind: PieceKind): string | undefined {
+    return this.factionSkins[player.type]?.names[kind];
+  }
+
   /** Mounted/armoured sprite if the theme provides one, else undefined (caller layers instead) */
   pieceVariantImage(player: Player, kind: PieceKind, variant: PieceVariant): GameImage | undefined {
+    // A faction's art replaces the whole look; layer steeds over it instead
+    if (this.factionSkins[player.type]?.images[kind] !== undefined) return undefined;
     return this.theme?.pieceVariantImage(player, kind, variant);
   }
 

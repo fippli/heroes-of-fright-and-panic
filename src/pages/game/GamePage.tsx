@@ -27,6 +27,7 @@ import { BuildingActions } from "./BuildingActions";
 import { TopBar } from "./TopBar";
 import { EventFeed } from "./EventFeed";
 import { GameSettings, loadImageAssets, readThemePreference } from "./GameSettings";
+import { loadFactionSkins } from "../../images/faction-skins";
 import { installErrorReporting, reportClientError } from "../../lib/error-report";
 import "./game.css";
 
@@ -147,6 +148,23 @@ export const GamePage = () => {
         const game = new Game(canvas, myPlayerType, imageAssets);
         gameRef.current = game;
         game.subscribe(setUi);
+
+        // Faction reskins each seat chose (names + art); spectators see none
+        void (async () => {
+          const { data: row } = await supabase
+            .from("games")
+            .select("day_faction_id, night_faction_id")
+            .eq("id", gameId)
+            .maybeSingle();
+          if (row === null) return;
+          const skins = await loadFactionSkins(
+            row.day_faction_id ?? null,
+            row.night_faction_id ?? null,
+          );
+          if (skins.day !== undefined || skins.night !== undefined) {
+            game.setFactionSkins(skins);
+          }
+        })().catch(console.error);
 
         game.parse(data);
         console.log("Game loaded:", game.id, "Playing as:", myPlayerType);

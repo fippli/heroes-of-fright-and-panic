@@ -75,11 +75,22 @@ Deno.serve(async (request) => {
 
   const joinedAt = new Date();
   const joinerName = await usernameOf(supabase, user.id);
+
+  // The joiner's newest faction of the seat's type reskins their side
+  const { data: joinerFaction } = await supabase
+    .from("factions")
+    .select("id")
+    .eq("owner_email", user.email)
+    .eq("type", side)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   const { error: updateError } = await supabase
     .from("games")
     .update({
       [side === "day" ? "day_player_email" : "night_player_email"]: user.email,
       [side === "day" ? "day_player_name" : "night_player_name"]: joinerName,
+      [side === "day" ? "day_faction_id" : "night_faction_id"]: joinerFaction?.id ?? null,
       updated_at: joinedAt.toISOString(),
     })
     .eq("id", gameId);

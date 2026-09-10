@@ -102,6 +102,13 @@ export const GamesPage = () => {
           </Link>
         </ChakraLink>
         <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
+          <Link to="/factions">
+            <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
+              Factions
+            </Button>
+          </Link>
+        </ChakraLink>
+        <ChakraLink asChild textDecoration="none" _hover={{ textDecoration: "none" }}>
           <Link to="/about">
             <Button w="100%" size="lg" bg="brand.contrast" color="brand.solid" _hover={{ bg: "#3d3d3b" }}>
               About

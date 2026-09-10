@@ -79,7 +79,7 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
 
   const title =
     piece !== null
-      ? KIND_LABEL[piece.kind] ?? piece.kind
+      ? piece.name ?? KIND_LABEL[piece.kind] ?? piece.kind
       : selected?.steed !== null && selected?.steed !== undefined
         ? ITEM_LABEL[selected.steed] ?? selected.steed
         : selected?.landscape ?? "Tile";

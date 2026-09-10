@@ -301,6 +301,12 @@ Each player begins with: **5 wood, 2 stone**.
 
 ---
 
+## Factions
+
+A faction is a player-owned reskin of one of the two rule-sets. Its base type (day or night) decides the clock and rules; on top of that the owner names each piece tier and uploads their own art (tier 1 peasant, tier 2 king, tier 3 priest, tier 4 archangel). Factions are created on the Factions page, chosen for your seat when creating a game, and the joiner's newest matching faction applies automatically at join. Both players see each other's faction names (hover, piece panel) and images (board); pieces without a custom entry fall back to the theme, then the classic art.
+
+---
+
 ## Map Generation
 
 Maps are procedurally generated using noise-based generation with three noise layers (elevation, forest, mountain) shaped by a **map style**:

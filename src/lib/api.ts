@@ -72,6 +72,8 @@ export const gamesApi = {
     inviteEmail?: string | null;
     /** A friend's username; the server resolves it to their account */
     inviteUsername?: string | null;
+    /** The creator's faction reskin for their seat */
+    factionId?: string | null;
     themeId?: string | null;
     mapConfig?: { mapStyle?: "island" | "forestLake"; forestDensity: number; mountainDensity: number; waterLevel: number } | null;
     aiOpponent?: boolean;

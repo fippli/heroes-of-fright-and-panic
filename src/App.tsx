@@ -9,6 +9,7 @@ import { GamesPage } from "./pages/games/GamesPage";
 import { NewGamePage } from "./pages/games/NewGamePage";
 import { LoadGamesPage } from "./pages/games/LoadGamesPage";
 import { FriendsPage } from "./pages/friends/FriendsPage";
+import { FactionsPage } from "./pages/factions/FactionsPage";
 import { AboutPage } from "./pages/about/AboutPage";
 import { GamePage } from "./pages/game/GamePage";
 import { AdminPage } from "./pages/admin/AdminPage";
@@ -33,6 +34,7 @@ export const App = () => {
       <Route path="/games/new" element={<NewGamePage />} />
       <Route path="/games/list" element={<LoadGamesPage />} />
       <Route path="/friends" element={<FriendsPage />} />
+      <Route path="/factions" element={<FactionsPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/game/:id" element={<GamePage />} />
       <Route path="/admin" element={<AdminPage />} />
