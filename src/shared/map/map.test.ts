@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { connectLand, generateMap } from "./map.ts";
+import { connectLand, defaultMapConfig, generateMap } from "./map.ts";
 import { LandscapeType, grass, tree, water } from "./landscape.ts";
 import type { Tile } from "./tile.ts";
 import { findNeighborTiles } from "@shared/tile/index.ts";
@@ -140,5 +140,29 @@ describe("rivers", () => {
     }
 
     expect(sawRiver).toBe(true);
+  });
+});
+
+describe("forestLake style", () => {
+  const forestLakeConfig = { ...defaultMapConfig, mapStyle: "forestLake" as const };
+
+  it("is land-dominant with inland lakes rather than a border ocean", () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const tiles = generateMap(40, lcg(seed), forestLakeConfig);
+      const waterTiles = tiles.filter((tile) => tile.landscape?.type === LandscapeType.water);
+
+      // Lakes exist, but land dominates the map
+      expect(waterTiles.length).toBeGreaterThan(0);
+      expect(waterTiles.length).toBeLessThan(tiles.length * 0.35);
+
+      // The border is mostly land — no surrounding ocean like the island style
+      const borderTiles = tiles.filter(
+        (tile) => tile.row === 0 || tile.row === 39 || tile.column === 0 || tile.column === 39,
+      );
+      const borderWater = borderTiles.filter(
+        (tile) => tile.landscape?.type === LandscapeType.water,
+      );
+      expect(borderWater.length).toBeLessThan(borderTiles.length * 0.3);
+    }
   });
 });

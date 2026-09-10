@@ -17,7 +17,12 @@ import { neighborAt, oppositeDirection } from "./hex.ts";
 // MAP CONFIGURATION
 // ============================================
 
+/** Overall shape of the world; more biomes can join this union later */
+export type MapStyle = "island" | "forestLake";
+
 export type MapConfig = {
+  /** "island": one landmass ringed by ocean (default). "forestLake": inland forest world dotted with lakes. */
+  readonly mapStyle?: MapStyle;
   /** Forest density: 0 = no trees, 1 = maximum forest coverage. Default 0.5. */
   readonly forestDensity: number;
   /** Mountain density: 0 = no mountains, 1 = maximum mountain coverage. Default 0.5. */
@@ -102,33 +107,31 @@ const landscapeFromNoise = (
  * (max of the three cube axes) to produce a hexagon-shaped island mask.
  * Returns 1.0 at center, falling to 0.0 at the hex boundary.
  */
+/** Hex distance between two offset coordinates via cube coordinates (odd-r) */
+const cubeDistance = (
+  rowA: number,
+  colA: number,
+  rowB: number,
+  colB: number,
+): number => {
+  const toQ = (r: number, c: number): number => c - (Math.round(r) - (Math.round(r) & 1)) / 2;
+  const qA = toQ(rowA, colA);
+  const rA = rowA;
+  const sA = -qA - rA;
+  const qB = toQ(rowB, colB);
+  const rB = rowB;
+  const sB = -qB - rB;
+  return Math.max(Math.abs(qA - qB), Math.abs(rA - rB), Math.abs(sA - sB));
+};
+
 const islandMask = (
   row: number,
   column: number,
   size: number,
   waterLevel: number,
 ): number => {
-  const centerRow = (size - 1) / 2;
-  const centerCol = (size - 1) / 2;
-
-  // Offset to cube coordinates (odd-r layout)
-  const toQ = (r: number, c: number): number => c - (r - (r & 1)) / 2;
-  const toR = (r: number): number => r;
-
-  const tileQ = toQ(row, column);
-  const tileR = toR(row);
-  const tileS = -tileQ - tileR;
-
-  const centerQ = toQ(Math.round(centerRow), Math.round(centerCol));
-  const centerR = toR(Math.round(centerRow));
-  const centerS = -centerQ - centerR;
-
-  // Hex distance = max of absolute differences on all three cube axes
-  const hexDistance = Math.max(
-    Math.abs(tileQ - centerQ),
-    Math.abs(tileR - centerR),
-    Math.abs(tileS - centerS),
-  );
+  const center = (size - 1) / 2;
+  const hexDistance = cubeDistance(row, column, Math.round(center), Math.round(center));
 
   // hexRadius controls island size — larger = more land
   // waterLevel 0 = radius 0.75 (big island), waterLevel 1 = radius 0.30 (tiny island)
@@ -138,6 +141,41 @@ const islandMask = (
   // Smooth falloff: 1.0 at center, tapering to 0.0 at edge and beyond
   return Math.max(0, 1 - normalized * normalized);
 };
+
+// ============================================
+// LAKES (forestLake style)
+// ============================================
+
+type LakeBasin = { readonly row: number; readonly col: number; readonly radius: number };
+
+/**
+ * Seed a handful of lake basins away from the map edges. The water level
+ * slider scales how large the lakes grow.
+ */
+const seedLakes = (
+  size: number,
+  random: RandomFunction,
+  waterLevel: number,
+): ReadonlyArray<LakeBasin> => {
+  const count = 2 + Math.floor(random() * 3);
+  const margin = 0.2;
+  return Array.from({ length: count }, () => ({
+    row: size * (margin + random() * (1 - 2 * margin)),
+    col: size * (margin + random() * (1 - 2 * margin)),
+    radius: Math.max(2.5, size * (0.07 + waterLevel * 0.1) * (0.7 + random() * 0.6)),
+  }));
+};
+
+/** How deeply the lake basins depress the elevation at this tile */
+const lakeDepression = (
+  row: number,
+  column: number,
+  basins: ReadonlyArray<LakeBasin>,
+): number =>
+  basins.reduce((depth, basin) => {
+    const normalized = cubeDistance(row, column, basin.row, basin.col) / basin.radius;
+    return depth + Math.max(0, 1 - normalized * normalized) * 0.7;
+  }, 0);
 
 // ============================================
 // POST-PROCESSING
@@ -191,6 +229,9 @@ export const generateMap = (
   const mountainNoise = createNoise(random, 2, 2.0, 0.5);
   // Elevation per tile, kept for river tracing after the terrain settles
   const elevations = new Map<string, number>();
+  const mapStyle = config.mapStyle ?? "island";
+  // forestLake: land everywhere except a few seeded basins that become lakes
+  const basins = mapStyle === "forestLake" ? seedLakes(size, random, config.waterLevel) : [];
 
   const tiles = Array.from({ length: size * size }, (_, tileNumber) => {
     const column = tileNumber % size;
@@ -201,8 +242,10 @@ export const generateMap = (
       column * ELEVATION_SCALE,
       row * ELEVATION_SCALE,
     );
-    const mask = islandMask(row, column, size, config.waterLevel);
-    const elevation = rawElevation * mask;
+    const elevation =
+      mapStyle === "forestLake"
+        ? 0.5 + rawElevation * 0.45 - lakeDepression(row, column, basins)
+        : rawElevation * islandMask(row, column, size, config.waterLevel);
 
     // Forest and mountain: independent layers that can cluster anywhere on land
     const forestScale = config.forestScale ?? FOREST_SCALE;

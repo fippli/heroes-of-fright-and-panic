@@ -117,6 +117,7 @@ const renderMapPreview = (
 type CreateFormState = {
   readonly name: string;
   readonly size: number;
+  readonly mapStyle: "island" | "forestLake";
   readonly alliance: "day" | "night";
   /** The other seat: "" = open, "AI", a friend's username, or an email */
   readonly opponent: string;
@@ -149,6 +150,7 @@ export const NewGamePage = () => {
   const [formState, setFormState] = useState<CreateFormState>({
     name: "",
     size: 40,
+    mapStyle: "island",
     alliance: "day",
     opponent: "",
     themeId: "",
@@ -232,13 +234,14 @@ export const NewGamePage = () => {
     const current = formStateRef.current;
     const random = createRandom(seed);
     const config = {
+      mapStyle: current.mapStyle,
       forestDensity: current.forestDensity,
       mountainDensity: current.mountainDensity,
       waterLevel: current.waterLevel,
     };
     const tiles = GameMap.generate(current.size, random, config) as Tile[];
     renderMapPreview(ctx, tiles, current.size);
-  }, [seed, previewTick, formState.size]);
+  }, [seed, previewTick, formState.size, formState.mapStyle]);
 
   useEffect(() => {
     if (!isCheckingAuth) {
@@ -275,6 +278,7 @@ export const NewGamePage = () => {
         inviteEmail,
         themeId: formState.themeId !== "" ? formState.themeId : null,
         mapConfig: {
+          mapStyle: formState.mapStyle,
           forestDensity: formState.forestDensity,
           mountainDensity: formState.mountainDensity,
           waterLevel: formState.waterLevel,
@@ -417,6 +421,28 @@ export const NewGamePage = () => {
 
         <Flex gap="6" direction={{ base: "column", md: "row" }} align="flex-start">
           <VStack flex="1" gap="4" align="stretch" minW="0">
+            <Field.Root>
+              <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">Map type</Field.Label>
+              <HStack gap="0" w="100%" borderRadius="md" overflow="hidden" border="2px solid" borderColor="brand.contrast">
+                {([["island", "Island"], ["forestLake", "Forest & lakes"]] as const).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    flex="1"
+                    size="sm"
+                    borderRadius="0"
+                    bg={formState.mapStyle === value ? "brand.contrast" : "white"}
+                    color={formState.mapStyle === value ? "brand.solid" : "brand.contrast"}
+                    fontWeight="900"
+                    _hover={{ bg: formState.mapStyle === value ? "#3d3d3b" : "rgba(0, 0, 0, 0.1)" }}
+                    onClick={() => setFormState((current) => ({ ...current, mapStyle: value }))}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </HStack>
+            </Field.Root>
+
             <Field.Root>
               <Field.Label color="brand.contrast" fontWeight="700" fontSize="1.2rem">
                 Water: {Math.round(formState.waterLevel * 100)}%

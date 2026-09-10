@@ -73,7 +73,7 @@ export const gamesApi = {
     /** A friend's username; the server resolves it to their account */
     inviteUsername?: string | null;
     themeId?: string | null;
-    mapConfig?: { forestDensity: number; mountainDensity: number; waterLevel: number } | null;
+    mapConfig?: { mapStyle?: "island" | "forestLake"; forestDensity: number; mountainDensity: number; waterLevel: number } | null;
     aiOpponent?: boolean;
   }): Promise<Game> {
     const { data, error } = await supabase.functions.invoke("game-create", {

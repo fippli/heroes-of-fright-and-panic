@@ -303,11 +303,17 @@ Each player begins with: **5 wood, 2 stone**.
 
 ## Map Generation
 
-Maps are procedurally generated using noise-based generation with three noise layers (elevation, forest, mountain) combined with a hexagonal island mask. Forests and mountains form small clusters, and after generation every patch of walkable land is joined to the rest by carving grass corridors through the nearest trees or mountains, so there is always a pass — only water separates land.
+Maps are procedurally generated using noise-based generation with three noise layers (elevation, forest, mountain) shaped by a **map style**:
+
+- **Island** (default): a hexagonal island mask sinks the borders into surrounding ocean.
+- **Forest & lakes**: the whole map is raised land; 2–4 randomly seeded basins depress the elevation into inland lakes. More biomes/landscapes can be added as further styles later.
+
+Forests and mountains form small clusters, and after generation every patch of walkable land is joined to the rest by carving grass corridors through the nearest trees or mountains, so there is always a pass — only water separates land.
 
 **Rivers** spring from the mountains, descend the elevation field and empty into the sea (roughly one per 20 tiles of map size). A river is an overlay: its tiles keep their landscape and gameplay rules — for now rivers are pure scenery. Each segment connects two edges of its hex, never with a sharp 60° bend, so straight and gently-bent pieces cover every shape. Rivers never cross each other, and forest on a river tile gives way to grass.
 
 Configurable parameters:
+- Map style (island / forest & lakes)
 - Forest density
 - Mountain density
 - Water level
