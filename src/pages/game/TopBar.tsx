@@ -1,12 +1,12 @@
 import type { GameUiState } from "../../core/ui-state";
 
-const RESOURCES: readonly { readonly key: "wood" | "stone" | "food" | "gold" | "iron" | "faith"; readonly label: string }[] = [
-  { key: "wood", label: "Wood" },
-  { key: "stone", label: "Stone" },
-  { key: "food", label: "Food" },
-  { key: "gold", label: "Gold" },
-  { key: "iron", label: "Iron" },
-  { key: "faith", label: "Faith" },
+const RESOURCES: readonly { readonly key: "wood" | "stone" | "food" | "gold" | "iron" | "faith" }[] = [
+  { key: "wood" },
+  { key: "stone" },
+  { key: "food" },
+  { key: "gold" },
+  { key: "iron" },
+  { key: "faith" },
 ];
 
 /** Fixed strip over the map: resources (with the coming production), population and buildings */
@@ -18,7 +18,8 @@ export const TopBar = ({ ui }: { readonly ui: GameUiState }) => {
   return (
     <header className="topbar" aria-label="Resources, population and buildings">
       <div className="topbar__group topbar__resources">
-        {RESOURCES.map(({ key, label }) => {
+        {RESOURCES.map(({ key }) => {
+          const label = ui.resourceNames[key] ?? key;
           const gain = ui.production[key] ?? 0;
           const upkeep = key === "food" ? ui.round.total : 0;
           const title =

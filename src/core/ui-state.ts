@@ -15,6 +15,8 @@ export type GameUiState = {
   readonly notice: Notice | null;
   /** Resource icon URLs from the active theme */
   readonly icons: Record<string, string>;
+  /** Your faction's words for the resources ("Faith" unless renamed to "Sin"...) */
+  readonly resourceNames: Record<string, string>;
   /** Sprite URLs for the selected piece, its items and building, from the active theme */
   readonly sprites: {
     readonly piece: string | null;
@@ -89,6 +91,15 @@ export type BuildingInfo = {
 export type ResourceEntry = { readonly resource: string; readonly amount: number };
 
 /** Non-zero entries of a cost, in display order */
+export const DEFAULT_RESOURCE_NAMES: Record<string, string> = {
+  wood: "Wood",
+  stone: "Stone",
+  food: "Food",
+  gold: "Gold",
+  iron: "Iron",
+  faith: "Faith",
+};
+
 export const costEntries = (cost: ResourceMap): readonly ResourceEntry[] =>
   (["wood", "stone", "food", "gold", "iron", "faith"] as const)
     .map((resource) => ({ resource, amount: cost[resource] ?? 0 }))

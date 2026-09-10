@@ -13,10 +13,12 @@ import { supabase } from "../../lib/supabase";
 import {
   factionsApi,
   defaultTierName,
+  FACTION_RESOURCES,
   FACTION_TIERS,
   type Faction,
-  type FactionPieces,
   type FactionType,
+  type FactionPieces,
+  type FactionResources,
 } from "../../lib/factions";
 import { SplitLayout } from "../../components/SplitLayout";
 import { ErrorBox } from "../../components/ErrorBox";
@@ -136,6 +138,77 @@ const TierRow = ({
         <Input
           value={name}
           placeholder={fallback}
+          onChange={(event) => setName(event.target.value)}
+          onBlur={() => void saveName()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void saveName();
+          }}
+          size="sm"
+          bg="white"
+          color="brand.contrast"
+          borderColor="brand.contrast"
+          disabled={busy}
+        />
+      </VStack>
+    </Flex>
+  );
+};
+
+/** A resource the faction renames: same mechanic, its own word */
+const ResourceRow = ({
+  faction,
+  resourceKey,
+  label,
+  hint,
+  onSaved,
+  onError,
+}: {
+  readonly faction: Faction;
+  readonly resourceKey: string;
+  readonly label: string;
+  readonly hint: string;
+  readonly onSaved: (updated: Faction) => void;
+  readonly onError: (message: string) => void;
+}) => {
+  const entry = faction.resources[resourceKey] ?? {};
+  const [name, setName] = useState(entry.name ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const saveName = async (): Promise<void> => {
+    const trimmed = name.trim();
+    if (trimmed === (entry.name ?? "")) return;
+    setBusy(true);
+    try {
+      const resources: FactionResources = {
+        ...faction.resources,
+        [resourceKey]: { name: trimmed === "" ? undefined : trimmed },
+      };
+      onSaved(await factionsApi.update(faction.id, { resources }));
+    } catch (saveError) {
+      onError(saveError instanceof Error ? saveError.message : "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Flex
+      align="center"
+      gap="3"
+      border="2px solid"
+      borderColor="brand.contrast"
+      borderRadius="md"
+      px="3"
+      py="2"
+      bg="rgba(0, 0, 0, 0.06)"
+    >
+      <VStack align="stretch" gap="0" flex="1">
+        <Text color="brand.contrast" fontSize="0.8rem" opacity={0.7}>
+          {label} resource — {hint}
+        </Text>
+        <Input
+          value={name}
+          placeholder={label}
           onChange={(event) => setName(event.target.value)}
           onBlur={() => void saveName()}
           onKeyDown={(event) => {
@@ -295,6 +368,17 @@ export const FactionsPage = () => {
                     faction={faction}
                     kind={entry.kind}
                     tier={entry.tier}
+                    onSaved={replaceFaction}
+                    onError={setError}
+                  />
+                ))}
+                {FACTION_RESOURCES.map((resource) => (
+                  <ResourceRow
+                    key={resource.key}
+                    faction={faction}
+                    resourceKey={resource.key}
+                    label={resource.label}
+                    hint={resource.hint}
                     onSaved={replaceFaction}
                     onError={setError}
                   />

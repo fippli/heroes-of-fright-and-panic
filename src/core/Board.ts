@@ -17,7 +17,7 @@ import { createPlayer, type Player } from "@shared/player";
 import type { TilePosition } from "@shared/map/tile";
 import { calculateProduction } from "@shared/production";
 import { populationOf } from "@shared/game/population";
-import { phaseOf } from "./ui-state";
+import { DEFAULT_RESOURCE_NAMES, phaseOf } from "./ui-state";
 import { Tile } from "./Tile";
 import { LandscapeType } from "./Landscape";
 import { boundsOfTiles, focusPoint } from "./viewport";
@@ -283,9 +283,18 @@ export class Game {
       const src = this.imageAssets.itemImage(key)?.image.src;
       if (src !== undefined) items[key] = src;
     });
+    const resourceNames = Object.fromEntries(
+      Object.entries(DEFAULT_RESOURCE_NAMES).map(([key, label]) => [
+        key,
+        (this.myPlayerType !== null
+          ? this.imageAssets.resourceName(this.myPlayerType, key)
+          : undefined) ?? label,
+      ]),
+    );
     return {
       notice: this.notice,
       icons: this.imageAssets.iconUrls(),
+      resourceNames,
       sprites: {
         piece:
           selected?.piece !== undefined

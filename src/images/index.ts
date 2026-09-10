@@ -193,6 +193,8 @@ const staticLandscapeImage = (type: LandscapeType): GameImage => {
 export type FactionSkin = {
   readonly names: Readonly<Partial<Record<PieceKind, string>>>;
   readonly images: Readonly<Partial<Record<PieceKind, GameImage>>>;
+  /** The faction's word for a resource ("faith" -> "Sin") */
+  readonly resourceNames: Readonly<Record<string, string>>;
 };
 
 export type FactionSkins = Readonly<Partial<Record<"day" | "night", FactionSkin>>>;
@@ -217,6 +219,11 @@ export class ImageAssets {
   /** The faction's name for a piece tier, or undefined for the classic name */
   pieceName(player: Player, kind: PieceKind): string | undefined {
     return this.factionSkins[player.type]?.names[kind];
+  }
+
+  /** A side's word for a resource, or undefined for the classic name */
+  resourceName(playerType: "day" | "night", resource: string): string | undefined {
+    return this.factionSkins[playerType]?.resourceNames[resource];
   }
 
   /** Mounted/armoured sprite if the theme provides one, else undefined (caller layers instead) */

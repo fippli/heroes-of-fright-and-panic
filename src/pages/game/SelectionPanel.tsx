@@ -21,11 +21,12 @@ type SlotProps = {
     readonly onBuy: () => void;
   };
   readonly icons: Record<string, string>;
+  readonly names?: Record<string, string>;
 };
 
 /** One paper-doll slot: the item's sprite when carried, otherwise an empty diamond with a + to buy it */
-const Slot = ({ label, item, sprite, side, buy, icons }: SlotProps) => {
-  const costText = buy !== undefined ? costEntries(buy.cost).map((entry) => `${entry.amount} ${entry.resource}`).join(", ") : "";
+const Slot = ({ label, item, sprite, side, buy, icons, names }: SlotProps) => {
+  const costText = buy !== undefined ? costEntries(buy.cost).map((entry) => `${entry.amount} ${(names?.[entry.resource] ?? entry.resource).toLowerCase()}`).join(", ") : "";
   return (
     <div className={`doll__slot doll__slot--${side}${item !== null ? " doll__slot--filled" : ""}`}>
       <div className="doll__diamond" title={item !== null ? ITEM_LABEL[item] ?? item : buy !== undefined ? `Buy ${label.toLowerCase()} — ${costText} (${buy.hotkey})` : `${label}: empty`}>
@@ -120,9 +121,9 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
           {piece !== null && (
             <section className="doll">
               <div className="doll__column">
-                <Slot label="Helmet" item={has("helmet")} sprite={ui.sprites.items.helmet} side="left" icons={icons} buy={buyFor(EquipmentType.helmet, "")} />
-                <Slot label="Cuirass" item={has("torso")} sprite={ui.sprites.items.torso} side="left" icons={icons} buy={buyFor(EquipmentType.torso, "")} />
-                <Slot label="Greaves" item={has("legs")} sprite={ui.sprites.items.legs} side="left" icons={icons} buy={buyFor(EquipmentType.legs, "")} />
+                <Slot label="Helmet" item={has("helmet")} sprite={ui.sprites.items.helmet} side="left" icons={icons} names={ui.resourceNames} buy={buyFor(EquipmentType.helmet, "")} />
+                <Slot label="Cuirass" item={has("torso")} sprite={ui.sprites.items.torso} side="left" icons={icons} names={ui.resourceNames} buy={buyFor(EquipmentType.torso, "")} />
+                <Slot label="Greaves" item={has("legs")} sprite={ui.sprites.items.legs} side="left" icons={icons} names={ui.resourceNames} buy={buyFor(EquipmentType.legs, "")} />
               </div>
               <div className="doll__figure">
                 {piece.acted && <span className="acted-tag">has acted</span>}
@@ -134,12 +135,12 @@ export const SelectionPanel = ({ game, ui }: { readonly game: Game; readonly ui:
                 </div>
               </div>
               <div className="doll__column">
-                <Slot label="Sword" item={has("sword")} sprite={ui.sprites.items.sword} side="right" icons={icons} buy={buyFor(EquipmentType.sword, "S")} />
-                <Slot label="Shield" item={has("shield")} sprite={ui.sprites.items.shield} side="right" icons={icons} buy={buyFor(EquipmentType.shield, "D")} />
-                <Slot label="Bow" item={has("bow")} sprite={ui.sprites.items.bow} side="right" icons={icons} buy={buyFor(EquipmentType.bow, "B")} />
+                <Slot label="Sword" item={has("sword")} sprite={ui.sprites.items.sword} side="right" icons={icons} names={ui.resourceNames} buy={buyFor(EquipmentType.sword, "S")} />
+                <Slot label="Shield" item={has("shield")} sprite={ui.sprites.items.shield} side="right" icons={icons} names={ui.resourceNames} buy={buyFor(EquipmentType.shield, "D")} />
+                <Slot label="Bow" item={has("bow")} sprite={ui.sprites.items.bow} side="right" icons={icons} names={ui.resourceNames} buy={buyFor(EquipmentType.bow, "B")} />
               </div>
               <div className="doll__foot">
-                <Slot label="Steed" item={piece.steed} sprite={piece.steed !== null ? ui.sprites.items[piece.steed] : undefined} side="right" icons={icons} />
+                <Slot label="Steed" item={piece.steed} sprite={piece.steed !== null ? ui.sprites.items[piece.steed] : undefined} side="right" icons={icons} names={ui.resourceNames} />
               </div>
             </section>
           )}

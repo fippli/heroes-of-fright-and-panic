@@ -15,14 +15,23 @@ export type FactionPiece = {
 /** Keyed by engine PieceKind ("peasant" | "king" | "priest" | "archAngel") */
 export type FactionPieces = Readonly<Record<string, FactionPiece>>;
 
+/** Keyed by resource ("faith", ...): the faction's own word for the mechanic */
+export type FactionResources = Readonly<Record<string, { readonly name?: string }>>;
+
 export type Faction = {
   readonly id: string;
   readonly ownerEmail: string;
   readonly name: string;
   readonly type: FactionType;
   readonly pieces: FactionPieces;
+  readonly resources: FactionResources;
   readonly updatedAt: string;
 };
+
+/** Resources whose name is faction flavor (same mechanic, your word for it) */
+export const FACTION_RESOURCES: readonly { readonly key: string; readonly label: string; readonly hint: string }[] = [
+  { key: "faith", label: "Faith", hint: 'e.g. "sin" for devils, "mana" for magicians' },
+];
 
 /** The piece tiers a faction can customize, with the classic default names */
 export const FACTION_TIERS: readonly {
@@ -51,6 +60,7 @@ const mapRow = (row: {
   name: string;
   type: string;
   pieces: FactionPieces | null;
+  resources: FactionResources | null;
   updated_at: string;
 }): Faction => ({
   id: row.id,
@@ -58,10 +68,11 @@ const mapRow = (row: {
   name: row.name,
   type: row.type === "night" ? "night" : "day",
   pieces: row.pieces ?? {},
+  resources: row.resources ?? {},
   updatedAt: row.updated_at,
 });
 
-const SELECT = "id, owner_email, name, type, pieces, updated_at";
+const SELECT = "id, owner_email, name, type, pieces, resources, updated_at";
 
 export const factionsApi = {
   async listOwn(): Promise<readonly Faction[]> {
@@ -107,7 +118,11 @@ export const factionsApi = {
 
   async update(
     factionId: string,
-    changes: { readonly name?: string; readonly pieces?: FactionPieces },
+    changes: {
+      readonly name?: string;
+      readonly pieces?: FactionPieces;
+      readonly resources?: FactionResources;
+    },
   ): Promise<Faction> {
     const { data, error } = await supabase
       .from("factions")

@@ -79,7 +79,7 @@ export const BuildingActions = ({ game, ui }: { readonly game: Game; readonly ui
               title={building.level === 1 ? "Homestead: +2 stone and +1 iron per adjacent mountain" : "Manor: +1 gold per mountain, double wood and food"}
             />
           )}
-          <ActionButton label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost()) && building.acted !== true} onClick={() => void game.spawnPeasantAt(at)} />
+          <ActionButton names={ui.resourceNames} label="Spawn peasant" hotkey="P" cost={peasantSpawnCost()} icons={icons} enabled={can(peasantSpawnCost()) && building.acted !== true} onClick={() => void game.spawnPeasantAt(at)} />
           {targetButton("Buy horse", "O", "horse", createSteed(SteedType.horse).cost, "Placed on a tile next to the house")}
         </div>
       )}
@@ -94,8 +94,8 @@ export const BuildingActions = ({ game, ui }: { readonly game: Game; readonly ui
       {ownBuilding === BuildingType.church && (
         <div className="selection__actions">
           <h3>Church</h3>
-          <ActionButton label="Train priest" hotkey="N" cost={priestTrainCost()} icons={icons} enabled={can(priestTrainCost()) && building.acted !== true} onClick={() => void game.trainPriestAt(at)} />
-          <ActionButton label="Summon archangel" hotkey="M" cost={archAngelSummonCost()} icons={icons} enabled={can(archAngelSummonCost()) && building.acted !== true} onClick={() => void game.summonArchAngelAt(at)} />
+          <ActionButton names={ui.resourceNames} label="Train priest" hotkey="N" cost={priestTrainCost()} icons={icons} enabled={can(priestTrainCost()) && building.acted !== true} onClick={() => void game.trainPriestAt(at)} />
+          <ActionButton names={ui.resourceNames} label="Summon archangel" hotkey="M" cost={archAngelSummonCost()} icons={icons} enabled={can(archAngelSummonCost()) && building.acted !== true} onClick={() => void game.summonArchAngelAt(at)} />
         </div>
       )}
 
@@ -135,7 +135,7 @@ export const BuildingActions = ({ game, ui }: { readonly game: Game; readonly ui
           )}
           {building.level >= 2 ? (
             RESEARCH.map(({ type, label, key }) => (
-              <ActionButton key={type} label={label} hotkey={key} cost={researchCostOf(type)} icons={icons} enabled={can(researchCostOf(type)) && !building.acted} onClick={() => void game.researchAt(type, at)} />
+              <ActionButton names={ui.resourceNames} key={type} label={label} hotkey={key} cost={researchCostOf(type)} icons={icons} enabled={can(researchCostOf(type)) && !building.acted} onClick={() => void game.researchAt(type, at)} />
             ))
           ) : (
             <p className="hint">Research unlocks once your Keep becomes a Castle.</p>

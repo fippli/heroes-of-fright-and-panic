@@ -18,7 +18,11 @@ const skinOf = (faction: Faction): FactionSkin => {
       });
     }
   });
-  return { names, images };
+  const resourceNames: Record<string, string> = {};
+  Object.entries(faction.resources).forEach(([resource, entry]) => {
+    if (entry.name !== undefined && entry.name !== "") resourceNames[resource] = entry.name;
+  });
+  return { names, images, resourceNames };
 };
 
 /** Resolve the game's chosen faction ids into per-side skins */
