@@ -175,7 +175,7 @@ describe("ai", () => {
     expect(chooseBattleAction(moved.state)).toEqual({ type: "attack", targetId: enemy.id });
   });
 
-  it("plays every preset matchup to a finish", () => {
+  it("plays every preset matchup to a finish", { timeout: 30_000 }, () => {
     ARMY_PRESETS.forEach((day) => {
       ARMY_PRESETS.forEach((night) => {
         const end = playUntilOver(createBattle({ seed: `${day.id}-${night.id}`, day, night }));

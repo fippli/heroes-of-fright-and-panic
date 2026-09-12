@@ -231,6 +231,17 @@ When attacking a tile:
 - Equipment modifies range (bow adds +1).
 - A piece with a bow inside a tower uses the tower view range (4) as attack range.
 
+### Sieges
+
+Attacking an enemy **tower that has defenders next to it** starts a siege instead of a single blow.
+
+- **Defenders**: the tower's owner holds it with at most 3 pieces — the piece standing on the tower first, then the strongest pieces on the six tiles around it.
+- **Attackers**: every piece of the attacker within 2 tiles of the tower that still has its action this phase joins the storm, led by the piece that struck.
+- **The tower's advantage** grows with its level (Watchpost 1, Watchtower 2, Beacon 3): defenders act first each round (+3 and +level initiative), wear its walls as armour (+level defense, absorbed before their own), and bows behind them shoot as far as the tower sees. The garrison keeps to the tower and its ring.
+- **The field** is the real map around the tower (15 × 9 tiles): forest, mountains and water block as usual, walls block too. Undefended towers fall to a plain attack as before.
+- **Resolution** is deterministic. The battle engine plays both sides from a seed made of the game, the tower and the hour, so hovering the tower with a piece selected shows a forecast of the same fight the server will run (hidden defenders excepted). Fights not settled after 30 rounds break off and the tower holds.
+- **Afterwards** the dead are removed, survivors keep their wounds, every attacker has spent its action, and a taken tower crumbles. A king who fell in the storm ends the game.
+
 ---
 
 ## Actions

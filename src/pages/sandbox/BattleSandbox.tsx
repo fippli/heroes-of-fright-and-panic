@@ -5,23 +5,35 @@ import { Hexagon } from "../../core/Hexagon";
 import { Landscape } from "../../core/Landscape";
 import { Tile } from "../../core/Tile";
 import { Piece } from "../../core/Piece";
+import { Building } from "../../core/Building";
 import { defaultImageAssets } from "../../images";
 import { createPlayer } from "@shared/player";
 import { PieceKind, getPieceAttack, getPieceAttackRange, getPieceDefense, getPieceMove } from "@shared/piece";
+import { BuildingType, TOWER_LEVEL_NAMES } from "@shared/building";
+import { LandscapeType } from "@shared/map/landscape";
+import { findNeighbors } from "@shared/map/hex";
+import { MAX_DEFENDERS, SIEGE_MAX_ROUNDS, attackerUnit, towerDefenderUnit } from "@shared/siege";
 import type { PlayerType } from "@shared/piece";
 import {
   ARMY_PRESETS,
+  BATTLEFIELD_COLUMNS,
+  BATTLEFIELD_ROWS,
   type BattleAction,
   type BattleEvent,
   type BattleState,
+  type BattleTile,
   type BattleUnit,
   activeUnit,
   applyBattleAction,
   attackableEnemies,
   chooseBattleAction,
   createBattle,
+  createBattleOnField,
+  createPieceFromSpec,
+  deployArmy,
   describeUnit,
   findArmyPreset,
+  generateBattlefield,
   findUnit,
   healableAllies,
   isUnitAlive,
@@ -36,8 +48,13 @@ import type { Coordinate } from "../../types/coordinate";
 
 type Controller = "human" | "ai";
 
+/** Open field, or a tower in the middle held by one side */
+type Ground = "field" | "siege-night" | "siege-day";
+
 type Setup = {
   readonly seed: string;
+  readonly ground: Ground;
+  readonly towerLevel: number;
   readonly dayArmy: string;
   readonly nightArmy: string;
   readonly dayController: Controller;
@@ -48,6 +65,8 @@ const randomSeed = (): string => Math.random().toString(36).slice(2, 8);
 
 const DEFAULT_SETUP: Setup = {
   seed: "meadow",
+  ground: "field",
+  towerLevel: 1,
   dayArmy: "men-at-arms",
   nightArmy: "men-at-arms",
   dayController: "human",
@@ -57,8 +76,56 @@ const DEFAULT_SETUP: Setup = {
 /** Delay before the AI acts, so a spectator can follow what happens */
 const AI_STEP_MS = 550;
 
-const startBattle = (setup: Setup): BattleState =>
-  createBattle({ seed: setup.seed, day: findArmyPreset(setup.dayArmy), night: findArmyPreset(setup.nightArmy) });
+/**
+ * A siege on the sandbox field: the holder's first few pieces stand on and
+ * around a tower in the middle with the tower's advantages, the other army
+ * storms in from its edge.
+ */
+const startSiege = (setup: Setup, holder: PlayerType): BattleState => {
+  const attacker: PlayerType = holder === "day" ? "night" : "day";
+  const columns = BATTLEFIELD_COLUMNS;
+  const rows = BATTLEFIELD_ROWS;
+  const tower = { row: Math.floor(rows / 2), column: Math.floor(columns / 2) };
+  const ring = findNeighbors(tower, generateBattlefield(setup.seed, columns, rows) as BattleTile[]);
+  const clear = new Set([tower, ...ring].map((tile) => `${tile.row},${tile.column}`));
+  const tiles: ReadonlyArray<BattleTile> = generateBattlefield(setup.seed, columns, rows).map((tile) => {
+    if (tile.row === tower.row && tile.column === tower.column) {
+      return { ...tile, landscape: LandscapeType.grass, building: { type: BuildingType.tower, owner: holder, level: setup.towerLevel } };
+    }
+    return clear.has(`${tile.row},${tile.column}`) ? { ...tile, landscape: LandscapeType.grass } : tile;
+  });
+
+  const holderPreset = findArmyPreset(holder === "day" ? setup.dayArmy : setup.nightArmy);
+  // Fighters before the king: the garrison is who the preset lists first, king last
+  const garrisonSpecs = [...holderPreset.units].toSorted((a, b) => Number(a.kind === PieceKind.king) - Number(b.kind === PieceKind.king)).slice(0, MAX_DEFENDERS);
+  // The tower first, then the neighbours facing away from the attacker
+  const posts = [tower, ...ring.toSorted((a, b) => (holder === "day" ? a.column - b.column : b.column - a.column))];
+  const defenders = garrisonSpecs.map((spec, index) =>
+    towerDefenderUnit(createPieceFromSpec(spec, holder), setup.towerLevel, `defender-${index}`, posts[index]!),
+  );
+  const attackerPreset = findArmyPreset(attacker === "day" ? setup.dayArmy : setup.nightArmy);
+  const attackers = deployArmy(attackerPreset, attacker, columns, rows).map((unit, index) =>
+    attackerUnit(unit.piece, `attacker-${index}`, unit),
+  );
+
+  return createBattleOnField({
+    seed: setup.seed,
+    columns,
+    rows,
+    tiles,
+    units: [...attackers, ...defenders],
+    opening: `${attackerPreset.name} (${attacker}) storm the ${TOWER_LEVEL_NAMES[setup.towerLevel]} held by ${defenders.length} of ${holderPreset.name} (${holder})`,
+    maxRounds: SIEGE_MAX_ROUNDS,
+    stalemateWinner: holder,
+    hold: { owner: holder, around: tower, radius: 1 },
+  });
+};
+
+const startBattle = (setup: Setup): BattleState => {
+  if (setup.ground === "siege-night") return startSiege(setup, "night");
+  if (setup.ground === "siege-day") return startSiege(setup, "day");
+  return createBattle({ seed: setup.seed, day: findArmyPreset(setup.dayArmy), night: findArmyPreset(setup.nightArmy) });
+};
 
 // ============================================
 // EFFECTS (floating text and strike flashes)
@@ -137,6 +204,10 @@ const buildRenderTiles = (state: BattleState): ReadonlyArray<Tile> => {
       column: tile.column,
       explored: true,
       landscape: new Landscape({ type: tile.landscape }),
+      building:
+        tile.building === undefined
+          ? undefined
+          : new Building({ type: tile.building.type, owner: createPlayer({ type: tile.building.owner }), level: tile.building.level }),
       piece: unit === undefined ? undefined : toClientPiece(unit),
     });
   });
@@ -348,6 +419,37 @@ export const BattleSandbox = () => {
               onArmy={(nightArmy) => setSetup((s) => ({ ...s, nightArmy }))}
               onController={(nightController) => setSetup((s) => ({ ...s, nightController }))}
             />
+            <HStack gap="1">
+              <NativeSelect.Root size="xs" flex="1">
+                <NativeSelect.Field value={setup.ground} onChange={(event) => setSetup((s) => ({ ...s, ground: event.target.value as Ground }))}>
+                  <option value="field">Open field</option>
+                  <option value="siege-night">Siege: night holds a tower</option>
+                  <option value="siege-day">Siege: day holds a tower</option>
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+              {setup.ground !== "field" && (
+                <NativeSelect.Root size="xs" w="110px">
+                  <NativeSelect.Field
+                    value={String(setup.towerLevel)}
+                    onChange={(event) => setSetup((s) => ({ ...s, towerLevel: Number(event.target.value) }))}
+                  >
+                    {[1, 2, 3].map((level) => (
+                      <option key={level} value={level}>
+                        {TOWER_LEVEL_NAMES[level]}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              )}
+            </HStack>
+            {setup.ground !== "field" && (
+              <Text fontSize="2xs" color="fg.muted">
+                The holder fields its first {MAX_DEFENDERS} fighters on the tower: they act first, wear its walls as armour, and bows shoot as far as it sees. The
+                assault breaks off after {SIEGE_MAX_ROUNDS} rounds.
+              </Text>
+            )}
             <HStack gap="1">
               <Input
                 size="xs"

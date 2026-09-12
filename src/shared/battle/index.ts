@@ -17,6 +17,7 @@
  */
 
 import { LandscapeType } from "@shared/map/landscape.ts";
+import { BuildingType } from "@shared/building/index.ts";
 import { findNeighbors, hexDistance } from "@shared/map/hex.ts";
 import type { TilePosition } from "@shared/map/tile.ts";
 import {
@@ -45,8 +46,16 @@ import { createRandom, type RandomFunction } from "@shared/utils/random.ts";
 // TYPES
 // ============================================
 
+export type BattleBuilding = {
+  readonly type: BuildingType;
+  readonly owner: PlayerType;
+  readonly level: number;
+};
+
 export type BattleTile = TilePosition & {
   readonly landscape: LandscapeType;
+  /** Building standing here on the overworld; walls block movement */
+  readonly building?: BattleBuilding;
 };
 
 export type BattleUnit = TilePosition & {
@@ -55,6 +64,8 @@ export type BattleUnit = TilePosition & {
   readonly piece: Piece;
   /** Turn order weight: higher acts earlier in each round */
   readonly initiative: number;
+  /** Reach of its attacks; a bow behind tower walls shoots as far as the tower sees */
+  readonly attackRange: number;
   /** Whether the unit has moved this turn */
   readonly moved: boolean;
   /** Whether the unit has finished its turn this round */
@@ -79,9 +90,21 @@ export type BattleState = {
   readonly order: ReadonlyArray<string>;
   readonly turnIndex: number;
   readonly round: number;
+  /** Rounds after which the fight is called; null fights to the end */
+  readonly maxRounds: number | null;
+  /** Who is left standing when the round cap is reached (the side that holds the ground) */
+  readonly stalemateWinner: PlayerType | null;
+  /** A garrison keeps to its post: this side's AI never strays beyond `radius` of `around` */
+  readonly hold: HoldOrder | null;
   readonly log: ReadonlyArray<string>;
   readonly events: ReadonlyArray<BattleEvent>;
   readonly winner: PlayerType | null;
+};
+
+export type HoldOrder = {
+  readonly owner: PlayerType;
+  readonly around: TilePosition;
+  readonly radius: number;
 };
 
 export type BattleAction =
@@ -178,6 +201,24 @@ export const ARMY_PRESETS: ReadonlyArray<ArmyPreset> = [
     name: "Angelic",
     description: "An archangel with a thin escort.",
     units: [{ kind: PieceKind.king }, { kind: PieceKind.archAngel }, peasant([EquipmentType.shield]), peasant([EquipmentType.shield])],
+  },
+  {
+    id: "horde",
+    name: "Horde",
+    description: "Ten peasants with whatever was in the armoury.",
+    units: [
+      { kind: PieceKind.king },
+      peasant([EquipmentType.sword, EquipmentType.shield]),
+      peasant([EquipmentType.sword, EquipmentType.shield]),
+      peasant([EquipmentType.sword]),
+      peasant([EquipmentType.sword]),
+      peasant([EquipmentType.sword], SteedType.horse),
+      peasant([EquipmentType.bow]),
+      peasant([EquipmentType.bow]),
+      peasant([EquipmentType.shield]),
+      peasant(),
+      peasant(),
+    ],
   },
 ];
 
@@ -360,7 +401,8 @@ const deploymentRows = (count: number, rows: number): ReadonlyArray<number> => {
   return Array.from({ length: count }, (_, index) => start + index);
 };
 
-const deployArmy = (
+/** Line an army up along its edge of the field: king at the back, the rest in front */
+export const deployArmy = (
   preset: ArmyPreset,
   owner: PlayerType,
   columns: number,
@@ -386,6 +428,7 @@ const deployArmy = (
         row,
         column,
         initiative: initiativeOf(piece),
+        attackRange: getPieceAttackRange(piece),
         moved: false,
         done: false,
       };
@@ -404,26 +447,58 @@ const computeOrder = (units: ReadonlyArray<BattleUnit>, random: RandomFunction):
 
 const orderRandom = (seed: string, round: number): RandomFunction => createRandom(`order:${seed}:${round}`);
 
+export type FieldSetup = {
+  readonly seed: string;
+  readonly columns: number;
+  readonly rows: number;
+  readonly tiles: ReadonlyArray<BattleTile>;
+  readonly units: ReadonlyArray<BattleUnit>;
+  readonly opening: string;
+  readonly maxRounds?: number;
+  readonly stalemateWinner?: PlayerType;
+  readonly hold?: HoldOrder;
+};
+
+/** A battle on a prepared field with units already in position */
+export const createBattleOnField = (setup: FieldSetup): BattleState => ({
+  seed: setup.seed,
+  columns: setup.columns,
+  rows: setup.rows,
+  tiles: setup.tiles,
+  units: setup.units,
+  order: computeOrder(setup.units, orderRandom(setup.seed, 1)),
+  turnIndex: 0,
+  round: 1,
+  maxRounds: setup.maxRounds ?? null,
+  stalemateWinner: setup.stalemateWinner ?? null,
+  hold: setup.hold ?? null,
+  log: [`Round 1 — ${setup.opening}`],
+  events: [{ type: "round", round: 1 }],
+  winner: null,
+});
+
 export const createBattle = (setup: BattleSetup): BattleState => {
   const columns = setup.columns ?? BATTLEFIELD_COLUMNS;
   const rows = setup.rows ?? BATTLEFIELD_ROWS;
-  const units = [
-    ...deployArmy(setup.day, "day", columns, rows),
-    ...deployArmy(setup.night, "night", columns, rows),
-  ];
-  return {
+  return createBattleOnField({
     seed: setup.seed,
     columns,
     rows,
     tiles: generateBattlefield(setup.seed, columns, rows),
-    units,
-    order: computeOrder(units, orderRandom(setup.seed, 1)),
-    turnIndex: 0,
-    round: 1,
-    log: [`Round 1 — ${setup.day.name} (day) against ${setup.night.name} (night)`],
-    events: [{ type: "round", round: 1 }],
-    winner: null,
-  };
+    units: [...deployArmy(setup.day, "day", columns, rows), ...deployArmy(setup.night, "night", columns, rows)],
+    opening: `${setup.day.name} (day) against ${setup.night.name} (night)`,
+  });
+};
+
+/** Play the battle out with the AI on both sides */
+export const runBattle = (start: BattleState, maxSteps: number = 5000): BattleState => {
+  let state = start;
+  for (let step = 0; step < maxSteps && state.winner === null; step += 1) {
+    const result = applyBattleAction(state, chooseBattleAction(state));
+    if (!result.ok) break;
+    state = result.state;
+  }
+  return state;
 };
 
 // ============================================
@@ -458,7 +533,7 @@ export const describeUnit = (unit: BattleUnit): string => {
 };
 
 const canWalk = (unit: BattleUnit, tile: BattleTile): boolean =>
-  getWalkableLandscape(unit.piece).includes(tile.landscape);
+  getWalkableLandscape(unit.piece).includes(tile.landscape) && tile.building?.type !== BuildingType.wall;
 
 export type ReachableTile = TilePosition & { readonly distance: number };
 
@@ -499,7 +574,7 @@ export const attackableEnemies = (
   from: TilePosition = unit,
 ): ReadonlyArray<BattleUnit> => {
   if (getPieceAttack(unit.piece) <= 0) return [];
-  const range = getPieceAttackRange(unit.piece);
+  const range = unit.attackRange;
   return livingUnits(state).filter(
     (target) => target.owner !== unit.owner && hexDistance(from, target) <= range,
   );
@@ -540,13 +615,16 @@ const withLog = (state: BattleState, entry: string, event: BattleEvent): BattleS
   events: [...state.events, event],
 });
 
+/** A side stands while it has units left and, if it brought a king, he lives */
 const winnerOf = (state: BattleState): PlayerType | null => {
   const alive = livingUnits(state);
-  const kingAlive = (owner: PlayerType) =>
-    alive.some((unit) => unit.owner === owner && unit.piece.kind === PieceKind.king);
-  const anyAlive = (owner: PlayerType) => alive.some((unit) => unit.owner === owner);
-  const dayStands = anyAlive("day") && kingAlive("day");
-  const nightStands = anyAlive("night") && kingAlive("night");
+  const stands = (owner: PlayerType) => {
+    const broughtKing = state.units.some((unit) => unit.owner === owner && unit.piece.kind === PieceKind.king);
+    const kingAlive = alive.some((unit) => unit.owner === owner && unit.piece.kind === PieceKind.king);
+    return alive.some((unit) => unit.owner === owner) && (!broughtKing || kingAlive);
+  };
+  const dayStands = stands("day");
+  const nightStands = stands("night");
   if (dayStands === nightStands) return null;
   return dayStands ? "day" : "night";
 };
@@ -572,6 +650,14 @@ const endTurn = (state: BattleState): BattleState => {
   if (nextIndex !== -1) return { ...settled, turnIndex: nextIndex };
 
   const round = settled.round + 1;
+  if (settled.maxRounds !== null && round > settled.maxRounds && settled.stalemateWinner !== null) {
+    const holder = settled.stalemateWinner;
+    return withLog(
+      { ...settled, winner: holder },
+      `The assault breaks off — ${holder === "day" ? "Day" : "Night"} holds the ground`,
+      { type: "victory", winner: holder },
+    );
+  }
   const rested = settled.units.map((unit) => ({ ...unit, done: false, moved: false }));
   const next = { ...settled, units: rested, order: computeOrder(rested, orderRandom(settled.seed, round)), turnIndex: 0, round };
   return withLog(next, `Round ${round}`, { type: "round", round });
@@ -703,9 +789,12 @@ export const chooseBattleAction = (state: BattleState): BattleAction => {
   if (unit === null) return { type: "wait" };
 
   const standing: ReachableTile = { row: unit.row, column: unit.column, distance: 0 };
-  const candidates: ReadonlyArray<ReachableTile> = [standing, ...reachableTiles(state, unit)];
+  const hold = state.hold;
+  const keepsPost = (tile: TilePosition): boolean =>
+    hold === null || hold.owner !== unit.owner || hexDistance(tile, hold.around) <= hold.radius;
+  const candidates: ReadonlyArray<ReachableTile> = [standing, ...reachableTiles(state, unit).filter(keepsPost)];
   const damage = getPieceAttack(unit.piece);
-  const ranged = getPieceAttackRange(unit.piece) > 1;
+  const ranged = unit.attackRange > 1;
 
   if (unit.piece.kind === PieceKind.priest) {
     const healNow = healableAllies(state, unit);

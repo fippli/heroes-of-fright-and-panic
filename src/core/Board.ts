@@ -23,6 +23,7 @@ import { LandscapeType } from "./Landscape";
 import { boundsOfTiles, focusPoint } from "./viewport";
 import { predictAction } from "./predict";
 import { planTowerWalls, type WallPlan } from "@shared/walls";
+import { planSiege, resolveSiege, siegeSeed, towerName, type SiegeOutcome } from "@shared/siege";
 import { neighborAt } from "@shared/map/hex";
 import type { Tile as EngineTile } from "@shared/map/tile";
 import type { GameUiState, Notice, TargetMode } from "./ui-state";
@@ -395,6 +396,44 @@ export class Game {
           );
     this.towerPlanCache = { key: cacheKey, plan };
     return plan;
+  }
+
+  // Cached siege forecast for the selected piece against the hovered enemy tower
+  private siegeCache: { readonly key: string; readonly outcome: SiegeOutcome | null } | null = null;
+
+  /**
+   * What storming the hovered enemy tower with the selected piece would come
+   * to, played out ahead of time with the same engine and seed the server
+   * uses. Only what this client can see goes in, so hidden defenders may
+   * still surprise. Null when no siege would start.
+   */
+  private siegeForecast(tile: Tile): SiegeOutcome | null {
+    const state = this.lastServerState;
+    const selected = this.getSelectedPosition();
+    if (state === null || selected === undefined || this.myPlayerType === null) return null;
+    if (tile.building?.type !== BuildingType.tower || tile.building.owner?.type === this.myPlayerType) return null;
+    if (this.selectedTile?.piece?.owner?.type !== this.myPlayerType) return null;
+    const cacheKey = `${state.updatedAt ?? ""}:${selected.row},${selected.column}>${tile.row},${tile.column}`;
+    if (this.siegeCache?.key === cacheKey) return this.siegeCache.outcome;
+    const target = { row: tile.row, column: tile.column };
+    const plan = planSiege(
+      state.tiles as unknown as ReadonlyArray<EngineTile>,
+      selected,
+      target,
+      this.myPlayerType,
+      siegeSeed(state.id, target, state.clock.time),
+    );
+    const outcome = plan === null ? null : resolveSiege(plan);
+    this.siegeCache = { key: cacheKey, outcome };
+    return outcome;
+  }
+
+  /** "Siege: 6 vs 3 — the Watchtower falls, 2 of yours slain" */
+  private siegeLabel(outcome: SiegeOutcome): string {
+    const { plan } = outcome;
+    const tower = towerName(plan.towerLevel);
+    const verdict = outcome.towerFalls ? `the ${tower} falls` : `the ${tower} holds`;
+    return `Siege: ${plan.attackers.length} vs ${plan.defenders.length} — ${verdict}, ${outcome.attackersLost} of yours slain`;
   }
 
   /** Ghost of the curtain wall the hovered tower placement would raise */
@@ -776,12 +815,15 @@ export class Game {
   /** Small label riding the cursor, drawn in screen space so zoom doesn't scale it */
   private renderHoverLabel(tile: Tile): void {
     const plan = this.towerWallPlan(tile);
+    const siege = plan === null ? this.siegeForecast(tile) : null;
     const text =
       plan !== null
         ? plan.linkedTowers.length > 0
           ? `Tower + curtain wall (${plan.newWallCount} stone)`
           : "Tower — no tower in range to link"
-        : this.hoverText(tile);
+        : siege !== null
+          ? this.siegeLabel(siege)
+          : this.hoverText(tile);
     if (text === null) return;
     const ctx = this.canvas.ctx;
     const mouse = this.canvas.mousePosition;
@@ -929,6 +971,7 @@ export class Game {
       this.parseQuiet(response.game);
       if (response.result.message !== undefined) {
         console.log("Action result:", response.result.message);
+        if (response.result.message.startsWith("Siege:")) this.say(response.result.message);
       }
     } else {
       console.warn("Action failed:", response.result.error);

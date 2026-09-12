@@ -27,6 +27,7 @@ import {
   TOWER_LEVEL_NAMES,
 } from "../building/index.ts";
 import { resolveCombat } from "../combat/index.ts";
+import { applySiege, describeSiege, planSiege, resolveSiege, siegeSeed } from "../siege/index.ts";
 import { createEquipment, EquipmentType } from "../equipment/index.ts";
 import {
   LandscapeType,
@@ -977,6 +978,20 @@ export const handleAttack = (
       game,
       result: { success: false, error: "Target is out of range" },
     };
+  }
+
+  // A defended enemy tower is stormed by everyone in reach: a siege
+  const siege = planSiege(
+    game.tiles,
+    action.attackerPosition,
+    action.targetPosition,
+    action.player,
+    siegeSeed(game.id, action.targetPosition, game.clock.time),
+  );
+  if (siege !== null) {
+    const outcome = resolveSiege(siege);
+    const afterSiege = checkWinCondition({ ...game, tiles: applySiege(game.tiles, outcome) });
+    return { game: afterSiege, result: { success: true, message: describeSiege(outcome) } };
   }
 
   if (
