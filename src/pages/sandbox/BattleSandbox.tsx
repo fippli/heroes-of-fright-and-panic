@@ -34,6 +34,7 @@ import {
   describeUnit,
   findArmyPreset,
   generateBattlefield,
+  runBattle,
   findUnit,
   healableAllies,
   isUnitAlive,
@@ -126,6 +127,47 @@ const startBattle = (setup: Setup): BattleState => {
   if (setup.ground === "siege-day") return startSiege(setup, "day");
   return createBattle({ seed: setup.seed, day: findArmyPreset(setup.dayArmy), night: findArmyPreset(setup.nightArmy) });
 };
+
+// ============================================
+// SIMULATION
+// ============================================
+
+const SIM_RUNS = 30;
+
+type SimRow = {
+  readonly label: string;
+  readonly runs: number;
+  readonly dayWins: number;
+  readonly dayLost: number;
+  readonly nightLost: number;
+  readonly rounds: number;
+};
+
+type SimState = {
+  readonly running: boolean;
+  readonly done: number;
+  readonly total: number;
+  readonly rows: ReadonlyArray<SimRow>;
+};
+
+const IDLE_SIM: SimState = { running: false, done: 0, total: 0, rows: [] };
+
+/** The setups a simulation sweeps: every tower level for a siege, the single field otherwise */
+const simulationCases = (setup: Setup): ReadonlyArray<{ readonly label: string; readonly setup: Setup }> =>
+  setup.ground === "field"
+    ? [{ label: "Open field", setup }]
+    : [1, 2, 3].map((towerLevel) => ({ label: TOWER_LEVEL_NAMES[towerLevel] ?? "", setup: { ...setup, towerLevel } }));
+
+const emptyRow = (label: string): SimRow => ({ label, runs: 0, dayWins: 0, dayLost: 0, nightLost: 0, rounds: 0 });
+
+const addRun = (row: SimRow, end: BattleState): SimRow => ({
+  ...row,
+  runs: row.runs + 1,
+  dayWins: row.dayWins + (end.winner === "day" ? 1 : 0),
+  dayLost: row.dayLost + end.units.filter((unit) => unit.owner === "day" && unit.piece.hearts <= 0).length,
+  nightLost: row.nightLost + end.units.filter((unit) => unit.owner === "night" && unit.piece.hearts <= 0).length,
+  rounds: row.rounds + end.round,
+});
 
 // ============================================
 // EFFECTS (floating text and strike flashes)
@@ -260,6 +302,42 @@ export const BattleSandbox = () => {
     seenEventsRef.current = fresh.events.length;
     effectsRef.current = [];
     setState(fresh);
+  }, []);
+
+  /** Finish the current battle at once with the AI on both sides */
+  const playOut = useCallback(() => {
+    const end = runBattle(stateRef.current);
+    seenEventsRef.current = end.events.length;
+    stateRef.current = end;
+    setState(end);
+  }, []);
+
+  // Simulation: many seeds per case, a few battles per frame so the page stays alive
+  const [sim, setSim] = useState<SimState>(IDLE_SIM);
+  const simRunRef = useRef(0);
+  const simulate = useCallback((base: Setup) => {
+    const runId = simRunRef.current + 1;
+    simRunRef.current = runId;
+    const cases = simulationCases(base);
+    const total = cases.length * SIM_RUNS;
+    let rows = cases.map((item) => emptyRow(item.label));
+    let done = 0;
+    setSim({ running: true, done, total, rows });
+    const step = () => {
+      if (simRunRef.current !== runId) return;
+      const started = performance.now();
+      while (done < total && performance.now() - started < 40) {
+        const caseIndex = Math.floor(done / SIM_RUNS);
+        const runIndex = done % SIM_RUNS;
+        const item = cases[caseIndex]!;
+        const end = runBattle(startBattle({ ...item.setup, seed: `${base.seed}#${runIndex}` }));
+        rows = rows.map((row, index) => (index === caseIndex ? addRun(row, end) : row));
+        done += 1;
+      }
+      setSim({ running: done < total, done, total, rows });
+      if (done < total) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }, []);
 
   // AI turns
@@ -461,9 +539,29 @@ export const BattleSandbox = () => {
                 Roll
               </Button>
             </HStack>
-            <Button size="xs" colorPalette="brand" onClick={() => restart(setup)}>
-              Start battle
+            <HStack gap="1">
+              <Button size="xs" colorPalette="brand" flex="1" onClick={() => restart(setup)}>
+                Start battle
+              </Button>
+              <Button size="xs" variant="outline" onClick={playOut} disabled={state.winner !== null}>
+                Play out
+              </Button>
+            </HStack>
+          </VStack>
+        </Box>
+
+        <Box>
+          <Label>Simulation</Label>
+          <VStack align="stretch" gap="2">
+            <Text fontSize="2xs" color="fg.muted">
+              {setup.ground === "field"
+                ? `${SIM_RUNS} fields from this seed, both sides played by the AI.`
+                : `${SIM_RUNS} sieges per tower level from this seed, both sides played by the AI.`}
+            </Text>
+            <Button size="xs" variant="outline" onClick={() => simulate(setup)} disabled={sim.running}>
+              {sim.running ? `Simulating ${sim.done}/${sim.total}…` : "Simulate"}
             </Button>
+            {sim.rows.length > 0 && <SimTable rows={sim.rows} attacker={setup.ground === "siege-day" ? "night" : "day"} siege={setup.ground !== "field"} />}
           </VStack>
         </Box>
 
@@ -545,6 +643,61 @@ export const BattleSandbox = () => {
 // ============================================
 // PANEL PIECES
 // ============================================
+
+const SimTable = ({
+  rows,
+  attacker,
+  siege,
+}: {
+  readonly rows: ReadonlyArray<SimRow>;
+  readonly attacker: PlayerType;
+  readonly siege: boolean;
+}) => {
+  const percent = (part: number, whole: number) => (whole === 0 ? "–" : `${Math.round((100 * part) / whole)}%`);
+  const average = (sum: number, count: number) => (count === 0 ? "–" : (sum / count).toFixed(1));
+  return (
+    <Box fontSize="2xs" fontFamily="mono">
+      <Flex color="fg.muted" gap="1" px="1">
+        <Text flex="1">{siege ? "tower" : "ground"}</Text>
+        <Text w="52px" textAlign="right">
+          {siege ? "falls" : "day wins"}
+        </Text>
+        <Text w="44px" textAlign="right" color="day.500">
+          day†
+        </Text>
+        <Text w="44px" textAlign="right" color="night.500">
+          night†
+        </Text>
+        <Text w="36px" textAlign="right">
+          rnd
+        </Text>
+      </Flex>
+      {rows.map((row) => {
+        const attackerWins = attacker === "day" ? row.dayWins : row.runs - row.dayWins;
+        return (
+          <Flex key={row.label} gap="1" px="1" py="0.5" borderTop="1px solid" borderColor="border">
+            <Text flex="1">{row.label}</Text>
+            <Text w="52px" textAlign="right" fontWeight="bold">
+              {percent(siege ? attackerWins : row.dayWins, row.runs)}
+            </Text>
+            <Text w="44px" textAlign="right">
+              {average(row.dayLost, row.runs)}
+            </Text>
+            <Text w="44px" textAlign="right">
+              {average(row.nightLost, row.runs)}
+            </Text>
+            <Text w="36px" textAlign="right">
+              {average(row.rounds, row.runs)}
+            </Text>
+          </Flex>
+        );
+      })}
+      <Text color="fg.muted" mt="1">
+        † average pieces lost per battle
+      </Text>
+    </Box>
+  );
+};
 
 const Label = ({ children }: { readonly children: ReactNode }) => (
   <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wide" mb="1">
