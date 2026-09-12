@@ -109,3 +109,12 @@ export const neighborAt = (
 /** The edge of the neighbor that touches `direction`'s edge of the origin */
 export const oppositeDirection = (direction: number): number =>
   (((direction + 3) % 6) + 6) % 6;
+
+/** Hex steps between two odd-r offset positions (ignores terrain) */
+export const hexDistance = (a: TilePosition, b: TilePosition): number => {
+  const qa = a.column - Math.floor((a.row - (a.row & 1)) / 2);
+  const qb = b.column - Math.floor((b.row - (b.row & 1)) / 2);
+  const dq = qa - qb;
+  const dr = a.row - b.row;
+  return (Math.abs(dq) + Math.abs(dq + dr) + Math.abs(dr)) / 2;
+};
